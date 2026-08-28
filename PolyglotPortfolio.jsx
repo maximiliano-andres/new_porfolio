@@ -42,29 +42,47 @@ function BootScreen({ onDone }) {
   const [count, setCount] = useState(0);
   const [leaving, setLeaving] = useState(false);
 
+  const finish = useCallback(() => {
+    setLeaving(true);
+    window.localStorage.setItem("boot_seen", "1");
+    setTimeout(onDone, 250);
+  }, [onDone]);
+
   useEffect(() => {
+    if (window.localStorage.getItem("boot_seen")) {
+      onDone();
+      return;
+    }
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const lineDelay = reduceMotion ? 30 : 190;
+    const endDelay = reduceMotion ? 250 : 2150;
+    const doneDelay = reduceMotion ? 350 : 2750;
+
     let i = 0;
     const iv = setInterval(() => {
       i += 1;
       setCount(i);
       if (i >= BOOT_LINES.length) clearInterval(iv);
-    }, 190);
-    const endTimer = setTimeout(() => setLeaving(true), 2150);
-    const doneTimer = setTimeout(() => onDone(), 2750);
+    }, lineDelay);
+    const endTimer = setTimeout(() => setLeaving(true), endDelay);
+    const doneTimer = setTimeout(finish, doneDelay);
     return () => {
       clearInterval(iv);
       clearTimeout(endTimer);
       clearTimeout(doneTimer);
     };
-  }, [onDone]);
+  }, [onDone, finish]);
 
   return (
     <motion.div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-[#05070b] px-4"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-[#05070b] px-4 cursor-pointer"
+      onClick={finish}
       animate={leaving ? { opacity: 0 } : { opacity: 1 }}
       transition={{ duration: 0.55, ease: "easeInOut" }}
       style={{ pointerEvents: leaving ? "none" : "auto" }}
       aria-hidden={leaving}
+      role="status"
+      aria-label="Cargando portafolio, clic para saltar"
     >
       <div
         className="w-full max-w-xl rounded-lg border px-5 py-5 sm:px-6 sm:py-6"
@@ -97,6 +115,9 @@ function BootScreen({ onDone }) {
             <span className="inline-block w-2 h-4 bg-[#22D3EE] align-middle animate-pulse ml-1" />
           )}
         </div>
+        <p className="mt-3 text-right text-[10px] text-white/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+          clic para saltar &rarr;
+        </p>
       </div>
     </motion.div>
   );
@@ -116,7 +137,7 @@ const CIRCUIT_PATHS = [
 
 function CircuitBackground() {
   return (
-    <div className="fixed inset-0 z-0 overflow-hidden bg-[#05070b]">
+    <div className="fixed inset-0 z-0 overflow-hidden bg-[#05070b]" aria-hidden="true">
       <div
         className="absolute inset-0"
         style={{
@@ -322,9 +343,8 @@ function LangBadge({ id, size = "sm" }) {
   const l = LANG[id];
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2 ${
-        size === "sm" ? "py-0.5 text-[10px]" : "py-1 text-[11px]"
-      } font-medium`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2 ${size === "sm" ? "py-0.5 text-[10px]" : "py-1 text-[11px]"
+        } font-medium`}
       style={{
         borderColor: `${l.c1}55`,
         background: `${l.c1}14`,
@@ -632,14 +652,16 @@ function TopBar() {
   const [stats, setStats] = useState({ cpu: 12, mem: 28, lat: 9 });
   const [time, setTime] = useState(new Date());
   useEffect(() => {
-    const iv = setInterval(() => {
+    const tick = () => {
+      if (document.hidden) return;
       setStats({
         cpu: 8 + Math.round(Math.random() * 14),
         mem: 22 + Math.round(Math.random() * 10),
         lat: 6 + Math.round(Math.random() * 8),
       });
       setTime(new Date());
-    }, 2200);
+    };
+    const iv = setInterval(tick, 2200);
     return () => clearInterval(iv);
   }, []);
   const item = (Icon, label, val, unit, color) => (
@@ -688,11 +710,11 @@ function AboutContent() {
             fontFamily: "'Space Grotesk', sans-serif",
           }}
         >
-          <span className="w-[52px] h-[52px] rounded-full bg-[#0d1117] flex items-center justify-center">AR</span>
+          <span className="w-[52px] h-[52px] rounded-full bg-[#0d1117] flex items-center justify-center">MC</span>
         </div>
         <div>
           <h3 className="text-white text-[15px] font-semibold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-            Alex Rivera
+            Maximiliano Andrés Caniullan Lefiñir
           </h3>
           <p className="text-white/50 text-[12px]">Senior Backend Engineer &middot; Sistemas poliglota</p>
         </div>
@@ -722,7 +744,7 @@ function AboutContent() {
 function SkillsContent() {
   return (
     <div className="w-full sm:w-[560px] max-w-full">
-      <p className="text-[12px] text-white/45 mb-4">
+      <p className="text-[12px] text-white/60 mb-4">
         Métricas relativas de cada runtime en mi stack &mdash; velocidad, memoria, seguridad,
         concurrencia y ecosistema disponible hoy.
       </p>
@@ -771,7 +793,7 @@ function SkillsContent() {
 function ProjectsContent({ onOpenProject }) {
   return (
     <div className="w-full sm:w-[520px] max-w-full">
-      <p className="text-[12px] text-white/45 mb-3">
+      <p className="text-[12px] text-white/60 mb-3">
         Selecciona un proyecto para abrir su infografía de arquitectura en una nueva ventana.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -788,7 +810,7 @@ function ProjectsContent({ onOpenProject }) {
             <div className="text-[13px] font-medium text-white/90 mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               {p.title}
             </div>
-            <p className="text-[11.5px] text-white/50 leading-5 mb-2">{p.summary}</p>
+            <p className="text-[11.5px] text-white/65 leading-5 mb-2">{p.summary}</p>
             <div className="flex items-center gap-1 text-[10.5px]" style={{ color: CORE }}>
               Ver infografía <ICONS_.Gauge className="hidden" />
               <ChevronRightIcon />
@@ -901,7 +923,7 @@ function ContactContent() {
   const [status, setStatus] = useState("idle"); // idle | loading | success | error
   const [errors, setErrors] = useState({});
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     const errs = {};
     if (!form.name.trim()) errs.name = "Requerido";
@@ -913,7 +935,18 @@ function ContactContent() {
       return;
     }
     setStatus("loading");
-    setTimeout(() => setStatus("success"), 1300);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error("request failed");
+      setStatus("success");
+    } catch {
+      setErrors({ submit: "No se pudo enviar el mensaje. Intenta de nuevo en unos minutos." });
+      setStatus("error");
+    }
   };
 
   const inputCls =
@@ -926,7 +959,7 @@ function ContactContent() {
         <div className="text-[13.5px] font-medium text-white/90 mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
           Mensaje enviado
         </div>
-        <p className="text-[12px] text-white/50 mb-4">Responderé dentro de 24&ndash;48 horas hábiles.</p>
+        <p className="text-[12px] text-white/65 mb-4">Responderé dentro de 24&ndash;48 horas hábiles.</p>
         <button
           onClick={() => { setStatus("idle"); setForm({ name: "", email: "", message: "" }); }}
           className="text-[11.5px] px-3 py-1.5 rounded-md border border-white/15 text-white/70 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none"
@@ -970,6 +1003,9 @@ function ContactContent() {
           />
           {errors.message && <p className="text-[10.5px] text-red-400 mt-1 flex items-center gap-1"><AlertCircle size={11} />{errors.message}</p>}
         </div>
+        {status === "error" && errors.submit && (
+          <p className="text-[11px] text-red-400 mb-3 flex items-center gap-1"><AlertCircle size={12} />{errors.submit}</p>
+        )}
         <button
           type="submit" disabled={status === "loading"}
           className="w-full flex items-center justify-center gap-2 rounded-md py-2 text-[12.5px] font-medium transition-all disabled:opacity-70 focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-none hover:brightness-110 active:scale-[0.98]"
@@ -997,20 +1033,34 @@ function ContactContent() {
    MAIN APP
    ============================================================ */
 const DOCK_ITEMS = [
-  { id: "about", label: "Sobre mí", IconCmp: User, accent: CORE, width: 380,
-    pos: { x: "6%", y: "18%" } },
-  { id: "skills", label: "Skills", IconCmp: Code2, accent: LANG.python.c1, width: 600,
-    pos: { x: "10%", y: "14%" } },
-  { id: "projects", label: "Proyectos", IconCmp: FolderGit2, accent: LANG.node.c1, width: 540,
-    pos: { x: "8%", y: "16%" } },
-  { id: "experience", label: "Experiencia", IconCmp: Briefcase, accent: LANG.java.c1, width: 460,
-    pos: { x: "30%", y: "12%" } },
-  { id: "education", label: "Educación", IconCmp: GraduationCap, accent: LANG.python.c2, width: 420,
-    pos: { x: "34%", y: "20%" } },
-  { id: "certifications", label: "Certificaciones", IconCmp: Award, accent: LANG.java.c2, width: 420,
-    pos: { x: "26%", y: "24%" } },
-  { id: "contact", label: "Contacto", IconCmp: Mail, accent: LANG.node.c2, width: 380,
-    pos: { x: "38%", y: "16%" } },
+  {
+    id: "about", label: "Sobre mí", IconCmp: User, accent: CORE, width: 380,
+    pos: { x: "6%", y: "18%" }
+  },
+  {
+    id: "skills", label: "Skills", IconCmp: Code2, accent: LANG.python.c1, width: 600,
+    pos: { x: "10%", y: "14%" }
+  },
+  {
+    id: "projects", label: "Proyectos", IconCmp: FolderGit2, accent: LANG.node.c1, width: 540,
+    pos: { x: "8%", y: "16%" }
+  },
+  {
+    id: "experience", label: "Experiencia", IconCmp: Briefcase, accent: LANG.java.c1, width: 460,
+    pos: { x: "30%", y: "12%" }
+  },
+  {
+    id: "education", label: "Educación", IconCmp: GraduationCap, accent: LANG.python.c2, width: 420,
+    pos: { x: "34%", y: "20%" }
+  },
+  {
+    id: "certifications", label: "Certificaciones", IconCmp: Award, accent: LANG.java.c2, width: 420,
+    pos: { x: "26%", y: "24%" }
+  },
+  {
+    id: "contact", label: "Contacto", IconCmp: Mail, accent: LANG.node.c2, width: 380,
+    pos: { x: "38%", y: "16%" }
+  },
 ];
 
 function makeInitialWindows() {
@@ -1095,7 +1145,6 @@ export default function PolyglotPortfolio() {
   return (
     <div className="relative w-full h-screen min-h-[640px] overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 8px; }
@@ -1131,18 +1180,19 @@ export default function PolyglotPortfolio() {
                 className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] mb-4"
                 style={{ borderColor: `${CORE}44`, color: CORE, fontFamily: "'JetBrains Mono', monospace" }}
               >
-                <Sparkles size={11} /> disponible para nuevos proyectos
+                <Sparkles size={11} /> Disponible para nuevos proyectos
               </span>
               <h1
                 className="text-[32px] sm:text-[44px] font-semibold text-white mb-3 leading-tight"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
-                Alex Rivera
+                Maximiliano Andrés Caniullan Lefiñir
               </h1>
               <p className="text-[14px] sm:text-[16px] text-white/55 max-w-md mb-6">
-                Backend engineer poliglota: <span style={{ color: LANG.python.c2 }}>Python</span>,{" "}
-                <span style={{ color: LANG.java.c1 }}>Java</span> y{" "}
-                <span style={{ color: LANG.node.c2 }}>Node.js</span> &mdash; construyendo sistemas
+                Backend Developer: <span style={{ color: LANG.python.c2 }}>Python</span>,{" "}
+                y{" "}
+                <span style={{ color: LANG.node.c2 }}>Node.js</span> &mdash; actualmente mejorando en {" "}
+                <span style={{ color: LANG.java.c1 }}>Java</span>, construyendo sistemas
                 rápidos, seguros y compilados para durar.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-2.5">
@@ -1160,7 +1210,7 @@ export default function PolyglotPortfolio() {
                   <User size={14} /> Sobre mí
                 </button>
               </div>
-              <p className="mt-8 text-[10.5px] text-white/30" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <p className="mt-8 text-[10.5px] text-white/50" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
                 abre las ventanas del dock inferior para explorar el resto del portafolio
               </p>
             </motion.div>
