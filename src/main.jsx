@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import PolyglotPortfolio from '../PolyglotPortfolio.jsx'
+import PolyglotPortfolio from './PolyglotPortfolio.jsx'
 import ErrorBoundary from './ErrorBoundary.jsx'
 import './index.css'
 
