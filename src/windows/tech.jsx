@@ -16,7 +16,7 @@ export function AboutContent() {
             <div className="w-28 h-28 rounded-lg overflow-hidden bg-black/40 flex items-center justify-center relative">
               {!imgError ? (
                 <img
-                  src="/img/max_andres_head.webp"
+                  src="/img/max_andres_head_256.webp" width={256} height={234} decoding="async"
                   alt="Maximiliano Caniullan"
                   onError={() => setImgError(true)}
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"

@@ -42,7 +42,7 @@ export function HRSummaryContent({ onOpen }) {
       {/* candidate card */}
       <div className="rounded-xl border p-4" style={{ borderColor: `${HR_ACCENT}2e`, background: `linear-gradient(135deg, ${HR_ACCENT}0d, transparent 60%)` }}>
         <div className="flex items-center gap-3.5 mb-4">
-          <img src="/img/max_andres_head.webp" alt="" className="w-14 h-14 rounded-lg object-cover border border-white/10 shrink-0 bg-black/40" />
+          <img src="/img/max_andres_head_256.webp" width={256} height={234} decoding="async" alt="" className="w-14 h-14 rounded-lg object-cover border border-white/10 shrink-0 bg-black/40" />
           <div className="min-w-0">
             <div className="text-[15px] font-semibold text-white leading-5 text-balance" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               Maximiliano Andrés Caniullan Lefiñir
@@ -141,7 +141,7 @@ export function AboutHRContent() {
   return (
     <div className="w-full space-y-5">
       <div className="flex items-center gap-3.5">
-        <img src="/img/max_andres_head.webp" alt="Maximiliano Caniullan" className="w-16 h-16 rounded-xl object-cover border border-white/10 shrink-0 bg-black/40" />
+        <img src="/img/max_andres_head_256.webp" width={256} height={234} decoding="async" alt="Maximiliano Caniullan" className="w-16 h-16 rounded-xl object-cover border border-white/10 shrink-0 bg-black/40" />
         <div className="min-w-0">
           <h3 className="text-white text-[15px] font-semibold text-balance" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             Maximiliano Andrés Caniullan Lefiñir

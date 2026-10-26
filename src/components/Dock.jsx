@@ -1,5 +1,12 @@
 /* Bottom dock: one button per section, numbered shortcuts, hover feeds the circuit. */
-export function Dock({ items, windows, onToggle, onHover, scale = 1 }) {
+import { memo } from "react";
+import { circuit } from "../lib/circuitStore.js";
+import { prefetchWindow } from "../windows/lazy.js";
+
+// hovering/focusing an icon lights its circuit trace and preloads the window's code
+const hoverOn = (id) => { circuit.hover(id); prefetchWindow(id); };
+const hoverOff = () => circuit.hover(null);
+export const Dock = memo(function Dock({ items, windows, onToggle, scale = 1 }) {
   return (
     <nav
       data-tour="dock"
@@ -21,10 +28,10 @@ export function Dock({ items, windows, onToggle, onHover, scale = 1 }) {
             key={it.id}
             data-dock-id={it.id}
             onClick={() => onToggle(it.id)}
-            onPointerEnter={() => onHover?.(it.id)}
-            onPointerLeave={() => onHover?.(null)}
-            onFocus={() => onHover?.(it.id)}
-            onBlur={() => onHover?.(null)}
+            onPointerEnter={() => hoverOn(it.id)}
+            onPointerLeave={hoverOff}
+            onFocus={() => hoverOn(it.id)}
+            onBlur={hoverOff}
             aria-label={it.label}
             aria-keyshortcuts={String(i + 1)}
             aria-pressed={active}
@@ -58,4 +65,4 @@ export function Dock({ items, windows, onToggle, onHover, scale = 1 }) {
       })}
     </nav>
   );
-}
+});

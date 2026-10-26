@@ -52,8 +52,8 @@ Para trabajar en el proyecto con recarga automática (*Hot Reload*) tanto en fro
 ### Terminal 1: Servidor Backend (FastAPI)
 Asegúrate de tener el entorno virtual activo:
 ```bash
-# Con el entorno virtual activo:
-python main.py
+# Con el entorno virtual activo (modo desarrollo: recarga automática y /docs habilitado):
+APP_ENV=development python main.py
 ```
 *El backend de desarrollo correrá en: `http://localhost:8000`*
 
@@ -81,13 +81,41 @@ En producción, FastAPI se encarga de servir tanto la API como el frontend compi
    ```
    FastAPI detectará automáticamente la carpeta `dist/` y servirá el portafolio completo en `http://localhost:8000`.
 
+### Configuración (variables de entorno, todas opcionales)
+
+| Variable | Por defecto | Uso |
+|---|---|---|
+| `APP_ENV` | `production` | `development` habilita recarga automática y la documentación `/docs` |
+| `HOST` / `PORT` | `127.0.0.1` / `8000` | Usa `0.0.0.0` solo detrás de un proxy o firewall |
+| `CORS_ORIGINS` | — | Orígenes extra separados por coma (el dev server de Vite ya está permitido) |
+| `TRUST_PROXY` | — | `1` para tomar la IP del cliente desde `X-Forwarded-For` (solo detrás de un proxy confiable) |
+| `ENABLE_HSTS` | — | `1` cuando el sitio se sirve exclusivamente por HTTPS |
+
+### Seguridad incluida
+
+- Cabeceras: Content-Security-Policy, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, COOP (y HSTS opcional).
+- `/api/contact`: validación con límites (nombre 100, email 254, mensaje 5000 caracteres), cuerpo máximo de 16 KB,
+  5 envíos cada 10 minutos por IP (responde `429` con `Retry-After`) y un campo trampa contra bots.
+- Los mensajes se guardan en `contact_messages.jsonl` (ignorado por git) con permisos `0600`; el log del servidor no registra su contenido.
+- Errores con respuestas JSON genéricas; los detalles quedan solo en el log del servidor.
+- Solo se publican desde `dist/` tipos de archivo estáticos conocidos y sin posibilidad de salir de la carpeta.
+
 ---
 
 ## 📁 Estructura del Proyecto
 
 - `main.py` - Punto de entrada del servidor FastAPI y configuración de rutas API/Estáticos.
-- `src/` - Código fuente del frontend en React.
+- `src/` - Código fuente del frontend en React (`PolyglotPortfolio.jsx` es la app; `components/`, `windows/`, `overlays/`, `data/` y `lib/` contienen los módulos).
 - `dist/` - Frontend compilado listo para producción (generado por `npm run build`).
 - `requirements.txt` - Dependencias de Python (FastAPI, Uvicorn).
 - `package.json` - Configuración y dependencias del frontend (Vite, React, TailwindCSS).
 - `tailwind.config.js` y `postcss.config.js` - Configuración de estilos visuales.
+
+---
+
+## ✅ Calidad
+
+```bash
+npm run lint    # ESLint (configuración en .eslintrc.cjs)
+npm run build   # compila y separa el código en chunks (react, motion, app y una por ventana)
+```

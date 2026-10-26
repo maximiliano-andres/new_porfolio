@@ -1,7 +1,8 @@
 /* Draggable, minimizable, maximizable window that grows out of its dock icon. */
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { motion, useMotionValue } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { SectionBoundary, WindowSkeleton } from "./SectionBoundary.jsx";
 import { AudienceToggle } from "./ui.jsx";
 
 export function FloatingWindow({
@@ -114,7 +115,9 @@ export function FloatingWindow({
         >
           {/* cap line length when a window is maximized on wide screens */}
           <div className="w-full max-w-[1080px] mx-auto flex flex-col flex-1">
-            {children}
+            <SectionBoundary name={title}>
+              <Suspense fallback={<WindowSkeleton />}>{children}</Suspense>
+            </SectionBoundary>
           </div>
         </div>
       )}

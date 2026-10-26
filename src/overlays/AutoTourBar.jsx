@@ -2,27 +2,8 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Pause, Play, SkipForward, X } from "lucide-react";
+import { AUTO_TOUR_MS } from "../data/system.js";
 import { HR_ACCENT } from "../theme.js";
-
-export const AUTO_TOUR = {
-  ti: [
-    { open: "about", text: "Quién soy: Backend Developer especializado en optimización de rendimiento." },
-    { open: "skills", text: "Stack políglota: Java, Python y Node.js, con métricas por runtime." },
-    { open: "projects", project: "iacc-optimizer", text: "Caso IACC: un proceso de más de 1 hora reducido a 5–10 minutos." },
-    { open: "experience", text: "Trayectoria: latencia de segundos a milisegundos, SQL +20% y costos cloud." },
-    { open: "simulator", text: "Pruébalo tú: el simulador recrea cómo se optimiza un proceso así." },
-    { open: "contact", text: "¿Conversamos? Escríbeme desde aquí." },
-  ],
-  rrhh: [
-    { open: "hr", text: "Ficha para RRHH: datos clave, resultados medibles y cargos donde encajo." },
-    { open: "skills", text: "Competencias explicadas en lenguaje de negocio, con los términos que piden los avisos." },
-    { open: "projects", project: "iacc-optimizer", text: "Un logro concreto: un proceso de 1 hora que hoy toma 10 minutos." },
-    { open: "experience", text: "Trayectoria: 2 años resolviendo problemas de rendimiento para empresas." },
-    { open: "contact", text: "¿Te interesa el perfil? Coordinemos una entrevista." },
-  ],
-};
-
-const AUTO_TOUR_MS = 60000;
 
 export function AutoTourBar({ tour, bottom, onNext, onTogglePlay, onStop }) {
   const stepMs = AUTO_TOUR_MS / tour.steps.length;

@@ -23,6 +23,10 @@ const TERMINAL_SUGGESTIONS = {
   rrhh: ["help", "about", "open rrhh", "recorrido", "simular"],
 };
 
+// the log is bounded so a long session can't grow memory (or render cost) without limit
+const MAX_LINES = 300;
+const capped = (lines) => (lines.length > MAX_LINES ? lines.slice(-MAX_LINES) : lines);
+
 export function TerminalContent({ onTriggerNotification, onOpenHR }) {
   const { audience, setAudience } = useAudience();
   const sys = useSystem();
@@ -57,6 +61,14 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
   };
 
   useEffect(scrollToEnd, [history]);
+
+  // delayed effects (matrix rain, opening Contact) are cancelled if the terminal closes first
+  const timers = useRef(new Set());
+  const later = (fn, ms) => {
+    const t = setTimeout(() => { timers.current.delete(t); fn(); }, ms);
+    timers.current.add(t);
+  };
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
   // commands that reach the rest of the app (windows, tours, audience) and the easter eggs
   const extraCommand = (cmd, arg) => {
@@ -103,7 +115,7 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
         return "handled";
       case "sudo":
         if (arg.startsWith("contratar") || arg.startsWith("hire")) {
-          setTimeout(() => sys.openWindow("contact"), 1100);
+          later(() => sys.openWindow("contact"), 1100);
           return egg([
             { text: "[sudo] verificando candidato…", type: "info" },
             { text: "  ✔ compilado sin errores · 0 vulnerabilidades", type: "accent" },
@@ -114,7 +126,7 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
         return [{ text: "sudo: permiso concedido solo para 'sudo contratar' 😉", type: "error" }];
       case "matrix":
         setMatrix(true);
-        setTimeout(() => setMatrix(false), 2600);
+        later(() => setMatrix(false), 2600);
         return egg([{ text: "Wake up, Neo…", type: "accent" }]);
       case "coffee":
       case "cafe":
@@ -151,7 +163,7 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
     setHistoryIndex(-1);
 
     if (!cmdClean) {
-      setHistory(newHistory);
+      setHistory(capped(newHistory));
       setInputVal("");
       return;
     }
@@ -162,7 +174,7 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
     const extra = extraCommand(cmd, args.join(" "));
     if (extra === "handled") return;
     if (extra) {
-      setHistory([...newHistory, ...extra]);
+      setHistory(capped([...newHistory, ...extra]));
       setInputVal("");
       return;
     }
@@ -248,7 +260,7 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
         reply = [{ text: `Comando no reconocido: '${cmdClean}'. Escribe 'help' para ver opciones.`, type: "error" }];
     }
 
-    setHistory([...newHistory, ...reply]);
+    setHistory(capped([...newHistory, ...reply]));
     setInputVal("");
   };
 
@@ -260,7 +272,7 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
       const pool = [...TERMINAL_COMMANDS, ...Object.keys(TERMINAL_OPEN_ALIASES).map((k) => `open ${k}`)];
       const hits = [...new Set(pool.filter((c) => c.startsWith(typed) && c !== typed))];
       if (hits.length === 1) setInputVal(hits[0]);
-      else if (hits.length > 1) setHistory((h) => [...h, { text: hits.join("   "), type: "info" }]);
+      else if (hits.length > 1) setHistory((h) => capped([...h, { text: hits.join("   "), type: "info" }]));
       return;
     }
     if (e.key === "ArrowUp") {
@@ -358,6 +370,7 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
           ref={inputRef}
           type="text"
           aria-label="Comando de terminal"
+          maxLength={200}
           autoCapitalize="off"
           autoCorrect="off"
           autoComplete="off"

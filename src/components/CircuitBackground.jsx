@@ -1,12 +1,14 @@
 /* Animated circuit background; traces react to open windows and dock hover. */
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import { CIRCUIT_PATHS } from "../data/content.js";
+import { useCircuit } from "../lib/circuitStore.js";
 import { hasFinePointer, prefersReducedMotion } from "../lib/env.js";
 import { CORE } from "../theme.js";
 
-/* energized: trace indexes of open windows · highlighted: trace of the hovered dock icon ·
-   pulses: one-shot comets fired when a window opens (key forces a fresh animation) */
-export function CircuitBackground({ energized = [], highlighted = null, pulses = [] }) {
+/* energized: trace indexes of open windows (prop, changes only when windows do).
+   Hovered trace and one-shot pulses come from the circuit store, so they never re-render the app. */
+export const CircuitBackground = memo(function CircuitBackground({ energized }) {
+  const { highlighted, pulses } = useCircuit();
   const glowRef = useRef(null);
 
   // cursor-following glow over the grid — mouse only, never with reduced motion; no React re-renders
@@ -117,4 +119,4 @@ export function CircuitBackground({ energized = [], highlighted = null, pulses =
       />
     </div>
   );
-}
+});

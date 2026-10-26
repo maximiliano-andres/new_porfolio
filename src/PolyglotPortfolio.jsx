@@ -1,34 +1,37 @@
 /* App shell: owns window state, layout, audience, achievements, tours and keyboard shortcuts,
    and composes the components, windows and overlays from the modules below. */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import { Code2, Compass, FolderGit2, Github, Hexagon, Linkedin, Mail, Play, Route, Sparkles, Trophy, User, Users, Volume2, VolumeX, Zap } from "lucide-react";
 import { BootScreen } from "./components/BootScreen.jsx";
 import { CircuitBackground } from "./components/CircuitBackground.jsx";
 import { Dock } from "./components/Dock.jsx";
 import { FloatingWindow } from "./components/FloatingWindow.jsx";
+import { SectionBoundary } from "./components/SectionBoundary.jsx";
 import { TopBar } from "./components/TopBar.jsx";
 import { AudienceSwap, AudienceToggle } from "./components/ui.jsx";
 import { AudienceContext, SystemContext } from "./context.js";
 import { NOTIFICATION_MESSAGES, PROJECTS } from "./data/content.js";
 import { AUDIENCES, HR_PROJECTS, PROFILE_NOTIFICATION } from "./data/hr.js";
-import { ALL_ITEMS, DOCK_ITEMS, EXTRA_ITEMS, PROJECT_WIN_WIDTH, WINDOW_CIRCUIT } from "./data/system.js";
+import { ALL_ITEMS, AUTO_TOUR, DOCK_ITEMS, EXTRA_ITEMS, PROJECT_WIN_WIDTH, WINDOW_CIRCUIT } from "./data/system.js";
 import { centeredPos, corePosition, deskArea, dockSpaceFor, isCompactViewport, makeInitialWindows, maximizedPos, tileWindows, uiScaleFor } from "./layout.js";
-import { prefersReducedMotion } from "./lib/env.js";
+import { circuit } from "./lib/circuitStore.js";
 import { sound } from "./lib/sound.js";
 import { storage } from "./lib/storage.js";
 import { AchievementToast } from "./overlays/AchievementToast.jsx";
-import { AUTO_TOUR, AutoTourBar } from "./overlays/AutoTourBar.jsx";
-import { CoachTour } from "./overlays/CoachTour.jsx";
-import { CommandPalette } from "./overlays/CommandPalette.jsx";
-import { CoreMenu } from "./overlays/CoreMenu.jsx";
+import { AutoTourBar } from "./overlays/AutoTourBar.jsx";
 import { CORE, HR_ACCENT, LANG, SOCIAL_LINKS } from "./theme.js";
-import { BadgesContent } from "./windows/BadgesContent.jsx";
-import { ContactContent } from "./windows/ContactContent.jsx";
-import { SimulatorContent } from "./windows/SimulatorContent.jsx";
-import { TerminalContent } from "./windows/TerminalContent.jsx";
-import { AboutHRContent, CertificationsHRContent, ExperienceHRContent, HRSummaryContent, ProjectDetailHRContent, ProjectsHRContent, SkillsHRContent } from "./windows/hr.jsx";
-import { AboutContent, CertificationsContent, EducationContent, ExperienceContent, ProjectDetailContent, ProjectsContent, SkillsContent } from "./windows/tech.jsx";
+import {
+  AboutContent, AboutHRContent, BadgesContent, CertificationsContent, CertificationsHRContent, ContactContent,
+  EducationContent, ExperienceContent, ExperienceHRContent, HRSummaryContent, ProjectDetailContent,
+  ProjectDetailHRContent, ProjectsContent, ProjectsHRContent, SimulatorContent, SkillsContent, SkillsHRContent,
+  TerminalContent, prefetchWindow,
+} from "./windows/lazy.js";
+
+// overlays are only needed after an interaction (or on the first visit's tour): load them on demand
+const CommandPalette = lazy(() => import("./overlays/CommandPalette.jsx").then((m) => ({ default: m.CommandPalette })));
+const CoachTour = lazy(() => import("./overlays/CoachTour.jsx").then((m) => ({ default: m.CoachTour })));
+const CoreMenu = lazy(() => import("./overlays/CoreMenu.jsx").then((m) => ({ default: m.CoreMenu })));
 
 export default function PolyglotPortfolio() {
   const [booted, setBooted] = useState(false);
@@ -49,9 +52,11 @@ export default function PolyglotPortfolio() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [coachOpen, setCoachOpen] = useState(false);
   const [coreOpen, setCoreOpen] = useState(false);
-  const [hoveredDock, setHoveredDock] = useState(null);
-  const [pulses, setPulses] = useState([]);
-  const pulseKey = useRef(0);
+  // overlays mount on first use and then stay mounted, so their exit animations keep working
+  const paletteMounted = useRef(false);
+  const coachMounted = useRef(false);
+  if (paletteOpen) paletteMounted.current = true;
+  if (coachOpen) coachMounted.current = true;
 
   // sound (opt-in, persisted)
   const [soundOn, setSoundOnState] = useState(() => storage.get("sound") === "on");
@@ -210,8 +215,8 @@ export default function PolyglotPortfolio() {
         return { ...w, [id]: { ...cur, minimized: false, z: zRef.current } };
       }
       
-      const activeWindows = Object.entries(w).filter(([_, win]) => win.open && !win.minimized);
-      const isFrontmost = activeWindows.length === 0 || cur.z === Math.max(...activeWindows.map(([_, win]) => win.z));
+      const activeWindows = Object.values(w).filter((win) => win.open && !win.minimized);
+      const isFrontmost = activeWindows.length === 0 || cur.z === Math.max(...activeWindows.map((win) => win.z));
 
       if (isFrontmost) {
         return { ...w, [id]: { ...cur, minimized: true } };
@@ -246,13 +251,6 @@ export default function PolyglotPortfolio() {
   }, [unlock]);
 
   /* ---- reactions to windows opening/closing: sound, circuit pulses, exploration, badges ---- */
-  const firePulses = useCallback((ids) => {
-    if (prefersReducedMotion()) return;
-    const fresh = ids.filter((id) => WINDOW_CIRCUIT[id] !== undefined).map((id) => ({ key: ++pulseKey.current, idx: WINDOW_CIRCUIT[id] }));
-    if (!fresh.length) return;
-    setPulses((p) => [...p, ...fresh]);
-    setTimeout(() => setPulses((p) => p.filter((x) => !fresh.includes(x))), 1300);
-  }, []);
   const prevWindowsRef = useRef(windows);
   useEffect(() => {
     const prev = prevWindowsRef.current;
@@ -267,7 +265,7 @@ export default function PolyglotPortfolio() {
     }
     if (opened.length) {
       sound.play("open");
-      firePulses(opened);
+      circuit.pulse(opened);
       unlock("first");
       if (opened.includes("hr")) unlock("recruiter");
     } else if (closed) {
@@ -282,9 +280,9 @@ export default function PolyglotPortfolio() {
       storage.set("visited", JSON.stringify([...next]));
       if (next.size === DOCK_ITEMS.length) unlock("explorer");
     }
-  }, [windows, unlock, firePulses]);
+  }, [windows, unlock]);
   useEffect(() => {
-    if (projectWin.open && !projectWin.minimized) firePulses(["project-detail"]);
+    if (projectWin.open && !projectWin.minimized) circuit.pulse(["project-detail"]);
   }, [projectWin.open, projectWin.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ---- CORE hub, tours ---- */
@@ -404,10 +402,21 @@ export default function PolyglotPortfolio() {
   const switchTo = useCallback((id) => { bringFront(id); sound.play("click"); }, [bringFront]);
 
   const openCount = openList.length + (projectWin.open && !projectWin.minimized ? 1 : 0);
-  const energized = [
+  // stable array (same identity until the set of open windows changes) so the memoized background skips re-renders
+  const energizedKey = [
     ...openList.map((it) => WINDOW_CIRCUIT[it.id]),
     ...(projectWin.open && !projectWin.minimized ? [WINDOW_CIRCUIT["project-detail"]] : []),
-  ];
+  ].join(",");
+  const energized = useMemo(() => (energizedKey ? energizedKey.split(",").map(Number) : []), [energizedKey]);
+
+  // warm the code of the likely-first windows once the browser is idle after boot
+  useEffect(() => {
+    if (!booted) return;
+    const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 1500));
+    const cancel = window.cancelIdleCallback || clearTimeout;
+    const handle = idle(() => ["about", "hr", "projects"].forEach(prefetchWindow));
+    return () => cancel(handle);
+  }, [booted]);
 
   const commands = useMemo(() => [
     ...dockItems.map((it, i) => ({
@@ -468,11 +477,7 @@ export default function PolyglotPortfolio() {
         {!booted && <BootScreen onDone={() => setBooted(true)} onChoose={(id) => setAudience(id, { silent: true })} current={audience} />}
       </AnimatePresence>
 
-      <CircuitBackground
-        energized={energized}
-        highlighted={hoveredDock ? WINDOW_CIRCUIT[hoveredDock] : null}
-        pulses={pulses}
-      />
+      <CircuitBackground energized={energized} />
       <TopBar
         scale={uiScale}
         openCount={openCount}
@@ -668,18 +673,22 @@ export default function PolyglotPortfolio() {
         </AnimatePresence>
       </div>
 
-      {booted && <Dock items={dockItems} windows={windows} onToggle={toggleWindow} onHover={setHoveredDock} scale={uiScale} />}
+      {booted && <Dock items={dockItems} windows={windows} onToggle={toggleWindow} scale={uiScale} />}
 
       <AnimatePresence>
         {coreOpen && (
-          <CoreMenu
-            open={coreOpen}
-            onClose={() => setCoreOpen(false)}
-            origin={core}
-            area={area}
-            items={allItems}
-            onPick={(id) => { setCoreOpen(false); openWindow(id); }}
-          />
+          <SectionBoundary key="core" name="core-menu" silent>
+            <Suspense fallback={null}>
+              <CoreMenu
+                open={coreOpen}
+                onClose={() => setCoreOpen(false)}
+                origin={core}
+                area={area}
+                items={allItems}
+                onPick={(id) => { setCoreOpen(false); openWindow(id); }}
+              />
+            </Suspense>
+          </SectionBoundary>
         )}
       </AnimatePresence>
 
@@ -695,8 +704,20 @@ export default function PolyglotPortfolio() {
         )}
       </AnimatePresence>
 
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} commands={commands} />
-      <CoachTour open={coachOpen} onClose={closeCoach} onFinish={finishCoach} />
+      {paletteMounted.current && (
+        <SectionBoundary name="command-palette" silent>
+          <Suspense fallback={null}>
+            <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} commands={commands} />
+          </Suspense>
+        </SectionBoundary>
+      )}
+      {coachMounted.current && (
+        <SectionBoundary name="coach-tour" silent>
+          <Suspense fallback={null}>
+            <CoachTour open={coachOpen} onClose={closeCoach} onFinish={finishCoach} />
+          </Suspense>
+        </SectionBoundary>
+      )}
 
       <AnimatePresence>
         {achQueue[0] && <AchievementToast key={achQueue[0]} id={achQueue[0]} onDone={popAchievement} />}
@@ -772,7 +793,7 @@ export default function PolyglotPortfolio() {
 
             {/* Image (right side, larger, no contour) */}
             <img
-              src="/img/logo_max_andres.webp"
+              src="/img/logo_max_andres_160.webp" width={107} height={160} decoding="async"
               alt=""
               onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
               className="w-12 h-12 sm:w-16 sm:h-16 shrink-0 object-contain select-none self-center short:hidden"

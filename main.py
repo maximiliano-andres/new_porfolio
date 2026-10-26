@@ -1,60 +1,197 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, field_validator
-from datetime import datetime, timezone
+"""Portfolio server: serves the compiled Vite frontend (dist/) and the contact API.
+
+Configuration (environment variables, all optional):
+  APP_ENV        "production" (default) or "development" — development enables /docs and reload
+  HOST, PORT     bind address (default 127.0.0.1:8000; use 0.0.0.0 only behind a proxy/firewall)
+  CORS_ORIGINS   comma-separated extra origins (default: the Vite dev server)
+  TRUST_PROXY    "1" to take the client IP from X-Forwarded-For (only behind a trusted proxy)
+  ENABLE_HSTS    "1" when the site is served exclusively over HTTPS
+"""
 import json
+import logging
 import os
-import re
+import threading
+import time
+from collections import defaultdict, deque
+from datetime import datetime, timezone
+from pathlib import Path
 
-app = FastAPI(title="Portfolio Server")
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel, Field, field_validator
 
-# Configurar CORS: sólo el dev server de Vite necesita origen cruzado.
-# En producción, FastAPI sirve el frontend compilado desde el mismo origen.
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
-    allow_credentials=False,
-    allow_methods=["GET", "POST"],
-    allow_headers=["*"],
+BASE_DIR = Path(__file__).resolve().parent
+FRONTEND_DIR = BASE_DIR / "dist"
+CONTACT_LOG = BASE_DIR / "contact_messages.jsonl"
+
+APP_ENV = os.getenv("APP_ENV", "production").lower()
+IS_DEV = APP_ENV == "development"
+TRUST_PROXY = os.getenv("TRUST_PROXY") == "1"
+ENABLE_HSTS = os.getenv("ENABLE_HSTS") == "1"
+
+MAX_BODY_BYTES = 16 * 1024          # a contact message never needs more
+RATE_LIMIT = 5                      # contact submissions…
+RATE_WINDOW_S = 10 * 60             # …per client IP per 10 minutes
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+log = logging.getLogger("portfolio")
+
+app = FastAPI(
+    title="Portfolio Server",
+    # API docs are useful while developing but needlessly expose the surface in production
+    docs_url="/docs" if IS_DEV else None,
+    redoc_url=None,
+    openapi_url="/openapi.json" if IS_DEV else None,
 )
 
-# Ruta a la carpeta estática del frontend compilado (por ejemplo, con Vite)
-FRONTEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dist")
-CONTACT_LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "contact_messages.jsonl")
+cors_origins = ["http://localhost:5173", "http://127.0.0.1:5173"] + [
+    o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()
+]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
+app.add_middleware(GZipMiddleware, minimum_size=1024)
 
-EMAIL_RE = re.compile(r"^\S+@\S+\.\S+$")
+# Inline styles are required by the UI (framer-motion animates style attributes);
+# scripts are only ever loaded from our own origin.
+CSP = "; ".join([
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data:",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+])
 
 
+@app.middleware("http")
+async def security_and_limits(request: Request, call_next):
+    # reject oversized API bodies before they are read into memory
+    if request.url.path.startswith("/api/") and request.method == "POST":
+        length = request.headers.get("content-length")
+        if length is None:
+            return JSONResponse({"detail": "Falta Content-Length."}, status_code=411)
+        if not length.isdigit() or int(length) > MAX_BODY_BYTES:
+            return JSONResponse({"detail": "El mensaje es demasiado grande."}, status_code=413)
+
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()")
+    response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+    if not (IS_DEV and request.url.path.startswith(("/docs", "/openapi.json"))):
+        response.headers.setdefault("Content-Security-Policy", CSP)
+    if ENABLE_HSTS:
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return response
+
+
+# ---------- error handling: concise, consistent JSON; details stay in the server log ----------
+@app.exception_handler(RequestValidationError)
+async def validation_error(_: Request, exc: RequestValidationError):
+    fields = sorted({str(e["loc"][-1]) for e in exc.errors() if e.get("loc")})
+    return JSONResponse({"detail": "Datos inválidos.", "fields": fields}, status_code=422)
+
+
+@app.exception_handler(Exception)
+async def unhandled_error(request: Request, exc: Exception):
+    log.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse({"detail": "Error interno del servidor."}, status_code=500)
+
+
+# ---------- contact API ----------
 class ContactMessage(BaseModel):
-    name: str
-    email: str
-    message: str
+    name: str = Field(min_length=1, max_length=100)
+    email: str = Field(min_length=3, max_length=254)
+    message: str = Field(min_length=1, max_length=5000)
+    # honeypot: invisible to people, bots tend to fill it in
+    website: str = Field(default="", max_length=200)
 
     @field_validator("name", "message")
     @classmethod
-    def not_blank(cls, v):
-        if not v.strip():
+    def not_blank(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
             raise ValueError("no puede estar vacío")
-        return v.strip()
+        return v
 
     @field_validator("email")
     @classmethod
-    def valid_email(cls, v):
-        if not EMAIL_RE.match(v):
+    def valid_email(cls, v: str) -> str:
+        v = v.strip()
+        local, sep, domain = v.rpartition("@")
+        if not sep or not local or "." not in domain or any(c.isspace() for c in v):
             raise ValueError("email inválido")
         return v
 
 
-# Rutas de la API pueden ir aquí
+class RateLimiter:
+    """Sliding-window limiter per client IP (in memory — enough for a single-instance portfolio)."""
+
+    def __init__(self, limit: int, window_s: int):
+        self.limit, self.window_s = limit, window_s
+        self.hits: dict[str, deque] = defaultdict(deque)
+        self.lock = threading.Lock()
+
+    def check(self, key: str) -> int:
+        """Returns 0 if allowed, otherwise the seconds to wait."""
+        now = time.monotonic()
+        with self.lock:
+            q = self.hits[key]
+            while q and now - q[0] > self.window_s:
+                q.popleft()
+            if len(q) >= self.limit:
+                return int(self.window_s - (now - q[0])) + 1
+            q.append(now)
+            if len(self.hits) > 10_000:  # bound memory under abuse
+                for k in [k for k, v in self.hits.items() if not v][:5_000]:
+                    del self.hits[k]
+            return 0
+
+
+contact_limiter = RateLimiter(RATE_LIMIT, RATE_WINDOW_S)
+contact_log_lock = threading.Lock()
+
+
+def client_ip(request: Request) -> str:
+    if TRUST_PROXY:
+        forwarded = request.headers.get("x-forwarded-for", "")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
 @app.get("/api/status")
-async def get_status():
-    return {"status": "ok", "message": "FastAPI server is running!"}
+def get_status():
+    return {"status": "ok"}
 
 
 @app.post("/api/contact")
-async def submit_contact(payload: ContactMessage):
+def submit_contact(payload: ContactMessage, request: Request):
+    # sync handler → runs in the threadpool, so the blocking file write never stalls the event loop
+    wait = contact_limiter.check(client_ip(request))
+    if wait:
+        raise HTTPException(
+            status_code=429,
+            detail="Demasiados mensajes. Intenta de nuevo más tarde.",
+            headers={"Retry-After": str(wait)},
+        )
+    if payload.website:
+        log.info("Contact honeypot triggered; message discarded")
+        return {"status": "ok"}  # same answer as a real submission, so bots learn nothing
+
     entry = {
         "name": payload.name,
         "email": payload.email,
@@ -62,29 +199,53 @@ async def submit_contact(payload: ContactMessage):
         "received_at": datetime.now(timezone.utc).isoformat(),
     }
     try:
-        with open(CONTACT_LOG, "a", encoding="utf-8") as f:
-            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
-    except OSError as exc:
-        raise HTTPException(status_code=500, detail="No se pudo guardar el mensaje.") from exc
+        with contact_log_lock:
+            # 0o600: the log contains personal data, readable only by the server user
+            fd = os.open(CONTACT_LOG, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+            with os.fdopen(fd, "a", encoding="utf-8") as f:
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except OSError:
+        log.exception("Could not write the contact log")
+        raise HTTPException(status_code=500, detail="No se pudo guardar el mensaje.")
+    log.info("Contact message stored")  # never log the content: it is personal data
     return {"status": "ok"}
 
-# Si existe la carpeta dist, servimos el frontend
-if os.path.isdir(FRONTEND_DIR):
-    # Servir archivos estáticos (JS, CSS, imágenes)
-    app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIR, "assets")), name="assets")
 
-@app.get("/{catchall:path}")
-async def serve_frontend(catchall: str):
-    """
-    Sirve el archivo index.html para todas las demás rutas.
-    Esto es necesario para que el enrutamiento del lado del cliente (React Router) funcione.
-    """
-    index_path = os.path.join(FRONTEND_DIR, "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return {"message": "El frontend no está compilado. Por favor compila tu código de React (ej. Vite) en la carpeta 'dist'."}
+@app.api_route("/api/{rest:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
+def api_not_found(rest: str):
+    raise HTTPException(status_code=404, detail="Recurso no encontrado.")
+
+
+# ---------- frontend (compiled SPA) ----------
+# Only these file types are served from dist/; anything else (e.g. stray .md files) falls back to the SPA.
+STATIC_TYPES = {".js", ".css", ".webp", ".png", ".jpg", ".jpeg", ".svg", ".ico", ".txt", ".woff2", ".json", ".webmanifest"}
+
+
+@app.get("/{path:path}")
+def serve_frontend(path: str):
+    index = FRONTEND_DIR / "index.html"
+    if not index.is_file():
+        return JSONResponse(
+            {"detail": "El frontend no está compilado. Ejecuta `npm run build` para generar dist/."},
+            status_code=503,
+        )
+    if path:
+        candidate = (FRONTEND_DIR / path).resolve()
+        # resolve() + is_relative_to blocks path traversal (../, symlinks outside dist)
+        if candidate.is_relative_to(FRONTEND_DIR) and candidate.is_file() and candidate.suffix.lower() in STATIC_TYPES:
+            # hashed build assets never change → cache for a year; everything else revalidates
+            cache = "public, max-age=31536000, immutable" if path.startswith("assets/") else "public, max-age=3600"
+            return FileResponse(candidate, headers={"Cache-Control": cache})
+    return FileResponse(index, headers={"Cache-Control": "no-cache"})
+
 
 if __name__ == "__main__":
     import uvicorn
-    # Iniciar el servidor en el puerto 8000
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+
+    uvicorn.run(
+        "main:app",
+        host=os.getenv("HOST", "127.0.0.1"),
+        port=int(os.getenv("PORT", "8000")),
+        reload=IS_DEV,
+        proxy_headers=TRUST_PROXY,
+    )
