@@ -304,7 +304,7 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
         </p>
         <button
           onClick={onOpenHR}
-          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-medium hover:brightness-110 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none"
+          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-medium hover:brightness-110 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
           style={{ background: HR_ACCENT, color: "#05070b" }}
         >
           <Users size={12} /> Abrir ficha RRHH
@@ -357,7 +357,7 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
             key={c}
             type="button"
             onClick={(e) => { e.stopPropagation(); runCommand(c); }}
-            className="rounded border px-1.5 py-1 text-[10.5px] text-white/60 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none"
+            className="rounded-sm border px-1.5 py-1 text-[10.5px] text-white/60 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
             style={{ borderColor: `${LANG.node.c1}44` }}
           >
             {c}
@@ -379,7 +379,7 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
           value={inputVal}
           onChange={(e) => setInputVal(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="flex-1 min-w-0 py-1 bg-transparent border-none outline-none text-white font-mono text-[16px] sm:text-[12px]"
+          className="flex-1 min-w-0 py-1 bg-transparent border-none outline-hidden text-white font-mono text-[16px] sm:text-[12px]"
           autoFocus={finePointer}
         />
       </form>

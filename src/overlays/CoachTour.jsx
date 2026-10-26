@@ -1,6 +1,6 @@
 /* Coach-mark tour that spotlights real UI elements. */
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { CORE } from "../theme.js";
 
 const COACH_STEPS = [
@@ -56,13 +56,13 @@ export function CoachTour({ open, onClose, onFinish }) {
 
   return (
     <div className="fixed inset-0 z-[260]" role="dialog" aria-modal="true" aria-label="Tour guiado">
-      <motion.div
+      <m.div
         className="fixed rounded-[14px] pointer-events-none"
         animate={{ left: rect.left - pad, top: rect.top - pad, width: rect.width + pad * 2, height: rect.height + pad * 2 }}
         transition={{ type: "spring", stiffness: 260, damping: 30 }}
         style={{ boxShadow: `0 0 0 9999px rgba(3,5,9,0.74), 0 0 0 2px ${CORE}, 0 0 24px ${CORE}66` }}
       />
-      <motion.div
+      <m.div
         key={i}
         initial={{ opacity: 0, y: below ? -6 : 6 }}
         animate={{ opacity: 1, y: 0 }}
@@ -75,33 +75,33 @@ export function CoachTour({ open, onClose, onFinish }) {
           borderColor: `${CORE}55`,
         }}
       >
-        <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: CORE, fontFamily: "'JetBrains Mono', monospace" }}>
+        <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: CORE, fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
           Paso {i + 1} de {steps.length}
         </div>
-        <div className="text-[14px] font-semibold text-white mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{step.title}</div>
+        <div className="text-[14px] font-semibold text-white mb-1" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>{step.title}</div>
         <p className="text-[12.5px] text-white/70 leading-5">{step.text}</p>
         <div className="flex items-center justify-between gap-2 mt-4">
-          <button onClick={onClose} className="text-[11.5px] text-white/45 hover:text-white px-1 py-1.5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none rounded">
+          <button onClick={onClose} className="text-[11.5px] text-white/45 hover:text-white px-1 py-1.5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden rounded-sm">
             Saltar tour
           </button>
           <div className="flex gap-2">
             <button
               onClick={() => setI((n) => n - 1)}
               disabled={i === 0}
-              className="rounded-md border border-white/15 px-3 py-1.5 text-[12px] text-white/70 disabled:opacity-30 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none"
+              className="rounded-md border border-white/15 px-3 py-1.5 text-[12px] text-white/70 disabled:opacity-30 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
             >
               Atrás
             </button>
             <button
               onClick={() => (last ? onFinish() : setI((n) => n + 1))}
-              className="rounded-md px-3 py-1.5 text-[12px] font-medium focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-none"
+              className="rounded-md px-3 py-1.5 text-[12px] font-medium focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-hidden"
               style={{ background: CORE, color: "#05070b" }}
             >
               {last ? "¡Listo!" : "Siguiente"}
             </button>
           </div>
         </div>
-      </motion.div>
+      </m.div>
     </div>
   );
 }

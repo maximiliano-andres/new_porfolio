@@ -38,7 +38,7 @@ export class SectionBoundary extends Component {
         </div>
         <button
           onClick={this.retry}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-[12px] text-white/80 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-[12px] text-white/80 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
         >
           <RotateCcw size={13} /> Reintentar
         </button>
@@ -51,9 +51,9 @@ export class SectionBoundary extends Component {
 export function WindowSkeleton() {
   return (
     <div className="w-full space-y-3 animate-pulse py-1" aria-busy="true" aria-label="Cargando">
-      <div className="h-3 w-2/3 rounded bg-white/10" />
-      <div className="h-3 w-full rounded bg-white/[0.07]" />
-      <div className="h-3 w-5/6 rounded bg-white/[0.07]" />
+      <div className="h-3 w-2/3 rounded-sm bg-white/10" />
+      <div className="h-3 w-full rounded-sm bg-white/[0.07]" />
+      <div className="h-3 w-5/6 rounded-sm bg-white/[0.07]" />
       <div className="h-20 w-full rounded-lg bg-white/[0.05] mt-4" />
     </div>
   );

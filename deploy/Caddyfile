@@ -1,0 +1,37 @@
+# Production front door (optional): Caddy serves the static build with automatic HTTPS, HTTP/2-3 and the
+# precompressed .br/.gz files from the build, and proxies /api/* to FastAPI (uvicorn on 127.0.0.1:8000).
+#   1. npm run build            (also regenerates deploy/security-headers.caddy)
+#   2. APP_ENV=production TRUST_PROXY=1 python main.py
+#   3. SITE_ADDRESS=tudominio.cl caddy run --config deploy/Caddyfile   (run from the project root)
+# Behind Cloudflare or another CDN the same rules apply; the CDN caches /assets/* for a year.
+
+{$SITE_ADDRESS::8080} {
+	root * dist
+	import security-headers.caddy
+
+	# API → FastAPI (rate limits, validation and contact storage live there)
+	handle /api/* {
+		encode zstd gzip
+		reverse_proxy {$API_UPSTREAM:127.0.0.1:8000}
+	}
+
+	# never publish stray docs or the precompressed files directly
+	@hidden path *.md *.br *.gz
+	respond @hidden 404
+
+	@assets path /assets/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+	@fonts path /fonts/*
+	header @fonts Cache-Control "public, max-age=2592000"
+	@sw path /sw.js
+	header @sw Cache-Control "no-cache"
+	@page path / /index.html
+	header @page Cache-Control "no-cache"
+
+	handle {
+		try_files {path} /index.html
+		file_server {
+			precompressed br gzip
+		}
+	}
+}

@@ -1,51 +1,76 @@
-/* Animated circuit background; traces react to open windows and dock hover. */
+/* Animated circuit background; traces react to open windows and dock hover.
+   Rendering cost is kept low on purpose:
+   - static art (grid, base traces, CORE label) lives in its own SVG layer and is painted once;
+   - the animated layer has no per-frame `filter` (glow = a wider translucent dashed stroke);
+   - the cursor glow is a fixed-size circle moved with `transform` (compositor only, no repaint);
+   - everything pauses when hidden behind windows or when the visitor prefers reduced motion. */
 import { memo, useEffect, useRef } from "react";
 import { CIRCUIT_PATHS } from "../data/content.js";
 import { useCircuit } from "../lib/circuitStore.js";
 import { hasFinePointer, prefersReducedMotion } from "../lib/env.js";
 import { CORE } from "../theme.js";
 
+const SVG_PROPS = { viewBox: "0 0 1440 900", preserveAspectRatio: "xMidYMid slice", fill: "none" };
+const GLOW_SIZE = 480;
+
 /* energized: trace indexes of open windows (prop, changes only when windows do).
+   paused: the desk is covered (maximized window, or any window on a phone).
    Hovered trace and one-shot pulses come from the circuit store, so they never re-render the app. */
-export const CircuitBackground = memo(function CircuitBackground({ energized }) {
+export const CircuitBackground = memo(function CircuitBackground({ energized, paused = false }) {
   const { highlighted, pulses } = useCircuit();
   const glowRef = useRef(null);
+  const animatedRef = useRef(null);
+  const reduced = prefersReducedMotion();
+  const still = paused || reduced;
 
-  // cursor-following glow over the grid — mouse only, never with reduced motion; no React re-renders
+  // cursor-following glow — mouse only, never with reduced motion; moved on the compositor, no React re-renders
   useEffect(() => {
     if (!hasFinePointer() || prefersReducedMotion()) return;
     let frame = 0;
     const onMove = (e) => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        glowRef.current?.style.setProperty("--mx", `${e.clientX}px`);
-        glowRef.current?.style.setProperty("--my", `${e.clientY}px`);
+        const el = glowRef.current;
+        if (!el) return;
+        el.style.opacity = "1";
+        el.style.transform = `translate3d(${e.clientX - GLOW_SIZE / 2}px, ${e.clientY - GLOW_SIZE / 2}px, 0)`;
       });
     };
     window.addEventListener("pointermove", onMove);
     return () => { cancelAnimationFrame(frame); window.removeEventListener("pointermove", onMove); };
   }, []);
 
+  // CSS animations stop via `animation-play-state`; the moving dots are SMIL, which CSS can't pause
+  useEffect(() => {
+    const svg = animatedRef.current;
+    if (!svg) return;
+    if (still) svg.pauseAnimations?.();
+    else svg.unpauseAnimations?.();
+  }, [still]);
+
+  const playState = still ? "paused" : "running";
+
   return (
     <div className="fixed inset-0 z-0 overflow-hidden bg-[#05070b]" aria-hidden="true">
       <div
         className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 70% 55% at 50% 42%, rgba(34,211,238,0.09), transparent 60%)",
-        }}
+        style={{ background: "radial-gradient(ellipse 70% 55% at 50% 42%, rgba(34,211,238,0.09), transparent 60%)" }}
       />
       <div
         ref={glowRef}
-        className="absolute inset-0 transition-opacity duration-500"
-        style={{ background: "radial-gradient(240px circle at var(--mx, -999px) var(--my, -999px), rgba(34,211,238,0.07), transparent 70%)" }}
+        className="absolute left-0 top-0 rounded-full pointer-events-none"
+        style={{
+          width: GLOW_SIZE,
+          height: GLOW_SIZE,
+          opacity: 0,
+          willChange: "transform",
+          transition: "opacity 0.5s",
+          background: "radial-gradient(circle at center, rgba(34,211,238,0.07), transparent 50%)",
+        }}
       />
-      <svg
-        className="absolute inset-0 w-full h-full opacity-[0.55]"
-        viewBox="0 0 1440 900"
-        preserveAspectRatio="xMidYMid slice"
-        fill="none"
-      >
+
+      {/* static layer: painted once */}
+      <svg className="absolute inset-0 w-full h-full opacity-[0.55]" {...SVG_PROPS}>
         <defs>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
             <path d="M40 0H0V40" fill="none" stroke="rgba(255,255,255,0.035)" strokeWidth="1" />
@@ -55,14 +80,41 @@ export const CircuitBackground = memo(function CircuitBackground({ energized }) 
         {CIRCUIT_PATHS.map((p, i) => {
           const on = energized.includes(i) || highlighted === i;
           return (
+            <path
+              key={i}
+              d={p.d}
+              stroke={p.color}
+              strokeWidth={on ? 2 : 1.5}
+              strokeOpacity={on ? 0.5 : 0.18}
+              fill="none"
+              style={{ transition: "stroke-opacity 0.4s, stroke-width 0.4s" }}
+            />
+          );
+        })}
+        <text x="760" y="214" textAnchor="middle" fill={CORE} fontSize="9"
+          fontFamily="'JetBrains Mono', 'JetBrains Mono Fallback', monospace" opacity="0.85" letterSpacing="1">
+          CORE
+        </text>
+      </svg>
+
+      {/* animated layer: its own compositing layer, no filters on anything that moves every frame */}
+      <svg ref={animatedRef} className="absolute inset-0 w-full h-full opacity-[0.55]" style={{ willChange: "transform" }} {...SVG_PROPS}>
+        {CIRCUIT_PATHS.map((p, i) => {
+          const on = energized.includes(i) || highlighted === i;
+          // play state goes inside the shorthand: mixing `animation` with `animationPlayState` makes React warn
+          const animation = `dashflow ${on ? p.dur / 2.2 : p.dur}s linear ${p.delay}s infinite ${playState}`;
+          return (
             <g key={i}>
+              {/* glow: a wider, translucent copy of the dashes (replaces a per-frame drop-shadow filter) */}
               <path
                 d={p.d}
                 stroke={p.color}
-                strokeWidth={on ? 2 : 1.5}
-                strokeOpacity={on ? 0.5 : 0.18}
+                strokeWidth={on ? 9 : 6}
+                strokeOpacity={on ? 0.22 : 0.14}
+                strokeLinecap="round"
                 fill="none"
-                style={{ transition: "stroke-opacity 0.4s, stroke-width 0.4s" }}
+                strokeDasharray="10 22"
+                style={{ animation }}
               />
               <path
                 d={p.d}
@@ -70,10 +122,7 @@ export const CircuitBackground = memo(function CircuitBackground({ energized }) 
                 strokeWidth={on ? 2.6 : 2}
                 fill="none"
                 strokeDasharray="10 22"
-                style={{
-                  animation: `dashflow ${on ? p.dur / 2.2 : p.dur}s linear ${p.delay}s infinite`,
-                  filter: `drop-shadow(0 0 ${on ? 6 : 3}px ${p.color})`,
-                }}
+                style={{ animation }}
               />
               <circle r={on ? 4 : 3} fill={p.color}>
                 <animateMotion dur={`${p.dur}s`} begin={`${p.delay}s`} repeatCount="indefinite" path={p.d} />
@@ -93,11 +142,12 @@ export const CircuitBackground = memo(function CircuitBackground({ energized }) 
               strokeLinecap="round"
               fill="none"
               strokeDasharray="12 120"
+              // one-shot, 1.1 s: the glow filter is affordable here
               style={{ animation: "comet 1.1s ease-out forwards", filter: `drop-shadow(0 0 6px ${p.color}) drop-shadow(0 0 12px ${p.color})` }}
             />
           );
         })}
-        <g style={{ animation: "corepulse 3.2s ease-in-out infinite" }}>
+        <g style={{ animation: `corepulse 3.2s ease-in-out infinite ${playState}`, transformOrigin: "760px 210px" }}>
           <polygon
             points="760,140 820,175 820,245 760,280 700,245 700,175"
             fill="rgba(34,211,238,0.07)"
@@ -105,17 +155,11 @@ export const CircuitBackground = memo(function CircuitBackground({ energized }) 
             strokeWidth="1.5"
           />
         </g>
-        <text x="760" y="214" textAnchor="middle" fill={CORE} fontSize="9"
-          fontFamily="'JetBrains Mono', monospace" opacity="0.85" letterSpacing="1">
-          CORE
-        </text>
       </svg>
+
       <div
         className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 90% 70% at 50% 45%, transparent 40%, rgba(5,7,11,0.85) 100%)",
-        }}
+        style={{ background: "radial-gradient(ellipse 90% 70% at 50% 45%, transparent 40%, rgba(5,7,11,0.85) 100%)" }}
       />
     </div>
   );

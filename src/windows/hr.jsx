@@ -12,13 +12,13 @@ function KpiGrid() {
       {HR_KPIS.map((k) => (
         <Tilt key={k.client} className="h-full">
         <div className="h-full rounded-lg border p-3.5 flex @md:flex-col items-center @md:items-start gap-3 @md:gap-1" style={{ borderColor: `${k.color}33`, background: `${k.color}0b` }}>
-          <div className="text-[26px] leading-none font-semibold shrink-0 min-w-[78px] @md:min-w-0" style={{ color: k.color, fontFamily: "'Space Grotesk', sans-serif" }}>
+          <div className="text-[26px] leading-none font-semibold shrink-0 min-w-[78px] @md:min-w-0" style={{ color: k.color, fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
             <CountUp value={k.value} />
           </div>
           <div className="min-w-0">
             <div className="text-[12px] font-medium text-white/90 leading-4 @md:mt-1.5">{k.label}</div>
             <div className="text-[11px] text-white/55 mt-1 leading-4">{k.detail}</div>
-            <div className="text-[10px] text-white/40 mt-1.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{k.client}</div>
+            <div className="text-[10px] text-white/40 mt-1.5" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{k.client}</div>
           </div>
         </div>
         </Tilt>
@@ -44,7 +44,7 @@ export function HRSummaryContent({ onOpen }) {
         <div className="flex items-center gap-3.5 mb-4">
           <img src="/img/max_andres_head_256.webp" width={256} height={234} decoding="async" alt="" className="w-14 h-14 rounded-lg object-cover border border-white/10 shrink-0 bg-black/40" />
           <div className="min-w-0">
-            <div className="text-[15px] font-semibold text-white leading-5 text-balance" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <div className="text-[15px] font-semibold text-white leading-5 text-balance" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
               Maximiliano Andrés Caniullan Lefiñir
             </div>
             <div className="text-[12px] text-white/55 mt-0.5">Backend Developer · Especialista en optimización</div>
@@ -53,7 +53,7 @@ export function HRSummaryContent({ onOpen }) {
         <dl className="grid grid-cols-2 @lg:grid-cols-4 gap-2.5">
           {HR_FACTS.map(({ Icon, label, value }) => (
             <div key={label} className="rounded-lg bg-black/25 border border-white/[0.06] px-3 py-2.5">
-              <dt className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <dt className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/40" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
                 <Icon size={11} style={{ color: HR_ACCENT }} /> {label}
               </dt>
               <dd className="text-[12.5px] text-white/90 mt-1 font-medium">{value}</dd>
@@ -86,10 +86,10 @@ export function HRSummaryContent({ onOpen }) {
 
       <section>
         <div className="flex items-center justify-between gap-3 mb-3">
-          <SectionTitle className="!mb-0">Palabras clave para filtros (ATS)</SectionTitle>
+          <SectionTitle className="mb-0!">Palabras clave para filtros (ATS)</SectionTitle>
           <button
             onClick={copyKeywords}
-            className="inline-flex items-center gap-1.5 shrink-0 rounded-md border border-white/10 px-2.5 py-1.5 text-[11px] text-white/70 hover:text-white hover:border-white/25 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none"
+            className="inline-flex items-center gap-1.5 shrink-0 rounded-md border border-white/10 px-2.5 py-1.5 text-[11px] text-white/70 hover:text-white hover:border-white/25 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
           >
             {copied ? <><Check size={12} style={{ color: LANG.node.c2 }} /> Copiado</> : <><Copy size={12} /> Copiar</>}
           </button>
@@ -97,7 +97,7 @@ export function HRSummaryContent({ onOpen }) {
         <p className="text-[11.5px] text-white/50 mb-2.5">Términos técnicos de mi perfil tal como aparecen en avisos de empleo.</p>
         <div className="flex flex-wrap gap-1.5">
           {ATS_KEYWORDS.map((k) => (
-            <span key={k} className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-white/70" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            <span key={k} className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] text-white/70" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
               {k}
             </span>
           ))}
@@ -119,7 +119,7 @@ export function HRSummaryContent({ onOpen }) {
       <div className="flex flex-wrap gap-2.5 pt-4 border-t border-white/10">
         <button
           onClick={() => onOpen("contact")}
-          className="flex-1 min-w-[180px] inline-flex items-center justify-center gap-2 rounded-lg py-2.5 text-[12.5px] font-medium hover:brightness-110 active:scale-[0.98] transition-all focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-none"
+          className="flex-1 min-w-[180px] inline-flex items-center justify-center gap-2 rounded-lg py-2.5 text-[12.5px] font-medium hover:brightness-110 active:scale-[0.98] transition-all focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-hidden"
           style={{ background: `linear-gradient(90deg, ${HR_ACCENT}, ${LANG.java.c1})`, color: "#05070b" }}
         >
           <Calendar size={14} /> Coordinar una entrevista
@@ -128,7 +128,7 @@ export function HRSummaryContent({ onOpen }) {
           href={SOCIAL_LINKS.linkedin}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1 min-w-[180px] inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 py-2.5 text-[12.5px] font-medium text-white/80 hover:bg-white/5 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none"
+          className="flex-1 min-w-[180px] inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 py-2.5 text-[12.5px] font-medium text-white/80 hover:bg-white/5 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
         >
           <Linkedin size={14} /> Ver perfil en LinkedIn
         </a>
@@ -143,7 +143,7 @@ export function AboutHRContent() {
       <div className="flex items-center gap-3.5">
         <img src="/img/max_andres_head_256.webp" width={256} height={234} decoding="async" alt="Maximiliano Caniullan" className="w-16 h-16 rounded-xl object-cover border border-white/10 shrink-0 bg-black/40" />
         <div className="min-w-0">
-          <h3 className="text-white text-[15px] font-semibold text-balance" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <h3 className="text-white text-[15px] font-semibold text-balance" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
             Maximiliano Andrés Caniullan Lefiñir
           </h3>
           <p className="text-white/50 text-[12px]">Desarrollador de sistemas · Especialista en eficiencia</p>
@@ -199,15 +199,15 @@ export function SkillsHRContent() {
         {HR_COMPETENCIES.map((c) => (
           <div key={c.area} className="rounded-lg border p-3.5 flex flex-col" style={{ borderColor: `${c.color}2e`, background: "rgba(255,255,255,0.02)" }}>
             <div className="flex items-start justify-between gap-3 mb-1.5">
-              <div className="text-[13px] font-medium text-white/90 leading-5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{c.area}</div>
-              <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap" style={{ color: c.color, background: `${c.color}17`, fontFamily: "'JetBrains Mono', monospace" }}>
+              <div className="text-[13px] font-medium text-white/90 leading-5" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>{c.area}</div>
+              <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap" style={{ color: c.color, background: `${c.color}17`, fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
                 {c.level}
               </span>
             </div>
             <p className="text-[12px] text-white/65 leading-5 mb-3">{c.plain}</p>
             <div className="mt-auto flex flex-wrap gap-1.5">
               {c.tech.map((t) => (
-                <span key={t} className="rounded border border-white/10 px-1.5 py-0.5 text-[10.5px] text-white/50" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{t}</span>
+                <span key={t} className="rounded-sm border border-white/10 px-1.5 py-0.5 text-[10.5px] text-white/50" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{t}</span>
               ))}
             </div>
           </div>
@@ -232,11 +232,11 @@ export function ProjectsHRContent({ onOpenProject }) {
             <Tilt key={p.id} className="h-full">
             <button
               onClick={() => onOpenProject(p.id)}
-              className="w-full h-full text-left rounded-lg border border-white/10 p-3.5 hover:border-white/25 hover:-translate-y-0.5 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none flex flex-col"
+              className="w-full h-full text-left rounded-lg border border-white/10 p-3.5 hover:border-white/25 hover:-translate-y-0.5 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden flex flex-col"
               style={{ background: "rgba(255,255,255,0.02)" }}
             >
               <BeforeAfter hr={hr} />
-              <div className="text-[13px] font-medium text-white/90 mt-2 mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{hr.title}</div>
+              <div className="text-[13px] font-medium text-white/90 mt-2 mb-1" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>{hr.title}</div>
               <p className="text-[11.5px] text-white/60 leading-5 mb-2">{hr.result}</p>
               <div className="mt-auto flex items-center gap-1 text-[10.5px]" style={{ color: HR_ACCENT }}>
                 Ver el caso <ChevronRight size={12} />
@@ -260,7 +260,7 @@ export function ProjectDetailHRContent({ project }) {
   return (
     <div className="w-full">
       <div className="rounded-lg border p-4 mb-4 flex flex-wrap items-center justify-between gap-3" style={{ borderColor: `${HR_ACCENT}33`, background: `${HR_ACCENT}0b` }}>
-        <div className="text-[10.5px] uppercase tracking-wider text-white/45" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Impacto</div>
+        <div className="text-[10.5px] uppercase tracking-wider text-white/45" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>Impacto</div>
         <BeforeAfter hr={hr} size="text-[18px] @md:text-[22px]" />
       </div>
       <ol className="space-y-3.5">
@@ -270,7 +270,7 @@ export function ProjectDetailHRContent({ project }) {
               <Icon size={14} />
             </span>
             <div className="min-w-0">
-              <div className="text-[11px] uppercase tracking-wider text-white/45" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{label}</div>
+              <div className="text-[11px] uppercase tracking-wider text-white/45" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{label}</div>
               <p className="text-[12.5px] text-white/80 leading-5 mt-0.5">{text}</p>
             </div>
           </li>
@@ -288,9 +288,9 @@ export function ExperienceHRContent() {
         {EXPERIENCE.map((e, i) => (
           <div key={i} className="mb-5 last:mb-0 relative">
             <span className="absolute -left-[25px] top-1 w-2.5 h-2.5 rounded-full border-2" style={{ borderColor: HR_ACCENT, background: "#0d1117" }} />
-            <div className="text-[13px] font-medium text-white/90" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{HR_EXPERIENCE[i].plainRole}</div>
+            <div className="text-[13px] font-medium text-white/90" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>{HR_EXPERIENCE[i].plainRole}</div>
             <div className="text-[11.5px] mb-1" style={{ color: HR_ACCENT }}>{e.company}</div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] text-white/40 mb-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] text-white/40 mb-2" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
               <span className="inline-flex items-center gap-1"><Calendar size={11} /> {e.period}</span>
               <span className="inline-flex items-center gap-1"><MapPin size={11} /> {e.location}</span>
               <span className="inline-flex items-center gap-1"><Briefcase size={11} /> Cargo técnico: {e.role}</span>

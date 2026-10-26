@@ -1,0 +1,22 @@
+{
+  "_comment": "Single source of the HTTP security policy. Read by main.py at startup; scripts/deploy-headers.mjs turns it into deploy/security-headers.caddy. The SHA-256 of the inline <head> script is appended to script-src at runtime/build.",
+  "csp": {
+    "default-src": "'self'",
+    "script-src": "'self'",
+    "style-src": "'self' 'unsafe-inline'",
+    "font-src": "'self'",
+    "img-src": "'self' data:",
+    "connect-src": "'self'",
+    "object-src": "'none'",
+    "base-uri": "'self'",
+    "form-action": "'self'",
+    "frame-ancestors": "'none'"
+  },
+  "headers": {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "X-Frame-Options": "DENY",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+    "Cross-Origin-Opener-Policy": "same-origin"
+  }
+}

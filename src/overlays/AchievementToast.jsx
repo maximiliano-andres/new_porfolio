@@ -1,6 +1,6 @@
 /* "Badge unlocked" toast. */
 import { useEffect } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { ACHIEVEMENTS } from "../data/system.js";
 import { HR_ACCENT } from "../theme.js";
 
@@ -13,7 +13,7 @@ export function AchievementToast({ id, onDone }) {
   if (!a) return null;
   return (
     <div className="fixed top-11 inset-x-0 z-[1000] flex justify-center px-2 pointer-events-none">
-    <motion.div
+    <m.div
       key={id}
       initial={{ opacity: 0, y: -16, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -26,11 +26,11 @@ export function AchievementToast({ id, onDone }) {
         <a.Icon size={17} />
       </span>
       <div className="min-w-0">
-        <div className="text-[10px] uppercase tracking-wider" style={{ color: HR_ACCENT, fontFamily: "'JetBrains Mono', monospace" }}>Insignia desbloqueada</div>
-        <div className="text-[13px] font-semibold text-white truncate" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>{a.title}</div>
+        <div className="text-[10px] uppercase tracking-wider" style={{ color: HR_ACCENT, fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>Insignia desbloqueada</div>
+        <div className="text-[13px] font-semibold text-white truncate" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>{a.title}</div>
         <div className="text-[11px] text-white/55 truncate">{a.desc}</div>
       </div>
-    </motion.div>
+    </m.div>
     </div>
   );
 }

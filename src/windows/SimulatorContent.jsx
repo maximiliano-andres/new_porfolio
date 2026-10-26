@@ -77,7 +77,7 @@ export function SimulatorContent() {
         <label className="block">
           <span className="flex items-center justify-between text-[12px] text-white/80 mb-2">
             {L.threads}
-            <span className="tabular-nums" style={{ color: CORE, fontFamily: "'JetBrains Mono', monospace" }}>{cfg.threads}</span>
+            <span className="tabular-nums" style={{ color: CORE, fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{cfg.threads}</span>
           </span>
           <input
             type="range" min="1" max="16" value={cfg.threads}
@@ -96,7 +96,7 @@ export function SimulatorContent() {
               role="switch"
               aria-checked={cfg[k]}
               onClick={() => setCfg({ ...cfg, [k]: !cfg[k] })}
-              className="relative w-10 h-6 rounded-full transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none"
+              className="relative w-10 h-6 rounded-full transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
               style={{ background: cfg[k] ? CORE : "rgba(255,255,255,0.15)" }}
             >
               <span className="absolute top-1 w-4 h-4 rounded-full bg-white transition-all" style={{ left: cfg[k] ? 20 : 4 }} />
@@ -107,12 +107,12 @@ export function SimulatorContent() {
 
       <div className="grid grid-cols-2 gap-3 my-4">
         <div className="rounded-lg border border-white/10 p-3">
-          <div className="text-[10px] uppercase tracking-wider text-white/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>Tiempo estimado</div>
-          <div className="text-[22px] font-semibold tabular-nums mt-1" style={{ color: minutes <= 10 ? LANG.node.c2 : minutes <= 30 ? HR_ACCENT : "#f87171", fontFamily: "'Space Grotesk', sans-serif" }}>{fmtMin(minutes)}</div>
+          <div className="text-[10px] uppercase tracking-wider text-white/40" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>Tiempo estimado</div>
+          <div className="text-[22px] font-semibold tabular-nums mt-1" style={{ color: minutes <= 10 ? LANG.node.c2 : minutes <= 30 ? HR_ACCENT : "#f87171", fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>{fmtMin(minutes)}</div>
         </div>
         <div className="rounded-lg border border-white/10 p-3">
-          <div className="text-[10px] uppercase tracking-wider text-white/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{hr ? "Mejora" : "Speed-up"}</div>
-          <div className="text-[22px] font-semibold tabular-nums mt-1 text-white/90" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <div className="text-[10px] uppercase tracking-wider text-white/40" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{hr ? "Mejora" : "Speed-up"}</div>
+          <div className="text-[22px] font-semibold tabular-nums mt-1 text-white/90" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
             {hr ? `−${Math.max(0, Math.round((1 - minutes / SIM_BASE_MIN) * 100))}%` : `×${(SIM_BASE_MIN / minutes).toFixed(1)}`}
           </div>
         </div>
@@ -121,7 +121,7 @@ export function SimulatorContent() {
       <button
         onClick={execute}
         disabled={run && !done}
-        className="w-full flex items-center justify-center gap-2 rounded-lg py-2.5 text-[13px] font-medium disabled:opacity-60 hover:brightness-110 active:scale-[0.98] transition-all focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-none"
+        className="w-full flex items-center justify-center gap-2 rounded-lg py-2.5 text-[13px] font-medium disabled:opacity-60 hover:brightness-110 active:scale-[0.98] transition-all focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-hidden"
         style={{ background: `linear-gradient(90deg, ${CORE}, ${LANG.node.c1})`, color: "#05070b" }}
       >
         <Play size={14} /> {run && !done ? (hr ? "Procesando…" : "Ejecutando…") : hr ? "Ejecutar proceso" : "Ejecutar batch"}
@@ -136,7 +136,7 @@ export function SimulatorContent() {
               </div>
             ))}
           </div>
-          <div className="flex justify-between mt-1.5 text-[10.5px] text-white/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+          <div className="flex justify-between mt-1.5 text-[10.5px] text-white/40" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
             <span>{run.lanes} {hr ? (run.lanes === 1 ? "trabajador" : "trabajadores") : run.lanes === 1 ? "hilo" : "hilos"}</span>
             <span>{fmtMin(run.minutes * progress)} / {fmtMin(run.minutes)}</span>
           </div>

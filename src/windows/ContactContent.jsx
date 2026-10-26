@@ -112,19 +112,19 @@ export function ContactContent() {
 
   // 16px on phones: iOS Safari auto-zooms the page when focusing inputs smaller than that
   const inputCls =
-    "w-full rounded-md bg-black/30 border px-3 py-2.5 sm:py-2 text-[16px] sm:text-[12.5px] text-white/90 placeholder:text-white/30 outline-none transition-colors focus:border-[#22D3EE] disabled:opacity-50";
+    "w-full rounded-md bg-black/30 border px-3 py-2.5 sm:py-2 text-[16px] sm:text-[12.5px] text-white/90 placeholder:text-white/30 outline-hidden transition-colors focus:border-[#22D3EE] disabled:opacity-50";
 
   if (status === "success") {
     return (
       <div className="w-full flex flex-col items-center text-center py-6">
         <CheckCircle2 size={30} style={{ color: LANG.node.c2 }} className="mb-3" />
-        <div className="text-[13.5px] font-medium text-white/90 mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+        <div className="text-[13.5px] font-medium text-white/90 mb-1" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
           Mensaje enviado
         </div>
         <p className="text-[12px] text-white/65 mb-4">Responderé dentro de 24&ndash;48 horas hábiles.</p>
         <button
           onClick={() => { setStatus("idle"); setForm(EMPTY_FORM); }}
-          className="text-[11.5px] px-3 py-1.5 rounded-lg border border-white/15 text-white/70 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none"
+          className="text-[11.5px] px-3 py-1.5 rounded-lg border border-white/15 text-white/70 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
         >
           Enviar otro mensaje
         </button>
@@ -144,7 +144,7 @@ export function ContactContent() {
               className="w-full h-full object-cover"
             />
           ) : (
-            <span className="text-white/20 font-bold text-[11px] select-none" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>MC</span>
+            <span className="text-white/20 font-bold text-[11px] select-none" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>MC</span>
           )}
         </div>
         <div className="min-w-0">
@@ -185,20 +185,20 @@ export function ContactContent() {
         )}
         <button
           type="submit" disabled={status === "loading"}
-          className="w-full flex items-center justify-center gap-2 rounded-lg py-2.5 sm:py-2 text-[13px] sm:text-[12.5px] font-medium transition-all disabled:opacity-70 focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-none hover:brightness-110 active:scale-[0.98]"
+          className="w-full flex items-center justify-center gap-2 rounded-lg py-2.5 sm:py-2 text-[13px] sm:text-[12.5px] font-medium transition-all disabled:opacity-70 focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-hidden hover:brightness-110 active:scale-[0.98]"
           style={{ background: `linear-gradient(90deg, ${CORE}, ${LANG.node.c1})`, color: "#05070b" }}
         >
           {status === "loading" ? (<><Loader2 size={14} className="animate-spin" /> Enviando...</>) : (<><Send size={13} /> Enviar mensaje</>)}
         </button>
       </form>
       <div className="flex items-center justify-center gap-4 mt-5 pt-4 border-t border-white/[0.08]">
-        <a href={SOCIAL_LINKS.github} target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="GitHub" className="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/60 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none">
+        <a href={SOCIAL_LINKS.github} target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="GitHub" className="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/60 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">
           <Github size={18} />
         </a>
-        <a href={SOCIAL_LINKS.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" aria-label="LinkedIn" className="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/60 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none">
+        <a href={SOCIAL_LINKS.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" aria-label="LinkedIn" className="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/60 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">
           <Linkedin size={18} />
         </a>
-        <a href={SOCIAL_LINKS.email} title="Email" aria-label="Email" className="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/60 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none">
+        <a href={SOCIAL_LINKS.email} title="Email" aria-label="Email" className="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/60 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">
           <Mail size={18} />
         </a>
       </div>

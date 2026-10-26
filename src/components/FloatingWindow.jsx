@@ -1,6 +1,6 @@
 /* Draggable, minimizable, maximizable window that grows out of its dock icon. */
 import { Suspense, useEffect } from "react";
-import { motion, useMotionValue } from "framer-motion";
+import { m, useMotionValue } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { SectionBoundary, WindowSkeleton } from "./SectionBoundary.jsx";
 import { AudienceToggle } from "./ui.jsx";
@@ -37,10 +37,10 @@ export function FloatingWindow({
 
   // 12px traffic lights get an invisible 28px hit area for touch
   const dotCls =
-    "relative w-3 h-3 rounded-full hover:brightness-110 focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-none after:absolute after:-inset-2 after:content-['']";
+    "relative w-3 h-3 rounded-full hover:brightness-110 focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-hidden after:absolute after:-inset-2 after:content-['']";
 
   return (
-    <motion.div
+    <m.div
       data-win={id}
       layout="position"
       drag={!isMobile && !isMaximized}
@@ -75,7 +75,7 @@ export function FloatingWindow({
       }}
     >
       {/* title bar */}
-      <motion.div
+      <m.div
         onPanEnd={isMobile && switcher ? onPanEnd : undefined}
         className="flex items-center gap-2 px-3 py-2.5 border-b select-none shrink-0"
         style={{ borderColor: "rgba(255,255,255,0.06)", cursor: isMobile || isMaximized ? "default" : "grab", zoom: scale, touchAction: isMobile ? "pan-y" : undefined }}
@@ -88,21 +88,21 @@ export function FloatingWindow({
         <IconCmp size={13} style={{ color: accent }} />
         <span
           className="text-[12.5px] font-medium text-white/85 truncate min-w-0"
-          style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}
         >
           {title}
         </span>
         <div className="ml-auto pl-2 shrink-0">
           <AudienceToggle />
         </div>
-      </motion.div>
+      </m.div>
       {isMobile && switcher && !isMinimized && (
-        <div className="flex items-center justify-between gap-2 px-2 py-1 border-b border-white/[0.06] shrink-0 text-[10.5px]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-          <button onClick={() => onSwitch(switcher.prev.id)} className="inline-flex items-center gap-1 min-w-0 rounded-md px-1.5 py-1.5 text-white/55 active:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none" aria-label={`Ir a ${switcher.prev.label}`}>
+        <div className="flex items-center justify-between gap-2 px-2 py-1 border-b border-white/[0.06] shrink-0 text-[10.5px]" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
+          <button onClick={() => onSwitch(switcher.prev.id)} className="inline-flex items-center gap-1 min-w-0 rounded-md px-1.5 py-1.5 text-white/55 active:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden" aria-label={`Ir a ${switcher.prev.label}`}>
             <ChevronLeft size={13} className="shrink-0" /><span className="truncate">{switcher.prev.label}</span>
           </button>
           <span className="shrink-0 text-white/35">{switcher.index + 1} / {switcher.total} · desliza</span>
-          <button onClick={() => onSwitch(switcher.next.id)} className="inline-flex items-center gap-1 min-w-0 rounded-md px-1.5 py-1.5 text-white/55 active:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none" aria-label={`Ir a ${switcher.next.label}`}>
+          <button onClick={() => onSwitch(switcher.next.id)} className="inline-flex items-center gap-1 min-w-0 rounded-md px-1.5 py-1.5 text-white/55 active:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden" aria-label={`Ir a ${switcher.next.label}`}>
             <span className="truncate">{switcher.next.label}</span><ChevronRight size={13} className="shrink-0" />
           </button>
         </div>
@@ -121,6 +121,6 @@ export function FloatingWindow({
           </div>
         </div>
       )}
-    </motion.div>
+    </m.div>
   );
 }

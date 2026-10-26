@@ -22,10 +22,10 @@ export function AboutContent() {
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
               ) : (
-                <span className="text-white/20 font-bold text-lg select-none" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>MC</span>
+                <span className="text-white/20 font-bold text-lg select-none" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>MC</span>
               )}
               {/* Scanline overlay */}
-              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-cyan-500/10 to-transparent pointer-events-none opacity-40 group-hover:opacity-75 transition-opacity duration-300" style={{ animation: "dashflow 8s linear infinite" }} />
+              <div className="absolute inset-0 bg-linear-to-b from-transparent via-cyan-500/10 to-transparent pointer-events-none opacity-40 group-hover:opacity-75 transition-opacity duration-300" style={{ animation: "dashflow 8s linear infinite" }} />
             </div>
           </div>
           <span className="text-[10px] text-white/40 mt-1.5 font-mono">max_andres_head.webp</span>
@@ -35,7 +35,7 @@ export function AboutContent() {
         <div className="flex-1 min-w-0 w-full">
           <div className="flex items-center gap-3 mb-3 text-center @md:text-left">
             <div className="w-full">
-              <h3 className="text-white text-[15px] font-semibold text-balance" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              <h3 className="text-white text-[15px] font-semibold text-balance" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
                 Maximiliano Andrés Caniullan Lefiñir
               </h3>
               <p className="text-white/50 text-[12px]">Backend Developer &middot; Especialista en Optimización</p>
@@ -57,7 +57,7 @@ export function AboutContent() {
       </div>
 
       <div className="mt-5 pt-4 border-t border-white/10">
-        <h4 className="text-xs uppercase tracking-wider text-cyan-400 font-semibold mb-3" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+        <h4 className="text-xs uppercase tracking-wider text-cyan-400 font-semibold mb-3" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
           Lo que hago mejor (Y cómo ayudo a tu equipo):
         </h4>
         <ul className="space-y-3 text-[12.5px] text-white/70">
@@ -83,7 +83,7 @@ export function AboutContent() {
       </div>
 
       <div className="mt-5 pt-4 border-t border-white/10">
-        <h4 className="text-xs uppercase tracking-wider text-cyan-400 font-semibold mb-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+        <h4 className="text-xs uppercase tracking-wider text-cyan-400 font-semibold mb-2" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
           Objetivo Profesional
         </h4>
         <p className="text-[12px] leading-5 text-white/60">
@@ -104,7 +104,7 @@ export function SkillsContent() {
       <div className="grid grid-cols-1 @lg:grid-cols-3 gap-3 @lg:gap-4 mb-5">
         {Object.entries(LANG).map(([id, l]) => (
           <div key={id} className="rounded-lg border p-3 min-w-0" style={{ borderColor: `${l.c1}2a`, background: "rgba(255,255,255,0.02)" }}>
-            <div className="text-center text-[11.5px] font-medium mb-1" style={{ color: l.c2, fontFamily: "'Space Grotesk', sans-serif" }}>
+            <div className="text-center text-[11.5px] font-medium mb-1" style={{ color: l.c2, fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
               {l.name}
             </div>
             <RadarChart values={RADAR[id]} color={l.c1} size={150} />
@@ -114,7 +114,7 @@ export function SkillsContent() {
       <div className="grid grid-cols-1 @md:grid-cols-2 @2xl:grid-cols-3 gap-5">
         {Object.entries(SKILL_BARS).map(([id, bars]) => (
           <div key={id} className="min-w-0">
-            <div className="text-[10.5px] uppercase tracking-wider mb-2" style={{ color: LANG[id].c2, fontFamily: "'JetBrains Mono', monospace" }}>
+            <div className="text-[10.5px] uppercase tracking-wider mb-2" style={{ color: LANG[id].c2, fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
               {LANG[id].name}
             </div>
             {bars.map((b, i) => (
@@ -124,7 +124,7 @@ export function SkillsContent() {
         ))}
       </div>
       <div className="mt-5 pt-4 border-t border-white/[0.08]">
-        <div className="text-[10.5px] uppercase tracking-wider mb-2 text-white/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+        <div className="text-[10.5px] uppercase tracking-wider mb-2 text-white/40" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
           Datos &amp; infraestructura
         </div>
         <div className="flex flex-wrap gap-2">
@@ -155,13 +155,13 @@ export function ProjectsContent({ onOpenProject }) {
           <Tilt key={p.id} className="h-full">
           <button
             onClick={() => onOpenProject(p.id)}
-            className="w-full h-full text-left rounded-lg border border-white/10 p-3 hover:border-white/25 hover:-translate-y-0.5 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none"
+            className="w-full h-full text-left rounded-lg border border-white/10 p-3 hover:border-white/25 hover:-translate-y-0.5 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
             style={{ background: "rgba(255,255,255,0.02)" }}
           >
             <div className="flex items-center gap-1.5 mb-2 flex-wrap">
               {p.langs.map((l) => <LangBadge key={l} id={l} />)}
             </div>
-            <div className="text-[13px] font-medium text-white/90 mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <div className="text-[13px] font-medium text-white/90 mb-1" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
               {p.title}
             </div>
             <p className="text-[11.5px] text-white/65 leading-5 mb-2">{p.summary}</p>
@@ -193,7 +193,7 @@ export function ProjectDetailContent({ project }) {
 
       <div className="flex flex-wrap gap-1.5">
         {project.stack.map((s) => (
-          <span key={s} className="rounded-full border border-white/10 px-2 py-0.5 text-[10.5px] text-white/60" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+          <span key={s} className="rounded-full border border-white/10 px-2 py-0.5 text-[10.5px] text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
             {s}
           </span>
         ))}
@@ -213,11 +213,11 @@ export function ExperienceContent() {
               className="absolute -left-[25px] top-1 w-2.5 h-2.5 rounded-full border-2"
               style={{ borderColor: CORE, background: "#0d1117" }}
             />
-            <div className="text-[13px] font-medium text-white/90" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <div className="text-[13px] font-medium text-white/90" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
               {e.role}
             </div>
             <div className="text-[11.5px] mb-1" style={{ color: CORE }}>{e.company}</div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] text-white/40 mb-2" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] text-white/40 mb-2" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
               <span className="inline-flex items-center gap-1"><Calendar size={11} /> {e.period}</span>
               <span className="inline-flex items-center gap-1"><MapPin size={11} /> {e.location}</span>
             </div>
@@ -241,10 +241,10 @@ export function EducationContent() {
       {EDUCATION.map((ed, i) => (
         <div key={i} className="rounded-lg border border-white/10 p-3" style={{ background: "rgba(255,255,255,0.02)" }}>
           <div className="flex items-start justify-between gap-2 mb-1">
-            <div className="text-[13px] font-medium text-white/90" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <div className="text-[13px] font-medium text-white/90" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
               {ed.title}
             </div>
-            <span className="text-[10.5px] text-white/40 shrink-0" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{ed.period}</span>
+            <span className="text-[10.5px] text-white/40 shrink-0" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{ed.period}</span>
           </div>
           <div className="text-[11.5px] mb-1.5" style={{ color: CORE }}>{ed.place}</div>
           <p className="text-[12px] text-white/55 leading-5">{ed.detail}</p>

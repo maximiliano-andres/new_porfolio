@@ -1,6 +1,6 @@
 /* Command palette (Ctrl/⌘ + K). */
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { CornerDownLeft, Search } from "lucide-react";
 import { norm } from "../lib/env.js";
 import { CORE } from "../theme.js";
@@ -52,14 +52,14 @@ export function CommandPalette({ open, onClose, commands }) {
   return (
     <AnimatePresence>
       {open && (
-        <motion.div
+        <m.div
           className="fixed inset-0 z-[300] flex justify-center px-3 pt-[10dvh] short:pt-3"
           style={{ background: "rgba(3,5,9,0.6)", backdropFilter: "blur(4px)" }}
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           transition={{ duration: 0.15 }}
           onMouseDown={(e) => e.target === e.currentTarget && onClose()}
         >
-          <motion.div
+          <m.div
             role="dialog"
             aria-modal="true"
             aria-label="Paleta de comandos"
@@ -80,9 +80,9 @@ export function CommandPalette({ open, onClose, commands }) {
                 aria-expanded="true"
                 aria-controls="palette-list"
                 aria-activedescendant={results[sel] ? `cmd-${results[sel].id}` : undefined}
-                className="flex-1 min-w-0 bg-transparent outline-none text-[16px] sm:text-[14px] text-white placeholder:text-white/30"
+                className="flex-1 min-w-0 bg-transparent outline-hidden text-[16px] sm:text-[14px] text-white placeholder:text-white/30"
               />
-              <button onClick={onClose} className="shrink-0 rounded border border-white/10 px-1.5 py-0.5 text-[10px] text-white/40 hover:text-white focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              <button onClick={onClose} className="shrink-0 rounded-sm border border-white/10 px-1.5 py-0.5 text-[10px] text-white/40 hover:text-white focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
                 esc
               </button>
             </div>
@@ -97,7 +97,7 @@ export function CommandPalette({ open, onClose, commands }) {
                 return (
                   <React.Fragment key={c.id}>
                     {header && (
-                      <div className="px-4 pt-2.5 pb-1 text-[10px] uppercase tracking-wider text-white/35" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{header}</div>
+                      <div className="px-4 pt-2.5 pb-1 text-[10px] uppercase tracking-wider text-white/35" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{header}</div>
                     )}
                     <button
                       id={`cmd-${c.id}`}
@@ -106,25 +106,25 @@ export function CommandPalette({ open, onClose, commands }) {
                       aria-selected={active}
                       onMouseMove={() => setSel(i)}
                       onClick={() => run(c)}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left focus:outline-none"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left focus:outline-hidden"
                       style={{ background: active ? "rgba(255,255,255,0.06)" : "transparent" }}
                     >
                       <span className="w-7 h-7 rounded-md flex items-center justify-center shrink-0" style={{ background: `${c.color || CORE}17`, color: c.color || CORE }}>
                         <c.Icon size={14} />
                       </span>
                       <span className="flex-1 min-w-0 text-[13px] text-white/85 truncate">{c.label}</span>
-                      {c.hint && <span className="shrink-0 text-[10.5px] text-white/35" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{c.hint}</span>}
+                      {c.hint && <span className="shrink-0 text-[10.5px] text-white/35" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{c.hint}</span>}
                       {active && <CornerDownLeft size={12} className="shrink-0 text-white/35 hidden sm:block" />}
                     </button>
                   </React.Fragment>
                 );
               })}
             </div>
-            <div className="hidden sm:flex items-center gap-4 px-4 py-2 border-t border-white/10 text-[10px] text-white/35" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+            <div className="hidden sm:flex items-center gap-4 px-4 py-2 border-t border-white/10 text-[10px] text-white/35" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
               <span>↑↓ navegar</span><span>↵ abrir</span><span>esc cerrar</span>
             </div>
-          </motion.div>
-        </motion.div>
+          </m.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

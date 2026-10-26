@@ -27,7 +27,7 @@ export default class ErrorBoundary extends React.Component {
             gap: "0.75rem",
             background: "#05070b",
             color: "#c9d1d9",
-            fontFamily: "'Inter', sans-serif",
+            fontFamily: "'Inter', 'Inter Fallback', sans-serif",
             textAlign: "center",
             padding: "1.5rem",
           }}

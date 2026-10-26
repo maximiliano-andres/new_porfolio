@@ -1,15 +1,16 @@
 /* App shell: owns window state, layout, audience, achievements, tours and keyboard shortcuts,
    and composes the components, windows and overlays from the modules below. */
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, MotionConfig, motion } from "framer-motion";
-import { Code2, Compass, FolderGit2, Github, Hexagon, Linkedin, Mail, Play, Route, Sparkles, Trophy, User, Users, Volume2, VolumeX, Zap } from "lucide-react";
+import { AnimatePresence, LazyMotion, m, MotionConfig } from "framer-motion";
+import { Code2, Compass, FolderGit2, Github, Hexagon, Linkedin, Mail, Route, Trophy, Users, Volume2, VolumeX, Zap } from "lucide-react";
 import { BootScreen } from "./components/BootScreen.jsx";
 import { CircuitBackground } from "./components/CircuitBackground.jsx";
 import { Dock } from "./components/Dock.jsx";
 import { FloatingWindow } from "./components/FloatingWindow.jsx";
+import { Hero } from "./components/Hero.jsx";
 import { SectionBoundary } from "./components/SectionBoundary.jsx";
 import { TopBar } from "./components/TopBar.jsx";
-import { AudienceSwap, AudienceToggle } from "./components/ui.jsx";
+import { AudienceSwap } from "./components/ui.jsx";
 import { AudienceContext, SystemContext } from "./context.js";
 import { NOTIFICATION_MESSAGES, PROJECTS } from "./data/content.js";
 import { AUDIENCES, HR_PROJECTS, PROFILE_NOTIFICATION } from "./data/hr.js";
@@ -20,7 +21,7 @@ import { sound } from "./lib/sound.js";
 import { storage } from "./lib/storage.js";
 import { AchievementToast } from "./overlays/AchievementToast.jsx";
 import { AutoTourBar } from "./overlays/AutoTourBar.jsx";
-import { CORE, HR_ACCENT, LANG, SOCIAL_LINKS } from "./theme.js";
+import { CORE, HR_ACCENT, SOCIAL_LINKS } from "./theme.js";
 import {
   AboutContent, AboutHRContent, BadgesContent, CertificationsContent, CertificationsHRContent, ContactContent,
   EducationContent, ExperienceContent, ExperienceHRContent, HRSummaryContent, ProjectDetailContent,
@@ -28,13 +29,23 @@ import {
   TerminalContent, prefetchWindow,
 } from "./windows/lazy.js";
 
+// index.html ships a prerendered copy of the landing screen (scripts/prerender.mjs); React replaces it on mount
+const PRERENDERED = typeof document !== "undefined" && Boolean(document.querySelector("[data-shell-root]"));
+
+// framer-motion's animation engine is fetched after the first paint (strict: any stray `motion.*` fails loudly)
+const loadMotionFeatures = () => import("./lib/motionFeatures.js").then((mod) => mod.default);
+
 // overlays are only needed after an interaction (or on the first visit's tour): load them on demand
 const CommandPalette = lazy(() => import("./overlays/CommandPalette.jsx").then((m) => ({ default: m.CommandPalette })));
 const CoachTour = lazy(() => import("./overlays/CoachTour.jsx").then((m) => ({ default: m.CoachTour })));
 const CoreMenu = lazy(() => import("./overlays/CoreMenu.jsx").then((m) => ({ default: m.CoreMenu })));
 
 export default function PolyglotPortfolio() {
-  const [booted, setBooted] = useState(false);
+  // returning visitors skip the boot sequence entirely (no black frame before the landing screen)
+  const [booted, setBooted] = useState(() => Boolean(storage.get("boot_seen")));
+  // the hero skips its fade-in only when taking over the prerendered shell, not when it reappears later
+  const heroFromShell = useRef(PRERENDERED);
+  useEffect(() => { heroFromShell.current = false; }, []);
   const [windows, setWindows] = useState(makeInitialWindows());
   const [projectWin, setProjectWin] = useState({ open: false, id: null, z: 1, minimized: false, maximized: false });
   const [windowSize, setWindowSize] = useState({
@@ -408,6 +419,11 @@ export default function PolyglotPortfolio() {
     ...(projectWin.open && !projectWin.minimized ? [WINDOW_CIRCUIT["project-detail"]] : []),
   ].join(",");
   const energized = useMemo(() => (energizedKey ? energizedKey.split(",").map(Number) : []), [energizedKey]);
+  // nothing to animate when the desk is hidden: a maximized window, or any window on a phone (windows fill the screen)
+  const deskCovered =
+    Object.values(windows).some((w) => w.open && !w.minimized && w.maximized) ||
+    (projectWin.open && !projectWin.minimized && projectWin.maximized) ||
+    (isMobile && openCount > 0);
 
   // warm the code of the likely-first windows once the browser is idle after boot
   useEffect(() => {
@@ -448,36 +464,18 @@ export default function PolyglotPortfolio() {
 
   const activeProject = PROJECTS.find((p) => p.id === projectWin.id);
 
-  const heroBtn =
-    "flex items-center justify-center gap-2 rounded-lg px-4 sm:px-5 py-2.5 2xl:py-3 text-[13.5px] 2xl:text-[15px] font-medium active:scale-[0.98] transition-all focus:outline-none whitespace-nowrap";
-
   return (
+    <LazyMotion features={loadMotionFeatures} strict>
     <MotionConfig reducedMotion="user">
     <AudienceContext.Provider value={audienceCtx}>
     <SystemContext.Provider value={systemCtx}>
-    <div className="relative w-full h-dvh overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
-      <style>{`
-        * { box-sizing: border-box; }
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        @keyframes dashflow { to { stroke-dashoffset: -160; } }
-        @keyframes matrixfall { from { transform: translateY(-100%); } to { transform: translateY(110%); } }
-        @keyframes comet { from { stroke-dashoffset: 12; opacity: 1; } 85% { opacity: 1; } to { stroke-dashoffset: -100; opacity: 0; } }
-        @keyframes corepulse {
-          0%, 100% { opacity: 0.7; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.04); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
-        }
-      `}</style>
+    <div className="relative w-full h-dvh overflow-hidden" style={{ fontFamily: "'Inter', 'Inter Fallback', sans-serif" }}>
 
       <AnimatePresence>
         {!booted && <BootScreen onDone={() => setBooted(true)} onChoose={(id) => setAudience(id, { silent: true })} current={audience} />}
       </AnimatePresence>
 
-      <CircuitBackground energized={energized} />
+      <CircuitBackground energized={energized} paused={deskCovered} />
       <TopBar
         scale={uiScale}
         openCount={openCount}
@@ -499,7 +497,7 @@ export default function PolyglotPortfolio() {
             onClick={openCore}
             aria-label="Abrir el centro de control CORE"
             title="Centro de control CORE"
-            className="absolute pointer-events-auto rounded-full group focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus:outline-none short:hidden"
+            className="absolute pointer-events-auto rounded-full group focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus:outline-hidden short:hidden"
             style={{ left: core.x - core.r, top: core.y - core.r, width: core.r * 2, height: core.r * 2 }}
           >
             <span
@@ -513,99 +511,14 @@ export default function PolyglotPortfolio() {
             and reserves room for the top bar and the dock so nothing overlaps */}
         <AnimatePresence>
           {booted && !Object.values(windows).some((w) => w.open && !w.minimized) && (
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-              className="absolute inset-0 overflow-y-auto overscroll-contain pointer-events-none short:pointer-events-auto"
-              style={{ scrollbarWidth: "none" }}
-            >
-              <div
-                className="min-h-full flex flex-col items-center justify-center px-5 sm:px-8 text-center"
-                style={{ paddingTop: area.y + 8, paddingBottom: windowSize.height - area.y - area.h + 8 }}
-              >
-                <span
-                  className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] 2xl:text-[12px] mb-4 2xl:mb-6 short:mb-2"
-                  style={{ borderColor: `${CORE}44`, color: CORE, fontFamily: "'JetBrains Mono', monospace" }}
-                >
-                  <Sparkles size={11} /> Disponible para nuevos proyectos
-                </span>
-                <h1
-                  className="text-[28px] min-[380px]:text-[32px] sm:text-[44px] lg:text-[52px] 2xl:text-[64px] short:text-[26px] font-semibold text-white mb-3 2xl:mb-5 short:mb-2 leading-[1.1] max-w-4xl text-balance"
-                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-                >
-                  Maximiliano Andrés Caniullan Lefiñir
-                </h1>
-                <p className="text-[14px] sm:text-[16px] 2xl:text-[19px] leading-relaxed text-white/55 max-w-md sm:max-w-xl 2xl:max-w-2xl mb-6 2xl:mb-8 short:mb-4 short:text-[13.5px] text-pretty">
-                  {hr ? (
-                    <>Construyo la parte invisible de las aplicaciones —la que procesa cada solicitud de los usuarios— y me especializo en que <span className="text-white/85">funcione más rápido y cueste menos operar</span>. Resultados medidos en empresas como IACC, PUMA y GyG.</>
-                  ) : (
-                    <>Backend Developer enfocado en crear sistemas rápidos y eficientes usando <span style={{ color: LANG.java.c1 }}>Java / Spring Boot</span>, <span style={{ color: LANG.python.c2 }}>Python</span> y <span style={{ color: LANG.node.c2 }}>Node.js</span>. Especialista en optimización de rendimiento y reducción de costos en la nube.</>
-                  )}
-                </p>
-                <div className="flex flex-col items-center gap-2 mb-6 short:mb-4 pointer-events-auto">
-                  <span className="text-[10.5px] uppercase tracking-wider text-white/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                    Ver el portafolio como
-                  </span>
-                  <AudienceToggle variant="long" />
-                </div>
-                {/* 2×2 grid of equal buttons on phones, a single row from sm up */}
-                <div className="grid grid-cols-2 gap-2.5 w-full max-w-[340px] sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 sm:w-auto sm:max-w-none pointer-events-auto">
-                  {hr ? (
-                    <button
-                      onClick={() => openWindow("hr")}
-                      className={`${heroBtn} hover:brightness-110 focus-visible:ring-2 focus-visible:ring-white/60`}
-                      style={{ background: `linear-gradient(90deg, ${HR_ACCENT}, ${LANG.java.c1})`, color: "#05070b" }}
-                    >
-                      <Users size={14} /> Ficha para RRHH
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => toggleWindow("projects")}
-                      className={`${heroBtn} hover:brightness-110 focus-visible:ring-2 focus-visible:ring-white/60`}
-                      style={{ background: `linear-gradient(90deg, ${CORE}, ${LANG.node.c1})`, color: "#05070b" }}
-                    >
-                      <FolderGit2 size={14} /> Ver proyectos
-                    </button>
-                  )}
-                  <button
-                    onClick={() => toggleWindow("about")}
-                    className={`${heroBtn} border border-white/15 text-white/80 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50`}
-                  >
-                    <User size={14} /> Sobre mí
-                  </button>
-                  <a
-                    href={SOCIAL_LINKS.linkedin}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`${heroBtn} text-white hover:brightness-110 focus-visible:ring-2 focus-visible:ring-white/60`}
-                    style={{ background: "#0077b5" }}
-                  >
-                    <Linkedin size={15} /> LinkedIn
-                  </a>
-                  <a
-                    href={SOCIAL_LINKS.github}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`${heroBtn} border border-white/20 bg-black/40 text-white hover:bg-black/60 focus-visible:ring-2 focus-visible:ring-white/50`}
-                  >
-                    <Github size={15} /> GitHub
-                  </a>
-                  <button
-                    onClick={startAutoTour}
-                    className={`${heroBtn} col-span-2 sm:col-span-1 border hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50`}
-                    style={{ borderColor: `${HR_ACCENT}66`, color: HR_ACCENT }}
-                  >
-                    <Play size={14} /> Recorrido de 60 s
-                  </button>
-                </div>
-                <p className="mt-6 sm:mt-8 short:mt-4 text-[10.5px] 2xl:text-[12px] text-white/50 max-w-[300px] sm:max-w-none" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                  explora desde el dock inferior o toca el núcleo <span style={{ color: CORE }}>CORE</span>
-                  <span className="hidden sm:inline"> · pulsa <kbd className="text-white/70">Ctrl K</kbd> para buscar</span>
-                </p>
-              </div>
-            </motion.div>
+            <Hero
+              hr={hr}
+              insets={{ top: area.y + 8, bottom: windowSize.height - area.y - area.h + 8 }}
+              animateIn={!heroFromShell.current}
+              onPrimary={() => (hr ? openWindow("hr") : toggleWindow("projects"))}
+              onAbout={() => toggleWindow("about")}
+              onTour={startAutoTour}
+            />
           )}
         </AnimatePresence>
 
@@ -727,7 +640,7 @@ export default function PolyglotPortfolio() {
           covers a window's title bar and its close/minimize controls; top-right card on larger screens */}
       <AnimatePresence>
         {activeToast && !autoTour && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, x: 100, y: 0 }}
             animate={{ opacity: 1, x: 0, y: 0 }}
             exit={{ opacity: 0, x: 100 }}
@@ -745,7 +658,7 @@ export default function PolyglotPortfolio() {
           >
             {/* Text area */}
             <div className="flex-1 min-w-0 pr-5 flex flex-col justify-center">
-              <div className="text-[12.5px] font-semibold text-white/90 mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              <div className="text-[12.5px] font-semibold text-white/90 mb-1" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
                 {activeToast.title}
               </div>
               {activeToast.text && (
@@ -774,7 +687,7 @@ export default function PolyglotPortfolio() {
                         <button
                           key={pr.id}
                           onClick={() => { setAudience(pr.id); setActiveToast(null); }}
-                          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-all hover:brightness-110 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none"
+                          className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-all hover:brightness-110 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
                           style={current
                             ? { background: a.color, color: "#05070b" }
                             : { border: `1px solid ${a.color}55`, color: a.color }}
@@ -784,7 +697,7 @@ export default function PolyglotPortfolio() {
                       );
                     })}
                   </div>
-                  <p className="text-[10px] text-white/40 mt-2 short:hidden" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+                  <p className="text-[10px] text-white/40 mt-2 short:hidden" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
                     Puedes cambiarlo cuando quieras desde la barra superior.
                   </p>
                 </>
@@ -802,17 +715,18 @@ export default function PolyglotPortfolio() {
             {/* Close button (absolute top-right) */}
             <button
               onClick={() => setActiveToast(null)}
-              className="absolute top-1.5 right-1.5 w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white transition-colors text-[18px] leading-none focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none"
+              className="absolute top-1.5 right-1.5 w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white transition-colors text-[18px] leading-none focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
               aria-label="Cerrar notificación"
             >
               &times;
             </button>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>
     </SystemContext.Provider>
     </AudienceContext.Provider>
     </MotionConfig>
+    </LazyMotion>
   );
 }

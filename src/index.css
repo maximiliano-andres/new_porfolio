@@ -1,6 +1,50 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* only scan the app's own sources (automatic detection would also read docs such as public/img/README.md) */
+@import "tailwindcss" source(none);
+@source "../src";
+@source "../index.html";
+
+/* ---------- theme ---------- */
+@theme {
+  --font-mono: 'JetBrains Mono', 'JetBrains Mono Fallback', monospace;
+  /* v3 palette values for the few named colors the UI uses (v4 defaults are OKLCH and render slightly differently) */
+  --color-gray-200: #e5e7eb;
+  --color-gray-400: #9ca3af;
+  --color-red-400: #f87171;
+  --color-red-500: #ef4444;
+  --color-amber-400: #fbbf24;
+  --color-cyan-300: #67e8f9;
+  --color-cyan-400: #22d3ee;
+  --color-cyan-500: #06b6d4;
+}
+
+/* landscape phones: width-based breakpoints alone would give them desktop-sized type.
+   `:root &` raises specificity so it beats `sm:`/`lg:` regardless of CSS order. */
+@custom-variant short {
+  @media (max-height: 500px) {
+    :root & {
+      @slot;
+    }
+  }
+}
+
+/* ---------- v3 compatibility: keep the exact look the UI was designed with ---------- */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-gray-400);
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
 
 html,
 body,
@@ -12,10 +56,34 @@ html {
   text-size-adjust: 100%;
 }
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', 'Inter Fallback', sans-serif;
   background-color: #05070b;
   color: #c9d1d9;
   overflow: hidden;
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* ---------- global effects (shared by the app and the prerendered shell) ---------- */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+@keyframes dashflow { to { stroke-dashoffset: -160; } }
+@keyframes matrixfall { from { transform: translateY(-100%); } to { transform: translateY(110%); } }
+@keyframes comet { from { stroke-dashoffset: 12; opacity: 1; } 85% { opacity: 1; } to { stroke-dashoffset: -100; opacity: 0; } }
+@keyframes corepulse {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}
+
+/* ---------- prerendered shell (index.html, replaced by React on mount) ---------- */
+/* the inline head script sets data-audience; only the matching variant is shown */
+html[data-audience="rrhh"] [data-shell="ti"],
+html:not([data-audience="rrhh"]) [data-shell="rrhh"] { display: none; }
+/* first visit: the boot sequence comes first, so the shell shows only the background */
+html[data-boot] [data-shell-hero] { visibility: hidden; }
+/* live readings (clock, simulated metrics) would be stale in static HTML */
+[data-shell-root] [data-live] { visibility: hidden; }

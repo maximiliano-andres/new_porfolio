@@ -24,13 +24,13 @@ export function TopBar({ scale = 1, openCount = 0, progress = 0, onPalette, onBa
     return () => clearInterval(iv);
   }, [openCount, loadFor]);
   const item = (Icon, label, val, unit, color) => (
-    <div className="flex items-center gap-1.5" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+    <div className="flex items-center gap-1.5" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
       <Icon size={12} style={{ color }} />
       <span className="text-[10.5px] text-white/50">{label}</span>
       <span className="text-[10.5px] tabular-nums" style={{ color }}>{val}{unit}</span>
     </div>
   );
-  const iconBtn = "inline-flex items-center justify-center gap-1.5 h-7 min-w-[28px] rounded-full border border-white/10 bg-black/40 px-2 text-white/60 hover:text-white hover:border-white/25 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none";
+  const iconBtn = "inline-flex items-center justify-center gap-1.5 h-7 min-w-[28px] rounded-full border border-white/10 bg-black/40 px-2 text-white/60 hover:text-white hover:border-white/25 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden";
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
   return (
     <div
@@ -40,12 +40,12 @@ export function TopBar({ scale = 1, openCount = 0, progress = 0, onPalette, onBa
       <div className="flex items-center gap-3 pointer-events-auto min-w-0">
         <div className="flex items-center gap-1.5 min-w-0">
           <span className="w-2 h-2 rounded-full shrink-0" style={{ background: CORE, boxShadow: `0 0 8px ${CORE}` }} />
-          <span className="text-[11px] tracking-wide text-white/70 truncate" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <span className="text-[11px] tracking-wide text-white/70 truncate" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
             polyglot_core <span className="text-white/30 hidden min-[380px]:inline">v1.0</span>
           </span>
         </div>
       </div>
-      <div className="hidden lg:flex items-center gap-4 pointer-events-auto" title="Carga simulada: cada ventana abierta es un proceso">
+      <div data-live className="hidden lg:flex items-center gap-4 pointer-events-auto" title="Carga simulada: cada ventana abierta es un proceso">
         {item(Cpu, "CPU", stats.cpu, "%", LANG.python.c2)}
         {item(MemoryStick, "MEM", stats.mem, "%", LANG.node.c2)}
         {item(Gauge, "LAT", stats.lat, "ms", LANG.java.c1)}
@@ -53,18 +53,18 @@ export function TopBar({ scale = 1, openCount = 0, progress = 0, onPalette, onBa
         {item(ShieldCheck, "TLS", "OK", "", CORE)}
       </div>
       <div className="flex items-center gap-1.5 sm:gap-2.5 pointer-events-auto shrink-0">
-        <button data-tour="progress" onClick={onBadges} className={iconBtn} aria-label={`Exploración ${progress}%. Ver insignias`} title="Progreso de exploración e insignias">
+        <button data-live data-tour="progress" onClick={onBadges} className={iconBtn} aria-label={`Exploración ${progress}%. Ver insignias`} title="Progreso de exploración e insignias">
           <Trophy size={13} style={{ color: HR_ACCENT }} />
           <span className="hidden sm:block w-10 h-1 rounded-full bg-white/10 overflow-hidden">
             <span className="block h-full rounded-full transition-[width] duration-700" style={{ width: `${progress}%`, background: HR_ACCENT }} />
           </span>
-          <span className="text-[10px] tabular-nums" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{progress}%</span>
+          <span className="text-[10px] tabular-nums" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{progress}%</span>
         </button>
         <button data-tour="palette" onClick={onPalette} className={iconBtn} aria-label="Buscar o ejecutar un comando" aria-keyshortcuts="Control+K Meta+K" title="Buscar (Ctrl+K)">
           <Search size={13} />
-          <kbd className="hidden md:inline text-[9.5px] text-white/40" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{isMac ? "⌘K" : "Ctrl K"}</kbd>
+          <kbd className="hidden md:inline text-[9.5px] text-white/40" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{isMac ? "⌘K" : "Ctrl K"}</kbd>
         </button>
-        <button onClick={onToggleSound} className={iconBtn} aria-pressed={soundOn} aria-label={soundOn ? "Desactivar sonidos" : "Activar sonidos"} title={soundOn ? "Sonidos activados" : "Sonidos desactivados"}>
+        <button data-live onClick={onToggleSound} className={iconBtn} aria-pressed={soundOn} aria-label={soundOn ? "Desactivar sonidos" : "Activar sonidos"} title={soundOn ? "Sonidos activados" : "Sonidos desactivados"}>
           {soundOn ? <Volume2 size={13} style={{ color: CORE }} /> : <VolumeX size={13} />}
         </button>
         <div data-tour="audience"><AudienceToggle /></div>
@@ -90,7 +90,7 @@ export function TopBar({ scale = 1, openCount = 0, progress = 0, onPalette, onBa
             <Linkedin size={15} />
           </a>
         </div>
-        <div className="hidden sm:block text-[10.5px] text-white/45" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+        <div data-live className="hidden sm:block text-[10.5px] text-white/45" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
           {time.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}
         </div>
       </div>

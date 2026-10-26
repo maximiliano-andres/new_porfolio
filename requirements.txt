@@ -1,2 +1,3 @@
 fastapi==0.141.1
-uvicorn==0.52.4
+# [standard]: uvloop + httptools (C event loop / HTTP parser), picked up automatically by uvicorn
+uvicorn[standard]==0.52.4

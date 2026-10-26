@@ -1,6 +1,6 @@
 /* Small shared UI pieces: badges, charts, diagrams, audience toggle and micro-interactions. */
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { motion, useSpring } from "framer-motion";
+import { m, useSpring } from "framer-motion";
 import { ArrowRight, ChevronRight, Zap } from "lucide-react";
 import { useAudience, useSystem } from "../context.js";
 import { RADAR_AXES } from "../data/content.js";
@@ -21,7 +21,7 @@ export function LangBadge({ id, size = "sm" }) {
         borderColor: `${l.c1}55`,
         background: `${l.c1}14`,
         color: l.c2,
-        fontFamily: "'JetBrains Mono', monospace",
+        fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace",
       }}
     >
       <span className="w-1.5 h-1.5 rounded-full" style={{ background: l.c1 }} />
@@ -42,7 +42,7 @@ export function SkillBar({ name, value, color, delay = 0 }) {
         <span className="text-[12.5px] text-white/80 min-w-0">{name}</span>
         <span
           className="text-[11px] shrink-0"
-          style={{ color, fontFamily: "'JetBrains Mono', monospace" }}
+          style={{ color, fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}
         >
           {value}%
         </span>
@@ -99,7 +99,7 @@ export function RadarChart({ values, color, size = 168 }) {
               dominantBaseline="middle"
               fontSize="8.5"
               fill="rgba(255,255,255,0.45)"
-              fontFamily="'JetBrains Mono', monospace"
+              fontFamily="'JetBrains Mono', 'JetBrains Mono Fallback', monospace"
             >
               {label}
             </text>
@@ -121,7 +121,7 @@ export function ProjectDiagram({ kind }) {
     <g key={label}>
       <rect x={x} y={y} width={w} height={h} rx="6" fill={`${color}18`} stroke={color} strokeWidth="1.3" />
       <text x={x + w / 2} y={y + h / 2 + 3.5} textAnchor="middle" fontSize="8.5"
-        fill="rgba(255,255,255,0.85)" fontFamily="'JetBrains Mono', monospace">
+        fill="rgba(255,255,255,0.85)" fontFamily="'JetBrains Mono', 'JetBrains Mono Fallback', monospace">
         {label}
       </text>
     </g>
@@ -197,7 +197,7 @@ export function SimulatorBanner({ compact = false }) {
   return (
     <button
       onClick={() => openWindow("simulator")}
-      className={`w-full flex items-center gap-3 rounded-lg border px-3.5 py-3 text-left hover:brightness-125 transition-all focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none ${compact ? "mt-4" : "mb-3"}`}
+      className={`w-full flex items-center gap-3 rounded-lg border px-3.5 py-3 text-left hover:brightness-125 transition-all focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden ${compact ? "mt-4" : "mb-3"}`}
       style={{ borderColor: `${CORE}44`, background: `linear-gradient(90deg, ${CORE}14, transparent)` }}
     >
       <span className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: `${CORE}1f`, color: CORE }}>
@@ -237,12 +237,12 @@ export function AudienceToggle({ variant = "compact" }) {
             aria-checked={active}
             title={a.hint}
             onClick={() => setAudience(a.id)}
-            className={`relative inline-flex items-center rounded-full font-medium transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-none ${long ? "gap-1.5 px-3.5 py-1.5 text-[12px]" : "gap-1 px-2.5 py-[7px] text-[10px] leading-none"
+            className={`relative inline-flex items-center rounded-full font-medium transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden ${long ? "gap-1.5 px-3.5 py-1.5 text-[12px]" : "gap-1 px-2.5 py-[7px] text-[10px] leading-none"
               }`}
-            style={{ color: active ? "#05070b" : "rgba(255,255,255,0.6)", fontFamily: "'JetBrains Mono', monospace" }}
+            style={{ color: active ? "#05070b" : "rgba(255,255,255,0.6)", fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}
           >
             {active && (
-              <motion.span
+              <m.span
                 layoutId={`audience-pill-${uid}`}
                 className="absolute inset-0 rounded-full"
                 style={{ background: a.color }}
@@ -263,9 +263,9 @@ export function AudienceToggle({ variant = "compact" }) {
 /* cross-fades a window's content when the audience changes */
 export function AudienceSwap({ children }) {
   return (
-    <motion.div className="w-full" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
+    <m.div className="w-full" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
       {children}
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -273,7 +273,7 @@ export function SectionTitle({ children, color = HR_ACCENT, className = "" }) {
   return (
     <h4
       className={`text-[10.5px] uppercase tracking-wider font-semibold mb-3 ${className}`}
-      style={{ color, fontFamily: "'JetBrains Mono', monospace" }}
+      style={{ color, fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}
     >
       {children}
     </h4>
@@ -293,7 +293,7 @@ export function Chip({ children, color }) {
 
 export function BeforeAfter({ hr, color = HR_ACCENT, size = "text-[13px]" }) {
   return (
-    <div className={`flex items-center gap-2 ${size} font-semibold`} style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+    <div className={`flex items-center gap-2 ${size} font-semibold`} style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
       {hr.before && (
         <>
           <span className="text-white/40 line-through decoration-white/25">{hr.before}</span>
@@ -340,7 +340,7 @@ export function Tilt({ children, className = "", max = 4 }) {
   const ry = useSpring(0, { stiffness: 260, damping: 22 });
   if (!enabled) return <div className={className}>{children}</div>;
   return (
-    <motion.div
+    <m.div
       className={className}
       style={{ rotateX: rx, rotateY: ry, transformPerspective: 800 }}
       onPointerMove={(e) => {
@@ -351,6 +351,6 @@ export function Tilt({ children, className = "", max = 4 }) {
       onPointerLeave={() => { rx.set(0); ry.set(0); }}
     >
       {children}
-    </motion.div>
+    </m.div>
   );
 }

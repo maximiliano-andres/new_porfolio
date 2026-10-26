@@ -35,4 +35,6 @@ const subscribe = (listener) => {
   return () => listeners.delete(listener);
 };
 
-export const useCircuit = () => useSyncExternalStore(subscribe, () => state);
+const getSnapshot = () => state;
+// third argument: snapshot used when the background is prerendered at build time
+export const useCircuit = () => useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
