@@ -47,7 +47,7 @@ export function ContactContent() {
     const message = form.message.trim();
     if (!name) errs.name = "Requerido";
     else if (name.length > LIMITS.name) errs.name = `Máximo ${LIMITS.name} caracteres`;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > LIMITS.email) errs.email = "Email inválido";
+    if (!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email) || email.length > LIMITS.email) errs.email = "Email inválido";
     if (!message) errs.message = "Requerido";
     else if (message.length > LIMITS.message) errs.message = `Máximo ${LIMITS.message} caracteres`;
     return errs;

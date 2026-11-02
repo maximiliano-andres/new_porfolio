@@ -1,5 +1,5 @@
 /* Window contents for the RRHH view, including the dedicated recruiter summary. */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Award, Briefcase, Calendar, Check, CheckCircle2, ChevronRight, Copy, Linkedin, MapPin, Target, TrendingUp } from "lucide-react";
 import { BeforeAfter, Chip, CountUp, SectionTitle, SimulatorBanner, Tilt } from "../components/ui.jsx";
 import { CERTS, EXPERIENCE, PROJECTS } from "../data/content.js";
@@ -29,11 +29,14 @@ function KpiGrid() {
 
 export function HRSummaryContent({ onOpen }) {
   const [copied, setCopied] = useState(false);
+  const copiedTimer = useRef(0);
+  useEffect(() => () => clearTimeout(copiedTimer.current), []);
   const copyKeywords = async () => {
     try {
       await navigator.clipboard.writeText(ATS_KEYWORDS.join(", "));
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopied(false), 2000);
     } catch { /* clipboard unavailable (http / permissions) — keywords stay visible to copy manually */ }
   };
 

@@ -1,0 +1,10 @@
+# Same bytes on macOS, Linux and Windows checkouts: Docker images, Caddy and shell tooling expect LF.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.woff2 binary
+*.br binary
+*.gz binary

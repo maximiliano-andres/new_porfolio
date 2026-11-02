@@ -62,7 +62,7 @@ export function TopBar({ scale = 1, openCount = 0, progress = 0, onPalette, onBa
         </button>
         <button data-tour="palette" onClick={onPalette} className={iconBtn} aria-label="Buscar o ejecutar un comando" aria-keyshortcuts="Control+K Meta+K" title="Buscar (Ctrl+K)">
           <Search size={13} />
-          <kbd className="hidden md:inline text-[9.5px] text-white/40" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{isMac ? "⌘K" : "Ctrl K"}</kbd>
+          {!import.meta.env.SSR && <kbd className="hidden md:inline text-[9.5px] text-white/40" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{isMac ? "⌘K" : "Ctrl K"}</kbd>}
         </button>
         <button data-live onClick={onToggleSound} className={iconBtn} aria-pressed={soundOn} aria-label={soundOn ? "Desactivar sonidos" : "Activar sonidos"} title={soundOn ? "Sonidos activados" : "Sonidos desactivados"}>
           {soundOn ? <Volume2 size={13} style={{ color: CORE }} /> : <VolumeX size={13} />}

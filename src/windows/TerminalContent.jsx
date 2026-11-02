@@ -265,10 +265,14 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
   };
 
   const handleKeyDown = (e) => {
+    if (e.key === "Escape") {
+      e.currentTarget.blur(); // a second Escape then closes the window (global shortcut)
+      return;
+    }
     if (e.key === "Tab") {
-      e.preventDefault();
       const typed = norm(inputVal);
-      if (!typed) return;
+      if (!typed || e.shiftKey) return; // empty input or Shift+Tab: normal focus navigation
+      e.preventDefault();
       const pool = [...TERMINAL_COMMANDS, ...Object.keys(TERMINAL_OPEN_ALIASES).map((k) => `open ${k}`)];
       const hits = [...new Set(pool.filter((c) => c.startsWith(typed) && c !== typed))];
       if (hits.length === 1) setInputVal(hits[0]);

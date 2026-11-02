@@ -1,0 +1,419 @@
+--- a/src/PolyglotPortfolio.jsx
++++ b/src/PolyglotPortfolio.jsx
+@@ -14,11 +14,12 @@
+ import { AudienceContext, SystemContext } from "./context.js";
+ import { NOTIFICATION_MESSAGES, PROJECTS } from "./data/content.js";
+ import { AUDIENCES, HR_PROJECTS, PROFILE_NOTIFICATION } from "./data/hr.js";
+-import { ALL_ITEMS, AUTO_TOUR, DOCK_ITEMS, EXTRA_ITEMS, PROJECT_WIN_WIDTH, WINDOW_CIRCUIT } from "./data/system.js";
++import { ACHIEVEMENTS, ALL_ITEMS, AUTO_TOUR, DOCK_ITEMS, EXTRA_ITEMS, PROJECT_WIN_WIDTH, WINDOW_CIRCUIT } from "./data/system.js";
+ import { centeredPos, corePosition, deskArea, dockSpaceFor, isCompactViewport, makeInitialWindows, maximizedPos, tileWindows, uiScaleFor } from "./layout.js";
+ import { circuit } from "./lib/circuitStore.js";
+ import { sound } from "./lib/sound.js";
+ import { storage } from "./lib/storage.js";
++import { reloadOnce } from "./lib/reload.js";
+ import { AchievementToast } from "./overlays/AchievementToast.jsx";
+ import { AutoTourBar } from "./overlays/AutoTourBar.jsx";
+ import { CORE, HR_ACCENT, SOCIAL_LINKS } from "./theme.js";
+@@ -33,29 +34,34 @@
+ const PRERENDERED = typeof document !== "undefined" && Boolean(document.querySelector("[data-shell-root]"));
+ 
+ // framer-motion's animation engine is fetched after the first paint (strict: any stray `motion.*` fails loudly)
+-const loadMotionFeatures = () => import("./lib/motionFeatures.js").then((mod) => mod.default);
++const loadMotionFeatures = () => import("./lib/motionFeatures.js").then((mod) => mod.default).catch((err) => { reloadOnce(); throw err; });
+ 
+ // overlays are only needed after an interaction (or on the first visit's tour): load them on demand
+-const CommandPalette = lazy(() => import("./overlays/CommandPalette.jsx").then((m) => ({ default: m.CommandPalette })));
+-const CoachTour = lazy(() => import("./overlays/CoachTour.jsx").then((m) => ({ default: m.CoachTour })));
+-const CoreMenu = lazy(() => import("./overlays/CoreMenu.jsx").then((m) => ({ default: m.CoreMenu })));
++const CommandPalette = lazy(() => import("./overlays/CommandPalette.jsx").then((m) => ({ default: m.CommandPalette })).catch((err) => { reloadOnce(); throw err; }));
++const CoachTour = lazy(() => import("./overlays/CoachTour.jsx").then((m) => ({ default: m.CoachTour })).catch((err) => { reloadOnce(); throw err; }));
++const CoreMenu = lazy(() => import("./overlays/CoreMenu.jsx").then((m) => ({ default: m.CoreMenu })).catch((err) => { reloadOnce(); throw err; }));
+ 
+ export default function PolyglotPortfolio() {
+   // returning visitors skip the boot sequence entirely (no black frame before the landing screen)
+   const [booted, setBooted] = useState(() => Boolean(storage.get("boot_seen")));
++  const finishBoot = useCallback(() => setBooted(true), []); // stable: BootScreen effects depend on it
+   // the hero skips its fade-in only when taking over the prerendered shell, not when it reappears later
+   const heroFromShell = useRef(PRERENDERED);
+   useEffect(() => { heroFromShell.current = false; }, []);
+   const [windows, setWindows] = useState(makeInitialWindows());
+   const [projectWin, setProjectWin] = useState({ open: false, id: null, z: 1, minimized: false, maximized: false });
++  const projectWinRef = useRef(projectWin);
++  projectWinRef.current = projectWin;
+   const [windowSize, setWindowSize] = useState({
+     width: typeof window !== "undefined" ? window.innerWidth : 1200,
+     height: typeof window !== "undefined" ? window.innerHeight : 800,
+   });
+   const isMobile = isCompactViewport(windowSize);
+   const uiScale = isMobile ? 1 : uiScaleFor(windowSize);
++  const autoTourRef = useRef(null);
+   const [autoTour, setAutoTour] = useState(null); // { steps, i, playing } while the 60 s walkthrough runs
+   // narration bar height: up to 3 lines of text on phones, 1–2 on wider screens
++  autoTourRef.current = autoTour;
+   const tourBarSpace = autoTour ? (windowSize.width < 640 ? 100 : 74) : 0;
+   const area = useMemo(() => deskArea(windowSize, isMobile, uiScale, tourBarSpace), [windowSize, isMobile, uiScale, tourBarSpace]);
+   const zRef = useRef(10);
+@@ -80,9 +86,14 @@
+   }, []);
+ 
+   // achievements + exploration progress (persisted). Refs make unlock() idempotent and side-effect safe.
+-  const readSet = (key) => { try { return new Set(JSON.parse(storage.get(key) || "[]")); } catch { return new Set(); } };
+-  const [unlocked, setUnlocked] = useState(() => readSet("achievements"));
+-  const [visited, setVisited] = useState(() => readSet("visited"));
++  const readSet = (key, valid) => {
++    try {
++      const v = JSON.parse(storage.get(key) || "[]");
++      return new Set(Array.isArray(v) ? v.filter((id) => valid.includes(id)) : []);
++    } catch { return new Set(); }
++  };
++  const [unlocked, setUnlocked] = useState(() => readSet("achievements", ACHIEVEMENTS.map((a) => a.id)));
++  const [visited, setVisited] = useState(() => readSet("visited", DOCK_ITEMS.map((it) => it.id)));
+   const unlockedRef = useRef(unlocked);
+   const visitedRef = useRef(visited);
+   const [achQueue, setAchQueue] = useState([]);
+@@ -139,7 +150,7 @@
+     const firstVisit = !storage.get("tour_seen");
+     const firstTimeout = setTimeout(() => {
+       if (firstVisit) {
+-        setCoachOpen(true);
++        if (!autoTourRef.current) setCoachOpen(true); // the 60 s tour already started: don't stack the coach on it
+         return;
+       }
+       setActiveToast(NOTIFICATION_MESSAGES[0]);
+@@ -183,7 +194,10 @@
+     const handleResize = () => {
+       cancelAnimationFrame(frame);
+       frame = requestAnimationFrame(() =>
+-        setWindowSize({ width: window.innerWidth, height: window.innerHeight })
++        setWindowSize((prev) =>
++          prev.width === window.innerWidth && prev.height === window.innerHeight
++            ? prev
++            : { width: window.innerWidth, height: window.innerHeight })
+       );
+     };
+     handleResize();
+@@ -206,11 +220,11 @@
+   }, [windows, area, isMobile, uiScale]);
+ 
+   const bringFront = useCallback((key) => {
+-    zRef.current += 1;
++    // already in front → keep the same state object (no re-render on every click inside a window)
+     if (key === "project") {
+-      setProjectWin((p) => ({ ...p, z: zRef.current }));
++      setProjectWin((p) => (p.z === zRef.current ? p : { ...p, z: ++zRef.current }));
+     } else {
+-      setWindows((w) => ({ ...w, [key]: { ...w[key], z: zRef.current } }));
++      setWindows((w) => (w[key]?.z === zRef.current ? w : { ...w, [key]: { ...w[key], z: ++zRef.current } }));
+     }
+   }, []);
+ 
+@@ -226,8 +240,10 @@
+         return { ...w, [id]: { ...cur, minimized: false, z: zRef.current } };
+       }
+       
+-      const activeWindows = Object.values(w).filter((win) => win.open && !win.minimized);
+-      const isFrontmost = activeWindows.length === 0 || cur.z === Math.max(...activeWindows.map((win) => win.z));
++      const pw = projectWinRef.current;
++      const zs = Object.values(w).filter((win) => win.open && !win.minimized).map((win) => win.z);
++      if (pw.open && !pw.minimized) zs.push(pw.z); // the project detail counts as a window in front
++      const isFrontmost = zs.length === 0 || cur.z === Math.max(...zs);
+ 
+       if (isFrontmost) {
+         return { ...w, [id]: { ...cur, minimized: true } };
+@@ -289,7 +305,7 @@
+       visitedRef.current = next;
+       setVisited(next);
+       storage.set("visited", JSON.stringify([...next]));
+-      if (next.size === DOCK_ITEMS.length) unlock("explorer");
++      if (next.size >= DOCK_ITEMS.length) unlock("explorer");
+     }
+   }, [windows, unlock]);
+   useEffect(() => {
+@@ -377,6 +393,7 @@
+   }, [booted, paletteOpen, coachOpen, coreOpen, autoTour, windows, projectWin, unlock, toggleWindow, closeWindow, stopAutoTour, startCoachTour]);
+ 
+   const hr = audience === "rrhh";
++  const toggleFromDock = useCallback((id) => { setCoreOpen(false); toggleWindow(id); }, [toggleWindow]);
+   // windows with two vocabularies cross-fade between them; contact/terminal keep their state (form input, history)
+   const swap = (ti, rrhh) => <AudienceSwap key={audience}>{hr ? rrhh : ti}</AudienceSwap>;
+   const contentFor = (id) => {
+@@ -472,7 +489,7 @@
+     <div className="relative w-full h-dvh overflow-hidden" style={{ fontFamily: "'Inter', 'Inter Fallback', sans-serif" }}>
+ 
+       <AnimatePresence>
+-        {!booted && <BootScreen onDone={() => setBooted(true)} onChoose={(id) => setAudience(id, { silent: true })} current={audience} />}
++        {!booted && <BootScreen onDone={finishBoot} onChoose={(id) => setAudience(id, { silent: true })} current={audience} />}
+       </AnimatePresence>
+ 
+       <CircuitBackground energized={energized} paused={deskCovered} />
+@@ -510,7 +527,7 @@
+         {/* hero — scrolls on its own when the screen is too short (landscape phones),
+             and reserves room for the top bar and the dock so nothing overlaps */}
+         <AnimatePresence>
+-          {booted && !Object.values(windows).some((w) => w.open && !w.minimized) && (
++          {booted && !Object.values(windows).some((w) => w.open && !w.minimized) && !(projectWin.open && !projectWin.minimized) && (
+             <Hero
+               hr={hr}
+               insets={{ top: area.y + 8, bottom: windowSize.height - area.y - area.h + 8 }}
+@@ -586,7 +603,7 @@
+         </AnimatePresence>
+       </div>
+ 
+-      {booted && <Dock items={dockItems} windows={windows} onToggle={toggleWindow} scale={uiScale} />}
++      {booted && <Dock items={dockItems} windows={windows} onToggle={toggleFromDock} scale={uiScale} />}
+ 
+       <AnimatePresence>
+         {coreOpen && (
+--- a/src/components/FloatingWindow.jsx
++++ b/src/components/FloatingWindow.jsx
+@@ -48,6 +48,7 @@
+       dragConstraints={boundsRef}
+       dragElastic={0}
+       onPointerDown={onFocus}
++      {...(isMinimized ? { inert: "", "aria-hidden": true } : {})}
+       initial={{ opacity: 0, scale: 0.15, x: toDock.x, y: toDock.y }}
+       animate={{
+         opacity: isMinimized ? 0 : 1,
+@@ -107,9 +108,11 @@
+           </button>
+         </div>
+       )}
+-      {!isMinimized && (
++      {(
++        // kept mounted while minimized: terminal history, form drafts and in-flight requests survive
+         // @container: window contents respond to the window's width, not the viewport's
+         <div
++          hidden={isMinimized}
+           className="@container flex flex-col overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5 flex-1 min-h-0"
+           style={{ scrollbarWidth: "thin", zoom: scale }}
+         >
+--- a/src/components/SectionBoundary.jsx
++++ b/src/components/SectionBoundary.jsx
+@@ -2,9 +2,10 @@
+    fails to download — shows a recoverable message there instead of taking the whole portfolio down. */
+ import { Component } from "react";
+ import { AlertTriangle, RotateCcw } from "lucide-react";
++import { reloadOnce } from "../lib/reload.js";
+ 
+ const isChunkLoadError = (error) =>
+-  /dynamically imported module|Importing a module script failed|Loading chunk|Failed to fetch/i.test(String(error?.message));
++  /dynamically imported module|Importing a module script failed|Loading chunk|Failed to fetch|Unable to preload/i.test(String(error?.message));
+ 
+ export class SectionBoundary extends Component {
+   state = { error: null };
+@@ -15,6 +16,8 @@
+ 
+   componentDidCatch(error, info) {
+     console.error(`[${this.props.name || "section"}] render error:`, error, info?.componentStack);
++    // silent overlays have no retry button: a stale chunk would disable them for the whole session
++    if (this.props.silent && isChunkLoadError(error)) reloadOnce();
+   }
+ 
+   // a stale or failed download is only recoverable with fresh assets; other errors get a fresh render
+--- a/src/main.jsx
++++ b/src/main.jsx
+@@ -4,7 +4,11 @@
+ import ErrorBoundary from './ErrorBoundary.jsx'
+ import './fonts.css'
+ import './index.css'
++import { reloadOnce } from './lib/reload.js'
+ 
++// Vite's preload helper: a CSS/JS dependency of a lazy chunk is gone after a redeploy
++window.addEventListener('vite:preloadError', (event) => { if (reloadOnce()) event.preventDefault() })
++
+ ReactDOM.createRoot(document.getElementById('root')).render(
+   <React.StrictMode>
+     <ErrorBoundary>
+--- a/src/windows/lazy.js
++++ b/src/windows/lazy.js
+@@ -1,6 +1,7 @@
+ /* Code-split window contents: each group is downloaded the first time one of its windows opens
+    (or earlier, when its dock icon is hovered/focused or the browser is idle). */
+ import { lazy } from "react";
++import { reloadOnce } from "../lib/reload.js";
+ 
+ const loaders = {
+   tech: () => import("./tech.jsx"),
+@@ -11,7 +12,7 @@
+   badges: () => import("./BadgesContent.jsx"),
+ };
+ 
+-const pick = (chunk, name) => lazy(() => loaders[chunk]().then((m) => ({ default: m[name] })));
++const pick = (chunk, name) => lazy(() => loaders[chunk]().then((m) => ({ default: m[name] })).catch((err) => { reloadOnce(); throw err; }));
+ 
+ export const AboutContent = pick("tech", "AboutContent");
+ export const SkillsContent = pick("tech", "SkillsContent");
+--- a/src/windows/TerminalContent.jsx
++++ b/src/windows/TerminalContent.jsx
+@@ -265,10 +265,14 @@
+   };
+ 
+   const handleKeyDown = (e) => {
++    if (e.key === "Escape") {
++      e.currentTarget.blur(); // a second Escape then closes the window (global shortcut)
++      return;
++    }
+     if (e.key === "Tab") {
+-      e.preventDefault();
+       const typed = norm(inputVal);
+-      if (!typed) return;
++      if (!typed || e.shiftKey) return; // empty input or Shift+Tab: normal focus navigation
++      e.preventDefault();
+       const pool = [...TERMINAL_COMMANDS, ...Object.keys(TERMINAL_OPEN_ALIASES).map((k) => `open ${k}`)];
+       const hits = [...new Set(pool.filter((c) => c.startsWith(typed) && c !== typed))];
+       if (hits.length === 1) setInputVal(hits[0]);
+--- a/src/overlays/CommandPalette.jsx
++++ b/src/overlays/CommandPalette.jsx
+@@ -15,8 +15,12 @@
+     if (!open) return;
+     setQ("");
+     setSel(0);
++    const previous = document.activeElement; // focus goes back here when the palette closes
+     const t = setTimeout(() => inputRef.current?.focus(), 30);
+-    return () => clearTimeout(t);
++    return () => {
++      clearTimeout(t);
++      if (previous instanceof HTMLElement && previous.isConnected) previous.focus({ preventScroll: true });
++    };
+   }, [open]);
+ 
+   const results = useMemo(() => {
+@@ -45,7 +49,6 @@
+     if (e.key === "ArrowDown") { e.preventDefault(); setSel((i) => (i + 1) % Math.max(1, results.length)); }
+     else if (e.key === "ArrowUp") { e.preventDefault(); setSel((i) => (i - 1 + results.length) % Math.max(1, results.length)); }
+     else if (e.key === "Enter") { e.preventDefault(); run(results[sel]); }
+-    else if (e.key === "Escape") { e.preventDefault(); onClose(); }
+   };
+ 
+   let lastGroup = null;
+@@ -58,6 +61,7 @@
+           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+           transition={{ duration: 0.15 }}
+           onMouseDown={(e) => e.target === e.currentTarget && onClose()}
++          onKeyDown={(e) => { if (e.key === "Escape") { e.preventDefault(); onClose(); } }}
+         >
+           <m.div
+             role="dialog"
+--- a/src/overlays/CoreMenu.jsx
++++ b/src/overlays/CoreMenu.jsx
+@@ -32,6 +32,7 @@
+       style={{ background: `radial-gradient(circle at ${cx}px ${cy}px, rgba(34,211,238,0.12), transparent 45%), rgba(3,5,9,0.93)`, backdropFilter: "blur(6px)" }}
+       onClick={onClose}
+       role="dialog"
++      aria-modal="true"
+       aria-label="Centro de control CORE"
+     >
+       <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
+--- a/src/components/TopBar.jsx
++++ b/src/components/TopBar.jsx
+@@ -62,7 +62,7 @@
+         </button>
+         <button data-tour="palette" onClick={onPalette} className={iconBtn} aria-label="Buscar o ejecutar un comando" aria-keyshortcuts="Control+K Meta+K" title="Buscar (Ctrl+K)">
+           <Search size={13} />
+-          <kbd className="hidden md:inline text-[9.5px] text-white/40" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{isMac ? "⌘K" : "Ctrl K"}</kbd>
++          {!import.meta.env.SSR && <kbd className="hidden md:inline text-[9.5px] text-white/40" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{isMac ? "⌘K" : "Ctrl K"}</kbd>}
+         </button>
+         <button data-live onClick={onToggleSound} className={iconBtn} aria-pressed={soundOn} aria-label={soundOn ? "Desactivar sonidos" : "Activar sonidos"} title={soundOn ? "Sonidos activados" : "Sonidos desactivados"}>
+           {soundOn ? <Volume2 size={13} style={{ color: CORE }} /> : <VolumeX size={13} />}
+--- a/src/prerender.jsx
++++ b/src/prerender.jsx
+@@ -58,9 +58,9 @@
+ export function shellScript() {
+   const fns = [uiScaleFor, isCompactViewport, dockSpaceFor, deskArea].map((f) => f.toString()).join("\n");
+   return `(function(){var d=document.documentElement;
+-try{var q=new URLSearchParams(location.search).get("vista");var s=window.localStorage;
+-d.dataset.audience=q==="rrhh"||q==="ti"?q:(s.getItem("audience")==="rrhh"?"rrhh":"ti");
+-if(!s.getItem("boot_seen"))d.dataset.boot="1";}catch(e){d.dataset.audience="ti";}
++var q=null;try{q=new URLSearchParams(location.search).get("vista");}catch(e){}
++try{var s=window.localStorage;d.dataset.audience=q==="rrhh"||q==="ti"?q:(s.getItem("audience")==="rrhh"?"rrhh":"ti");
++if(!s.getItem("boot_seen"))d.dataset.boot="1";}catch(e){d.dataset.audience=q==="rrhh"?"rrhh":"ti";d.dataset.boot="1";}
+ var TILE_GAP=12;
+ ${fns}
+ function apply(){var size={width:innerWidth,height:innerHeight};var c=isCompactViewport(size);var k=c?1:uiScaleFor(size);var a=deskArea(size,c,k,0);
+--- a/src/windows/SimulatorContent.jsx
++++ b/src/windows/SimulatorContent.jsx
+@@ -45,7 +45,7 @@
+     const total = prefersReducedMotion() ? 1 : Math.max(500, (run.minutes / SIM_BASE_MIN) * 3200);
+     let frame = 0;
+     const step = (t) => {
+-      const k = Math.min(1, (t - run.started) / total);
++      const k = Math.max(0, Math.min(1, (t - run.started) / total)); // first rAF can predate `started`
+       setProgress(k);
+       if (k < 1) frame = requestAnimationFrame(step);
+       else if (run.minutes <= 10) unlock("optimizer");
+--- a/src/windows/hr.jsx
++++ b/src/windows/hr.jsx
+@@ -1,5 +1,5 @@
+ /* Window contents for the RRHH view, including the dedicated recruiter summary. */
+-import { useState } from "react";
++import { useEffect, useRef, useState } from "react";
+ import { Award, Briefcase, Calendar, Check, CheckCircle2, ChevronRight, Copy, Linkedin, MapPin, Target, TrendingUp } from "lucide-react";
+ import { BeforeAfter, Chip, CountUp, SectionTitle, SimulatorBanner, Tilt } from "../components/ui.jsx";
+ import { CERTS, EXPERIENCE, PROJECTS } from "../data/content.js";
+@@ -29,11 +29,14 @@
+ 
+ export function HRSummaryContent({ onOpen }) {
+   const [copied, setCopied] = useState(false);
++  const copiedTimer = useRef(0);
++  useEffect(() => () => clearTimeout(copiedTimer.current), []);
+   const copyKeywords = async () => {
+     try {
+       await navigator.clipboard.writeText(ATS_KEYWORDS.join(", "));
+       setCopied(true);
+-      setTimeout(() => setCopied(false), 2000);
++      clearTimeout(copiedTimer.current);
++      copiedTimer.current = setTimeout(() => setCopied(false), 2000);
+     } catch { /* clipboard unavailable (http / permissions) — keywords stay visible to copy manually */ }
+   };
+ 
+--- a/src/windows/ContactContent.jsx
++++ b/src/windows/ContactContent.jsx
+@@ -47,7 +47,7 @@
+     const message = form.message.trim();
+     if (!name) errs.name = "Requerido";
+     else if (name.length > LIMITS.name) errs.name = `Máximo ${LIMITS.name} caracteres`;
+-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > LIMITS.email) errs.email = "Email inválido";
++    if (!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email) || email.length > LIMITS.email) errs.email = "Email inválido";
+     if (!message) errs.message = "Requerido";
+     else if (message.length > LIMITS.message) errs.message = `Máximo ${LIMITS.message} caracteres`;
+     return errs;
+--- a/public/sw.js
++++ b/public/sw.js
+@@ -2,7 +2,7 @@
+    - /assets/* (content-hashed, immutable), /fonts/*, /img/*: cache first
+    - page navigations: network first, so a new deploy is seen immediately; cached copy when offline
+    - /api/* and other origins: never touched */
+-const VERSION = "v1";
++const VERSION = "v2"; // v2: purges HTML that v1 may have cached under asset URLs
+ const STATIC_CACHE = `static-${VERSION}`;
+ const PAGE_CACHE = `pages-${VERSION}`;
+ const MAX_STATIC_ENTRIES = 80; // old hashed assets from previous deploys get evicted
+@@ -32,7 +32,8 @@
+   const hit = await cache.match(request);
+   if (hit) return hit;
+   const response = await fetch(request);
+-  if (response.ok) {
++  const type = response.headers.get("content-type") || "";
++  if (response.ok && !type.startsWith("text/html")) {
+     await cache.put(request, response.clone());
+     trim(cache);
+   }
+--- /dev/null
++++ b/src/lib/reload.js
+@@ -0,0 +1,16 @@
++/* Chunks from an older deploy are gone after a redeploy: reload once to get fresh HTML.
++   Never loops (one attempt per 30 s) and never reloads while offline (the error UI stays instead). */
++const KEY = "chunk_reload_at";
++
++export function reloadOnce() {
++  if (typeof navigator !== "undefined" && navigator.onLine === false) return false;
++  try {
++    const last = Number(window.sessionStorage.getItem(KEY) || 0);
++    if (Date.now() - last < 30_000) return false;
++    window.sessionStorage.setItem(KEY, String(Date.now()));
++  } catch {
++    return false;
++  }
++  window.location.reload();
++  return true;
++}

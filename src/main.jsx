@@ -4,6 +4,10 @@ import PolyglotPortfolio from './PolyglotPortfolio.jsx'
 import ErrorBoundary from './ErrorBoundary.jsx'
 import './fonts.css'
 import './index.css'
+import { reloadOnce } from './lib/reload.js'
+
+// Vite's preload helper: a CSS/JS dependency of a lazy chunk is gone after a redeploy
+window.addEventListener('vite:preloadError', (event) => { if (reloadOnce()) event.preventDefault() })
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

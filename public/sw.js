@@ -2,7 +2,7 @@
    - /assets/* (content-hashed, immutable), /fonts/*, /img/*: cache first
    - page navigations: network first, so a new deploy is seen immediately; cached copy when offline
    - /api/* and other origins: never touched */
-const VERSION = "v1";
+const VERSION = "v2"; // v2: purges HTML that v1 may have cached under asset URLs
 const STATIC_CACHE = `static-${VERSION}`;
 const PAGE_CACHE = `pages-${VERSION}`;
 const MAX_STATIC_ENTRIES = 80; // old hashed assets from previous deploys get evicted
@@ -32,7 +32,8 @@ async function cacheFirst(request) {
   const hit = await cache.match(request);
   if (hit) return hit;
   const response = await fetch(request);
-  if (response.ok) {
+  const type = response.headers.get("content-type") || "";
+  if (response.ok && !type.startsWith("text/html")) {
     await cache.put(request, response.clone());
     trim(cache);
   }

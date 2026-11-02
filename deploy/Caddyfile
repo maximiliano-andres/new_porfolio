@@ -9,29 +9,54 @@
 	root * dist
 	import security-headers.caddy
 
-	# API → FastAPI (rate limits, validation and contact storage live there)
-	handle /api/* {
+	# API → FastAPI (rate limits, validation and contact storage live there); "/api" too, so it never gets the SPA
+	@api path /api /api/*
+	handle @api {
 		encode zstd gzip
 		reverse_proxy {$API_UPSTREAM:127.0.0.1:8000}
 	}
 
-	# never publish stray docs or the precompressed files directly
+	# never publish stray docs or the precompressed files directly.
+	# Must be a `handle` block: a bare `respond` runs after `handle` in Caddy's directive order,
+	# so the catch-all `handle` below answered first and these files were served.
 	@hidden path *.md *.br *.gz
-	respond @hidden 404
+	handle @hidden {
+		respond 404
+	}
 
+	# same cache policy as main.py: hashed assets 1 year, fonts 30 days, images 1 hour
 	@assets path /assets/*
 	header @assets Cache-Control "public, max-age=31536000, immutable"
 	@fonts path /fonts/*
 	header @fonts Cache-Control "public, max-age=2592000"
-	@sw path /sw.js
-	header @sw Cache-Control "no-cache"
-	@page path / /index.html
-	header @page Cache-Control "no-cache"
+	@img path /img/*
+	header @img Cache-Control "public, max-age=3600"
 
-	handle {
-		try_files {path} /index.html
+	# static files: a missing one is a real 404, never the HTML shell
+	# (before: an old chunk name got index.html with the 1-year immutable header above)
+	@static path /assets/* /fonts/* /img/*
+	handle @static {
 		file_server {
 			precompressed br gzip
+		}
+	}
+
+	# existing pages and files (/, /index.html, ?vista=…, sw.js, robots.txt): always revalidated
+	@exists file {path} {path}/index.html
+	handle @exists {
+		header Cache-Control "no-cache"
+		file_server {
+			precompressed br gzip
+		}
+	}
+
+	# unknown paths: the visitor still gets the portfolio, crawlers get an honest 404 (same as main.py)
+	handle {
+		header Cache-Control "no-cache"
+		rewrite * /index.html
+		file_server {
+			precompressed br gzip
+			status 404
 		}
 	}
 }

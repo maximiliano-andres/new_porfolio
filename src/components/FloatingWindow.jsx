@@ -42,12 +42,15 @@ export function FloatingWindow({
   return (
     <m.div
       data-win={id}
+      role="dialog"
+      aria-label={title}
       layout="position"
       drag={!isMobile && !isMaximized}
       dragMomentum={false}
       dragConstraints={boundsRef}
       dragElastic={0}
       onPointerDown={onFocus}
+      {...(isMinimized ? { inert: "", "aria-hidden": true } : {})}
       initial={{ opacity: 0, scale: 0.15, x: toDock.x, y: toDock.y }}
       animate={{
         opacity: isMinimized ? 0 : 1,
@@ -107,9 +110,11 @@ export function FloatingWindow({
           </button>
         </div>
       )}
-      {!isMinimized && (
+      {(
+        // kept mounted while minimized: terminal history, form drafts and in-flight requests survive
         // @container: window contents respond to the window's width, not the viewport's
         <div
+          hidden={isMinimized}
           className="@container flex flex-col overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5 flex-1 min-h-0"
           style={{ scrollbarWidth: "thin", zoom: scale }}
         >

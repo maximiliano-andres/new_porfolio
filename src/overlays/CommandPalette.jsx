@@ -4,19 +4,37 @@ import { AnimatePresence, m } from "framer-motion";
 import { CornerDownLeft, Search } from "lucide-react";
 import { norm } from "../lib/env.js";
 import { CORE } from "../theme.js";
+import { useFocusTrap } from "../lib/useFocusTrap.js";
 
 export function CommandPalette({ open, onClose, commands }) {
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(0);
   const inputRef = useRef(null);
   const listRef = useRef(null);
+  const panelRef = useRef(null);
+  useFocusTrap(panelRef, open);
+  // Escape closes from anywhere while open (also when a click left the focus on an empty area)
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      e.preventDefault();
+      onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
 
   useEffect(() => {
     if (!open) return;
     setQ("");
     setSel(0);
+    const previous = document.activeElement; // focus goes back here when the palette closes
     const t = setTimeout(() => inputRef.current?.focus(), 30);
-    return () => clearTimeout(t);
+    return () => {
+      clearTimeout(t);
+      if (previous instanceof HTMLElement && previous.isConnected) previous.focus({ preventScroll: true });
+    };
   }, [open]);
 
   const results = useMemo(() => {
@@ -45,7 +63,6 @@ export function CommandPalette({ open, onClose, commands }) {
     if (e.key === "ArrowDown") { e.preventDefault(); setSel((i) => (i + 1) % Math.max(1, results.length)); }
     else if (e.key === "ArrowUp") { e.preventDefault(); setSel((i) => (i - 1 + results.length) % Math.max(1, results.length)); }
     else if (e.key === "Enter") { e.preventDefault(); run(results[sel]); }
-    else if (e.key === "Escape") { e.preventDefault(); onClose(); }
   };
 
   let lastGroup = null;
@@ -60,11 +77,13 @@ export function CommandPalette({ open, onClose, commands }) {
           onMouseDown={(e) => e.target === e.currentTarget && onClose()}
         >
           <m.div
+            ref={panelRef}
+            tabIndex={-1} // a click on an empty area keeps the focus inside the dialog
             role="dialog"
             aria-modal="true"
             aria-label="Paleta de comandos"
             initial={{ y: -10, scale: 0.98 }} animate={{ y: 0, scale: 1 }} exit={{ y: -10, scale: 0.98 }}
-            className="w-full max-w-[560px] h-fit max-h-[min(520px,calc(100dvh-24px))] flex flex-col rounded-xl border overflow-hidden shadow-2xl"
+            className="outline-hidden w-full max-w-[560px] h-fit max-h-[min(520px,calc(100dvh-24px))] flex flex-col rounded-xl border overflow-hidden shadow-2xl"
             style={{ background: "rgba(10,14,20,0.97)", borderColor: `${CORE}33` }}
           >
             <div className="flex items-center gap-2.5 px-4 py-3 border-b border-white/10">

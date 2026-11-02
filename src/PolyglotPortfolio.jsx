@@ -14,11 +14,12 @@ import { AudienceSwap } from "./components/ui.jsx";
 import { AudienceContext, SystemContext } from "./context.js";
 import { NOTIFICATION_MESSAGES, PROJECTS } from "./data/content.js";
 import { AUDIENCES, HR_PROJECTS, PROFILE_NOTIFICATION } from "./data/hr.js";
-import { ALL_ITEMS, AUTO_TOUR, DOCK_ITEMS, EXTRA_ITEMS, PROJECT_WIN_WIDTH, WINDOW_CIRCUIT } from "./data/system.js";
+import { ACHIEVEMENTS, ALL_ITEMS, AUTO_TOUR, DOCK_ITEMS, EXTRA_ITEMS, PROJECT_WIN_WIDTH, WINDOW_CIRCUIT } from "./data/system.js";
 import { centeredPos, corePosition, deskArea, dockSpaceFor, isCompactViewport, makeInitialWindows, maximizedPos, tileWindows, uiScaleFor } from "./layout.js";
 import { circuit } from "./lib/circuitStore.js";
 import { sound } from "./lib/sound.js";
 import { storage } from "./lib/storage.js";
+import { reloadOnce } from "./lib/reload.js";
 import { AchievementToast } from "./overlays/AchievementToast.jsx";
 import { AutoTourBar } from "./overlays/AutoTourBar.jsx";
 import { CORE, HR_ACCENT, SOCIAL_LINKS } from "./theme.js";
@@ -33,29 +34,34 @@ import {
 const PRERENDERED = typeof document !== "undefined" && Boolean(document.querySelector("[data-shell-root]"));
 
 // framer-motion's animation engine is fetched after the first paint (strict: any stray `motion.*` fails loudly)
-const loadMotionFeatures = () => import("./lib/motionFeatures.js").then((mod) => mod.default);
+const loadMotionFeatures = () => import("./lib/motionFeatures.js").then((mod) => mod.default).catch((err) => { reloadOnce(); throw err; });
 
 // overlays are only needed after an interaction (or on the first visit's tour): load them on demand
-const CommandPalette = lazy(() => import("./overlays/CommandPalette.jsx").then((m) => ({ default: m.CommandPalette })));
-const CoachTour = lazy(() => import("./overlays/CoachTour.jsx").then((m) => ({ default: m.CoachTour })));
-const CoreMenu = lazy(() => import("./overlays/CoreMenu.jsx").then((m) => ({ default: m.CoreMenu })));
+const CommandPalette = lazy(() => import("./overlays/CommandPalette.jsx").then((m) => ({ default: m.CommandPalette })).catch((err) => { reloadOnce(); throw err; }));
+const CoachTour = lazy(() => import("./overlays/CoachTour.jsx").then((m) => ({ default: m.CoachTour })).catch((err) => { reloadOnce(); throw err; }));
+const CoreMenu = lazy(() => import("./overlays/CoreMenu.jsx").then((m) => ({ default: m.CoreMenu })).catch((err) => { reloadOnce(); throw err; }));
 
 export default function PolyglotPortfolio() {
   // returning visitors skip the boot sequence entirely (no black frame before the landing screen)
   const [booted, setBooted] = useState(() => Boolean(storage.get("boot_seen")));
+  const finishBoot = useCallback(() => setBooted(true), []); // stable: BootScreen effects depend on it
   // the hero skips its fade-in only when taking over the prerendered shell, not when it reappears later
   const heroFromShell = useRef(PRERENDERED);
   useEffect(() => { heroFromShell.current = false; }, []);
   const [windows, setWindows] = useState(makeInitialWindows());
   const [projectWin, setProjectWin] = useState({ open: false, id: null, z: 1, minimized: false, maximized: false });
+  const projectWinRef = useRef(projectWin);
+  projectWinRef.current = projectWin;
   const [windowSize, setWindowSize] = useState({
     width: typeof window !== "undefined" ? window.innerWidth : 1200,
     height: typeof window !== "undefined" ? window.innerHeight : 800,
   });
   const isMobile = isCompactViewport(windowSize);
   const uiScale = isMobile ? 1 : uiScaleFor(windowSize);
+  const autoTourRef = useRef(null);
   const [autoTour, setAutoTour] = useState(null); // { steps, i, playing } while the 60 s walkthrough runs
   // narration bar height: up to 3 lines of text on phones, 1–2 on wider screens
+  autoTourRef.current = autoTour;
   const tourBarSpace = autoTour ? (windowSize.width < 640 ? 100 : 74) : 0;
   const area = useMemo(() => deskArea(windowSize, isMobile, uiScale, tourBarSpace), [windowSize, isMobile, uiScale, tourBarSpace]);
   const zRef = useRef(10);
@@ -80,9 +86,14 @@ export default function PolyglotPortfolio() {
   }, []);
 
   // achievements + exploration progress (persisted). Refs make unlock() idempotent and side-effect safe.
-  const readSet = (key) => { try { return new Set(JSON.parse(storage.get(key) || "[]")); } catch { return new Set(); } };
-  const [unlocked, setUnlocked] = useState(() => readSet("achievements"));
-  const [visited, setVisited] = useState(() => readSet("visited"));
+  const readSet = (key, valid) => {
+    try {
+      const v = JSON.parse(storage.get(key) || "[]");
+      return new Set(Array.isArray(v) ? v.filter((id) => valid.includes(id)) : []);
+    } catch { return new Set(); }
+  };
+  const [unlocked, setUnlocked] = useState(() => readSet("achievements", ACHIEVEMENTS.map((a) => a.id)));
+  const [visited, setVisited] = useState(() => readSet("visited", DOCK_ITEMS.map((it) => it.id)));
   const unlockedRef = useRef(unlocked);
   const visitedRef = useRef(visited);
   const [achQueue, setAchQueue] = useState([]);
@@ -139,7 +150,7 @@ export default function PolyglotPortfolio() {
     const firstVisit = !storage.get("tour_seen");
     const firstTimeout = setTimeout(() => {
       if (firstVisit) {
-        setCoachOpen(true);
+        if (!autoTourRef.current) setCoachOpen(true); // the 60 s tour already started: don't stack the coach on it
         return;
       }
       setActiveToast(NOTIFICATION_MESSAGES[0]);
@@ -183,7 +194,10 @@ export default function PolyglotPortfolio() {
     const handleResize = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() =>
-        setWindowSize({ width: window.innerWidth, height: window.innerHeight })
+        setWindowSize((prev) =>
+          prev.width === window.innerWidth && prev.height === window.innerHeight
+            ? prev
+            : { width: window.innerWidth, height: window.innerHeight })
       );
     };
     handleResize();
@@ -206,11 +220,11 @@ export default function PolyglotPortfolio() {
   }, [windows, area, isMobile, uiScale]);
 
   const bringFront = useCallback((key) => {
-    zRef.current += 1;
+    // already in front → keep the same state object (no re-render on every click inside a window)
     if (key === "project") {
-      setProjectWin((p) => ({ ...p, z: zRef.current }));
+      setProjectWin((p) => (p.z === zRef.current ? p : { ...p, z: ++zRef.current }));
     } else {
-      setWindows((w) => ({ ...w, [key]: { ...w[key], z: zRef.current } }));
+      setWindows((w) => (w[key]?.z === zRef.current ? w : { ...w, [key]: { ...w[key], z: ++zRef.current } }));
     }
   }, []);
 
@@ -226,8 +240,10 @@ export default function PolyglotPortfolio() {
         return { ...w, [id]: { ...cur, minimized: false, z: zRef.current } };
       }
       
-      const activeWindows = Object.values(w).filter((win) => win.open && !win.minimized);
-      const isFrontmost = activeWindows.length === 0 || cur.z === Math.max(...activeWindows.map((win) => win.z));
+      const pw = projectWinRef.current;
+      const zs = Object.values(w).filter((win) => win.open && !win.minimized).map((win) => win.z);
+      if (pw.open && !pw.minimized) zs.push(pw.z); // the project detail counts as a window in front
+      const isFrontmost = zs.length === 0 || cur.z === Math.max(...zs);
 
       if (isFrontmost) {
         return { ...w, [id]: { ...cur, minimized: true } };
@@ -245,7 +261,10 @@ export default function PolyglotPortfolio() {
   }, []);
 
   const closeWindow = useCallback((id) => {
+    // only when the focus is inside that window (close button, Esc): programmatic closes (tours) don't move it
+    const focusWasInside = Boolean(document.activeElement?.closest?.(`[data-win="${id}"]`));
     setWindows((w) => ({ ...w, [id]: { ...w[id], open: false, minimized: false, maximized: false } }));
+    if (focusWasInside) requestAnimationFrame(() => document.querySelector(`[data-dock-id="${id}"]`)?.focus({ preventScroll: true }));
   }, []);
   const minimizeWindow = useCallback((id) => {
     setWindows((w) => ({ ...w, [id]: { ...w[id], minimized: !w[id].minimized } }));
@@ -289,7 +308,7 @@ export default function PolyglotPortfolio() {
       visitedRef.current = next;
       setVisited(next);
       storage.set("visited", JSON.stringify([...next]));
-      if (next.size === DOCK_ITEMS.length) unlock("explorer");
+      if (next.size >= DOCK_ITEMS.length) unlock("explorer");
     }
   }, [windows, unlock]);
   useEffect(() => {
@@ -377,6 +396,7 @@ export default function PolyglotPortfolio() {
   }, [booted, paletteOpen, coachOpen, coreOpen, autoTour, windows, projectWin, unlock, toggleWindow, closeWindow, stopAutoTour, startCoachTour]);
 
   const hr = audience === "rrhh";
+  const toggleFromDock = useCallback((id) => { setCoreOpen(false); toggleWindow(id); }, [toggleWindow]);
   // windows with two vocabularies cross-fade between them; contact/terminal keep their state (form input, history)
   const swap = (ti, rrhh) => <AudienceSwap key={audience}>{hr ? rrhh : ti}</AudienceSwap>;
   const contentFor = (id) => {
@@ -472,7 +492,7 @@ export default function PolyglotPortfolio() {
     <div className="relative w-full h-dvh overflow-hidden" style={{ fontFamily: "'Inter', 'Inter Fallback', sans-serif" }}>
 
       <AnimatePresence>
-        {!booted && <BootScreen onDone={() => setBooted(true)} onChoose={(id) => setAudience(id, { silent: true })} current={audience} />}
+        {!booted && <BootScreen onDone={finishBoot} onChoose={(id) => setAudience(id, { silent: true })} current={audience} />}
       </AnimatePresence>
 
       <CircuitBackground energized={energized} paused={deskCovered} />
@@ -510,7 +530,7 @@ export default function PolyglotPortfolio() {
         {/* hero — scrolls on its own when the screen is too short (landscape phones),
             and reserves room for the top bar and the dock so nothing overlaps */}
         <AnimatePresence>
-          {booted && !Object.values(windows).some((w) => w.open && !w.minimized) && (
+          {booted && !Object.values(windows).some((w) => w.open && !w.minimized) && !(projectWin.open && !projectWin.minimized) && (
             <Hero
               hr={hr}
               insets={{ top: area.y + 8, bottom: windowSize.height - area.y - area.h + 8 }}
@@ -586,7 +606,7 @@ export default function PolyglotPortfolio() {
         </AnimatePresence>
       </div>
 
-      {booted && <Dock items={dockItems} windows={windows} onToggle={toggleWindow} scale={uiScale} />}
+      {booted && <Dock items={dockItems} windows={windows} onToggle={toggleFromDock} scale={uiScale} />}
 
       <AnimatePresence>
         {coreOpen && (

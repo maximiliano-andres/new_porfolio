@@ -58,9 +58,9 @@ export function shellVars(width, height) {
 export function shellScript() {
   const fns = [uiScaleFor, isCompactViewport, dockSpaceFor, deskArea].map((f) => f.toString()).join("\n");
   return `(function(){var d=document.documentElement;
-try{var q=new URLSearchParams(location.search).get("vista");var s=window.localStorage;
-d.dataset.audience=q==="rrhh"||q==="ti"?q:(s.getItem("audience")==="rrhh"?"rrhh":"ti");
-if(!s.getItem("boot_seen"))d.dataset.boot="1";}catch(e){d.dataset.audience="ti";}
+var q=null;try{q=new URLSearchParams(location.search).get("vista");}catch(e){}
+try{var s=window.localStorage;d.dataset.audience=q==="rrhh"||q==="ti"?q:(s.getItem("audience")==="rrhh"?"rrhh":"ti");
+if(!s.getItem("boot_seen"))d.dataset.boot="1";}catch(e){d.dataset.audience=q==="rrhh"?"rrhh":"ti";d.dataset.boot="1";}
 var TILE_GAP=12;
 ${fns}
 function apply(){var size={width:innerWidth,height:innerHeight};var c=isCompactViewport(size);var k=c?1:uiScaleFor(size);var a=deskArea(size,c,k,0);

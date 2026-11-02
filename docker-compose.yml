@@ -1,0 +1,74 @@
+# Production stack: Caddy (edge, static files, TLS) → FastAPI (only /api/*).
+#   Local:       docker compose up -d --build                 → http://localhost
+#   Production:  SITE_ADDRESS=tudominio.cl in .env (DNS pointing to this host) → HTTPS automático
+name: portfolio
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"   # bounded logs: a noisy client can't fill the disk
+    max-file: "3"
+
+services:
+  api:
+    build:
+      context: .
+      target: api
+    image: portfolio-api:latest
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      TRUST_PROXY: "1"
+      ENABLE_HSTS: ${ENABLE_HSTS:-0}
+    volumes:
+      - contact-data:/data          # contact messages survive rebuilds and redeploys
+    expose:
+      - "8000"                      # internal network only: never published to the host
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 256M
+    logging: *logging
+
+  web:
+    build:
+      context: .
+      target: web
+    image: portfolio-web:latest
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+      API_UPSTREAM: api:8000
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"   # HTTP/3 (QUIC)
+    volumes:
+      - caddy-data:/data            # TLS certificates (keep them: Let's Encrypt rate-limits re-issuance)
+      - caddy-config:/config
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: [no-new-privileges:true]
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 256M
+    logging: *logging
+
+volumes:
+  contact-data:
+  caddy-data:
+  caddy-config:

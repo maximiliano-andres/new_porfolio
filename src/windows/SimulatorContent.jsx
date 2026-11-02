@@ -45,7 +45,7 @@ export function SimulatorContent() {
     const total = prefersReducedMotion() ? 1 : Math.max(500, (run.minutes / SIM_BASE_MIN) * 3200);
     let frame = 0;
     const step = (t) => {
-      const k = Math.min(1, (t - run.started) / total);
+      const k = Math.max(0, Math.min(1, (t - run.started) / total)); // first rAF can predate `started`
       setProgress(k);
       if (k < 1) frame = requestAnimationFrame(step);
       else if (run.minutes <= 10) unlock("optimizer");

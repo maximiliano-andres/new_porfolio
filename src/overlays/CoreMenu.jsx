@@ -1,11 +1,14 @@
 /* CORE control hub: radial menu around the background hexagon. */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { m } from "framer-motion";
 import { Hexagon } from "lucide-react";
+import { useFocusTrap } from "../lib/useFocusTrap.js";
 import { CORE } from "../theme.js";
 
 export function CoreMenu({ open, onClose, origin, area, items, onPick }) {
   const [hover, setHover] = useState(null);
+  const dialogRef = useRef(null);
+  useFocusTrap(dialogRef, open, { focusFirst: true, restore: true });
   useEffect(() => {
     if (!open) return;
     setHover(null);
@@ -27,11 +30,13 @@ export function CoreMenu({ open, onClose, origin, area, items, onPick }) {
 
   return (
     <m.div
+      ref={dialogRef}
       className="fixed inset-0 z-[95]"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       style={{ background: `radial-gradient(circle at ${cx}px ${cy}px, rgba(34,211,238,0.12), transparent 45%), rgba(3,5,9,0.93)`, backdropFilter: "blur(6px)" }}
       onClick={onClose}
       role="dialog"
+      aria-modal="true"
       aria-label="Centro de control CORE"
     >
       <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">

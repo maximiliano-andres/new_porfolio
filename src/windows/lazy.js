@@ -1,6 +1,7 @@
 /* Code-split window contents: each group is downloaded the first time one of its windows opens
    (or earlier, when its dock icon is hovered/focused or the browser is idle). */
 import { lazy } from "react";
+import { reloadOnce } from "../lib/reload.js";
 
 const loaders = {
   tech: () => import("./tech.jsx"),
@@ -11,7 +12,7 @@ const loaders = {
   badges: () => import("./BadgesContent.jsx"),
 };
 
-const pick = (chunk, name) => lazy(() => loaders[chunk]().then((m) => ({ default: m[name] })));
+const pick = (chunk, name) => lazy(() => loaders[chunk]().then((m) => ({ default: m[name] })).catch((err) => { reloadOnce(); throw err; }));
 
 export const AboutContent = pick("tech", "AboutContent");
 export const SkillsContent = pick("tech", "SkillsContent");

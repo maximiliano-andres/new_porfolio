@@ -1,0 +1,22 @@
+# Keep the build context small: everything is rebuilt inside the image
+.git
+.gitignore
+node_modules
+dist
+dist-ssr
+.venv
+__pycache__
+*.pyc
+contact_messages.jsonl
+auditoria
+README.md
+.env
+.env.*
+!.env.example
+Dockerfile
+docker-compose*.yml
+.dockerignore
+.eslintrc.cjs
+.DS_Store
+.vscode
+.idea

@@ -3,9 +3,12 @@
 Configuration (environment variables, all optional):
   APP_ENV        "production" (default) or "development" — development enables /docs and reload
   HOST, PORT     bind address (default 127.0.0.1:8000; use 0.0.0.0 only behind a proxy/firewall)
-  CORS_ORIGINS   comma-separated extra origins (default: the Vite dev server)
+  CORS_ORIGINS   comma-separated extra origins (the Vite dev server is added only in development)
   TRUST_PROXY    "1" to take the client IP from X-Forwarded-For (only behind a trusted proxy)
   ENABLE_HSTS    "1" when the site is served exclusively over HTTPS
+  CONTACT_LOG    path of the contact messages file (default: contact_messages.jsonl next to this file)
+  CLIENT_IP_HEADER  e.g. "cf-connecting-ip": header with the client IP set by a trusted CDN (needs TRUST_PROXY=1)
+  FORWARDED_ALLOW_IPS  proxies whose X-Forwarded-For uvicorn trusts (default 127.0.0.1)
 """
 import base64
 import hashlib
@@ -16,7 +19,7 @@ import os
 import re
 import threading
 import time
-from collections import defaultdict, deque
+from collections import OrderedDict, deque
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -24,12 +27,13 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, Field, field_validator
 
 BASE_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = BASE_DIR / "dist"
-CONTACT_LOG = BASE_DIR / "contact_messages.jsonl"
+# configurable so it can live on a persistent/writable volume (Docker: /data)
+CONTACT_LOG = Path(os.getenv("CONTACT_LOG") or BASE_DIR / "contact_messages.jsonl")
 
 APP_ENV = os.getenv("APP_ENV", "production").lower()
 IS_DEV = APP_ENV == "development"
@@ -51,7 +55,7 @@ app = FastAPI(
     openapi_url="/openapi.json" if IS_DEV else None,
 )
 
-cors_origins = ["http://localhost:5173", "http://127.0.0.1:5173"] + [
+cors_origins = (["http://localhost:5173", "http://127.0.0.1:5173"] if IS_DEV else []) + [
     o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()
 ]
 app.add_middleware(
@@ -100,17 +104,9 @@ def _build_csp(script_hashes: list[str]) -> str:
     return "; ".join(f"{name} {value}" for name, value in directives.items())
 
 
-@app.middleware("http")
-async def security_and_limits(request: Request, call_next):
-    # reject oversized API bodies before they are read into memory
-    if request.url.path.startswith("/api/") and request.method == "POST":
-        length = request.headers.get("content-length")
-        if length is None:
-            return JSONResponse({"detail": "Falta Content-Length."}, status_code=411)
-        if not length.isdigit() or int(length) > MAX_BODY_BYTES:
-            return JSONResponse({"detail": "El mensaje es demasiado grande."}, status_code=413)
-
-    response = await call_next(request)
+def apply_security_headers(request: Request, response):
+    if request.url.path == "/api" or request.url.path.startswith("/api/"):
+        response.headers.setdefault("Cache-Control", "no-store")
     for name, value in SECURITY["headers"].items():
         response.headers.setdefault(name, value)
     if not (IS_DEV and request.url.path.startswith(("/docs", "/openapi.json"))):
@@ -118,6 +114,18 @@ async def security_and_limits(request: Request, call_next):
     if ENABLE_HSTS:
         response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
     return response
+
+
+@app.middleware("http")
+async def security_and_limits(request: Request, call_next):
+    # reject oversized API bodies before they are read into memory
+    if request.url.path.startswith("/api/") and request.method == "POST":
+        length = request.headers.get("content-length")
+        if length is None:
+            return apply_security_headers(request, JSONResponse({"detail": "Falta Content-Length."}, status_code=411))
+        if not length.isdigit() or int(length) > MAX_BODY_BYTES:
+            return apply_security_headers(request, JSONResponse({"detail": "El mensaje es demasiado grande."}, status_code=413))
+    return apply_security_headers(request, await call_next(request))
 
 
 # ---------- error handling: concise, consistent JSON; details stay in the server log ----------
@@ -134,6 +142,11 @@ async def unhandled_error(request: Request, exc: Exception):
 
 
 # ---------- contact API ----------
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$")
+# bidi overrides/isolates and C0/C1 controls (except \n \t). ZWJ (U+200D) is kept: emoji sequences need it.
+UNSAFE_CHARS = re.compile(r"[\u202a-\u202e\u2066-\u2069\x00-\x08\x0b-\x1f\x7f-\x9f]")
+
+
 class ContactMessage(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     email: str = Field(min_length=3, max_length=254)
@@ -144,7 +157,7 @@ class ContactMessage(BaseModel):
     @field_validator("name", "message")
     @classmethod
     def not_blank(cls, v: str) -> str:
-        v = v.strip()
+        v = UNSAFE_CHARS.sub("", v).strip()
         if not v:
             raise ValueError("no puede estar vacío")
         return v
@@ -154,7 +167,7 @@ class ContactMessage(BaseModel):
     def valid_email(cls, v: str) -> str:
         v = v.strip()
         local, sep, domain = v.rpartition("@")
-        if not sep or not local or "." not in domain or any(c.isspace() for c in v):
+        if not EMAIL_RE.match(v):
             raise ValueError("email inválido")
         return v
 
@@ -166,24 +179,30 @@ class StatusResponse(BaseModel):
 class RateLimiter:
     """Sliding-window limiter per client IP (in memory — enough for a single-instance portfolio)."""
 
-    def __init__(self, limit: int, window_s: int):
-        self.limit, self.window_s = limit, window_s
-        self.hits: dict[str, deque] = defaultdict(deque)
+    def __init__(self, limit: int, window_s: int, max_keys: int = 10_000):
+        self.limit, self.window_s, self.max_keys = limit, window_s, max_keys
+        self.hits: OrderedDict[str, deque] = OrderedDict()  # least recently used first
         self.lock = threading.Lock()
 
     def check(self, key: str) -> int:
         """Returns 0 if allowed, otherwise the seconds to wait."""
         now = time.monotonic()
         with self.lock:
-            q = self.hits[key]
+            q = self.hits.get(key)
+            if q is None:
+                q = self.hits[key] = deque()
+            self.hits.move_to_end(key)
             while q and now - q[0] > self.window_s:
                 q.popleft()
+            # evict idle clients from the LRU end: O(1) amortized, memory bounded even under attack
+            while self.hits:
+                oldest_key, oldest = next(iter(self.hits.items()))
+                if oldest_key == key or (oldest and now - oldest[-1] <= self.window_s and len(self.hits) <= self.max_keys):
+                    break
+                self.hits.popitem(last=False)
             if len(q) >= self.limit:
                 return int(self.window_s - (now - q[0])) + 1
             q.append(now)
-            if len(self.hits) > 10_000:  # bound memory under abuse
-                for k in [k for k, v in self.hits.items() if not v][:5_000]:
-                    del self.hits[k]
             return 0
 
 
@@ -191,17 +210,25 @@ contact_limiter = RateLimiter(RATE_LIMIT, RATE_WINDOW_S)
 contact_log_lock = threading.Lock()
 
 
+CLIENT_IP_HEADER = os.getenv("CLIENT_IP_HEADER", "").lower()  # e.g. "cf-connecting-ip" behind Cloudflare
+
+
 def client_ip(request: Request) -> str:
-    if TRUST_PROXY:
-        forwarded = request.headers.get("x-forwarded-for", "")
-        if forwarded:
-            return forwarded.split(",")[0].strip()
+    if TRUST_PROXY and CLIENT_IP_HEADER:
+        value = request.headers.get(CLIENT_IP_HEADER, "").strip()
+        if value:
+            return value
     return request.client.host if request.client else "unknown"
 
 
 # declared return types let FastAPI serialize straight to JSON bytes via Pydantic (no extra library needed)
-@app.get("/api/status")
-def get_status() -> StatusResponse:
+@app.api_route("/api/status", methods=["GET", "HEAD"], response_model=StatusResponse)
+def get_status():
+    """Readiness: 503 when contact messages could not be stored (or, in production, the build is missing)."""
+    log_ok = os.access(CONTACT_LOG, os.W_OK) if CONTACT_LOG.exists() else os.access(CONTACT_LOG.parent, os.W_OK)
+    build_ok = IS_DEV or (FRONTEND_DIR / "index.html").is_file()  # `npm run dev` needs no dist/
+    if not log_ok or not build_ok:
+        return JSONResponse({"status": "degraded"}, status_code=503)
     return StatusResponse(status="ok")
 
 
@@ -229,7 +256,8 @@ def submit_contact(payload: ContactMessage, request: Request) -> StatusResponse:
         with contact_log_lock:
             # 0o600: the log contains personal data, readable only by the server user
             fd = os.open(CONTACT_LOG, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
-            with os.fdopen(fd, "a", encoding="utf-8") as f:
+            # newline="\n": identical JSONL on Linux, macOS and Windows (no \r\n translation)
+            with os.fdopen(fd, "a", encoding="utf-8", newline="\n") as f:
                 f.write(json.dumps(entry, ensure_ascii=False) + "\n")
     except OSError:
         log.exception("Could not write the contact log")
@@ -238,26 +266,68 @@ def submit_contact(payload: ContactMessage, request: Request) -> StatusResponse:
     return StatusResponse(status="ok")
 
 
-@app.api_route("/api/{rest:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
-def api_not_found(rest: str):
+API_METHODS = {"status": "GET, HEAD", "contact": "POST"}
+
+
+@app.api_route("/api", methods=["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], include_in_schema=False)
+@app.api_route("/api/{rest:path}", methods=["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], include_in_schema=False)
+def api_not_found(rest: str = ""):
+    allowed = API_METHODS.get(rest.strip("/"))
+    if allowed:
+        raise HTTPException(status_code=405, detail="Método no permitido.", headers={"Allow": allowed})
     raise HTTPException(status_code=404, detail="Recurso no encontrado.")
 
 
 # ---------- frontend (compiled SPA) ----------
 # Only these file types are served from dist/; anything else (e.g. stray .md files) falls back to the SPA.
 STATIC_TYPES = {".js", ".css", ".webp", ".png", ".jpg", ".jpeg", ".svg", ".ico", ".txt", ".woff2", ".json", ".webmanifest"}
+# explicit types: on Windows `mimetypes` reads the registry, where .js is often "text/plain" — with nosniff the
+# browser would then refuse every module script. These win over whatever the OS reports, on every platform.
+for _ext, _type in {
+    ".js": "text/javascript", ".css": "text/css", ".html": "text/html", ".webp": "image/webp", ".png": "image/png",
+    ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".svg": "image/svg+xml", ".ico": "image/x-icon",
+    ".txt": "text/plain", ".woff2": "font/woff2", ".json": "application/json", ".webmanifest": "application/manifest+json",
+}.items():
+    mimetypes.add_type(_type, _ext)
 
 
 def static_response(file: Path, request: Request, cache: str) -> FileResponse:
     """Serves the build's precompressed copy (.br / .gz, see scripts/compress.mjs) when the client accepts it."""
-    accepted = request.headers.get("accept-encoding", "")
+    accepted = accepted_encodings(request.headers.get("accept-encoding", ""))
     headers = {"Cache-Control": cache, "Vary": "Accept-Encoding"}
     media_type = mimetypes.guess_type(file.name)[0] or "application/octet-stream"
-    for encoding, suffix in (("br", ".br"), ("gzip", ".gz")):
+    chosen, encoding = file, None
+    for enc, suffix in (("br", ".br"), ("gzip", ".gz")):
         variant = file.with_name(file.name + suffix)
-        if encoding in accepted and variant.is_file():
-            return FileResponse(variant, media_type=media_type, headers={**headers, "Content-Encoding": encoding})
-    return FileResponse(file, media_type=media_type, headers=headers)
+        if enc in accepted and variant.is_file():
+            chosen, encoding = variant, enc
+            break
+    st = chosen.stat()
+    etag = f'"{st.st_mtime_ns:x}-{st.st_size:x}"'  # one tag per encoded variant
+    headers["ETag"] = etag
+    if encoding:
+        headers["Content-Encoding"] = encoding
+    if etag in [t.strip() for t in request.headers.get("if-none-match", "").split(",")]:
+        return Response(status_code=304, headers=headers)
+    return FileResponse(chosen, media_type=media_type, headers=headers)
+
+
+def accepted_encodings(header: str) -> set[str]:
+    """Tokens with q > 0 ("gzip;q=0" means *not* acceptable)."""
+    out = set()
+    for part in header.split(","):
+        token, _, params = part.strip().partition(";")
+        q = 1.0
+        for p in params.split(";"):
+            k, _, v = p.strip().partition("=")
+            if k == "q":
+                try:
+                    q = float(v)
+                except ValueError:
+                    q = 0.0
+        if token and q > 0:
+            out.add(token.strip().lower())
+    return out
 
 
 @app.api_route("/{path:path}", methods=["GET", "HEAD"])
@@ -268,10 +338,18 @@ def serve_frontend(path: str, request: Request):
             {"detail": "El frontend no está compilado. Ejecuta `npm run build` para generar dist/."},
             status_code=503,
         )
-    if path:
+    if path in ("", "index.html"):
+        return static_response(index, request, "no-cache")
+    if "\x00" in path:
+        return JSONResponse({"detail": "Recurso no encontrado."}, status_code=404)
+    root = FRONTEND_DIR.resolve()  # per request: dist/ may be a symlink swapped by an atomic deploy
+    try:
         candidate = (FRONTEND_DIR / path).resolve()
+    except (OSError, ValueError):
+        return JSONResponse({"detail": "Recurso no encontrado."}, status_code=404)
+    if path:
         # resolve() + is_relative_to blocks path traversal (../, symlinks outside dist)
-        if candidate.is_relative_to(FRONTEND_DIR) and candidate.is_file() and candidate.suffix.lower() in STATIC_TYPES:
+        if candidate.is_relative_to(root) and candidate.is_file() and candidate.suffix.lower() in STATIC_TYPES:
             # hashed build assets never change → cache for a year; everything else revalidates
             if path == "sw.js":
                 cache = "no-cache"  # the browser must always see a new service worker version promptly
@@ -282,7 +360,14 @@ def serve_frontend(path: str, request: Request):
             else:
                 cache = "public, max-age=3600"
             return static_response(candidate, request, cache)
-    return static_response(index, request, "no-cache")
+    # a missing file (old hashed chunk, image, font…) must never be answered with the HTML shell
+    if path.startswith(("assets/", "fonts/", "img/")) or Path(path).suffix.lower() in STATIC_TYPES:
+        return JSONResponse({"detail": "Recurso no encontrado."}, status_code=404, headers={"Cache-Control": "no-store"})
+    # unknown page: same app (the visitor still sees the portfolio) but an honest 404 for crawlers
+    response = static_response(index, request, "no-cache")
+    if response.status_code == 200:
+        response.status_code = 404
+    return response
 
 
 if __name__ == "__main__":
@@ -294,4 +379,6 @@ if __name__ == "__main__":
         port=int(os.getenv("PORT", "8000")),
         reload=IS_DEV,
         proxy_headers=TRUST_PROXY,
+        forwarded_allow_ips=os.getenv("FORWARDED_ALLOW_IPS", "127.0.0.1"),
+        server_header=False,
     )

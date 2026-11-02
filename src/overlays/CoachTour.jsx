@@ -1,6 +1,7 @@
 /* Coach-mark tour that spotlights real UI elements. */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { m } from "framer-motion";
+import { useFocusTrap } from "../lib/useFocusTrap.js";
 import { CORE } from "../theme.js";
 
 const COACH_STEPS = [
@@ -20,6 +21,8 @@ export function CoachTour({ open, onClose, onFinish }) {
     [open]
   );
   const step = steps[i];
+  const cardRef = useRef(null);
+  useFocusTrap(cardRef, Boolean(open && step && rect), { focusFirst: true, restore: true, focusKey: i });
 
   useEffect(() => { if (open) setI(0); }, [open]);
 
@@ -63,6 +66,7 @@ export function CoachTour({ open, onClose, onFinish }) {
         style={{ boxShadow: `0 0 0 9999px rgba(3,5,9,0.74), 0 0 0 2px ${CORE}, 0 0 24px ${CORE}66` }}
       />
       <m.div
+        ref={cardRef}
         key={i}
         initial={{ opacity: 0, y: below ? -6 : 6 }}
         animate={{ opacity: 1, y: 0 }}

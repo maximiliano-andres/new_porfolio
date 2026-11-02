@@ -2,9 +2,10 @@
    fails to download — shows a recoverable message there instead of taking the whole portfolio down. */
 import { Component } from "react";
 import { AlertTriangle, RotateCcw } from "lucide-react";
+import { reloadOnce } from "../lib/reload.js";
 
 const isChunkLoadError = (error) =>
-  /dynamically imported module|Importing a module script failed|Loading chunk|Failed to fetch/i.test(String(error?.message));
+  /dynamically imported module|Importing a module script failed|Loading chunk|Failed to fetch|Unable to preload/i.test(String(error?.message));
 
 export class SectionBoundary extends Component {
   state = { error: null };
@@ -15,6 +16,8 @@ export class SectionBoundary extends Component {
 
   componentDidCatch(error, info) {
     console.error(`[${this.props.name || "section"}] render error:`, error, info?.componentStack);
+    // silent overlays have no retry button: a stale chunk would disable them for the whole session
+    if (this.props.silent && isChunkLoadError(error)) reloadOnce();
   }
 
   // a stale or failed download is only recoverable with fresh assets; other errors get a fresh render

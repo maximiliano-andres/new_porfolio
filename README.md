@@ -55,7 +55,12 @@ Para trabajar en el proyecto con recarga automática (*Hot Reload*) tanto en fro
 Asegúrate de tener el entorno virtual activo:
 ```bash
 # Con el entorno virtual activo (modo desarrollo: recarga automática y /docs habilitado):
+# macOS / Linux:
 APP_ENV=development python main.py
+# Windows (PowerShell):
+#   $env:APP_ENV="development"; python main.py
+# Windows (cmd):
+#   set APP_ENV=development&& python main.py
 ```
 *El backend de desarrollo correrá en: `http://localhost:8000`*
 
@@ -92,14 +97,39 @@ En producción, FastAPI se encarga de servir tanto la API como el frontend compi
    los archivos precomprimidos, y envía `/api/*` a FastAPI. Las instrucciones están al inicio del archivo.
    Detrás de Cloudflare u otro CDN aplican las mismas reglas de caché.
 
+### 🐳 Docker (recomendado para producción)
+
+Dos contenedores construidos desde un único `Dockerfile` multi-etapa; el frontend se compila una sola vez dentro de la imagen:
+
+| Servicio | Imagen | Rol |
+|---|---|---|
+| `web` | Caddy 2.11 (~90 MB) | Punto de entrada. Sirve `dist/` con Brotli/gzip precomprimidos, HTTP/2 + HTTP/3 y HTTPS automático, y envía `/api/*` a `api`. |
+| `api` | Python 3.14 slim + Uvicorn (uvloop + httptools) | Solo la API. Sin puertos publicados, usuario no-root, sistema de archivos de solo lectura. Los mensajes se guardan en el volumen `contact-data`. |
+
+```bash
+cp .env.example .env            # en producción: SITE_ADDRESS=tudominio.cl
+docker compose up -d --build    # → http://localhost  (o https://tudominio.cl)
+docker compose logs -f web      # logs de acceso (Caddy)
+docker compose exec api cat /data/contact_messages.jsonl   # leer los mensajes de contacto
+```
+
+- **Un solo worker en `api`, a propósito:** el límite de 5 envíos cada 10 minutos vive en memoria, y con N workers sería N veces mayor. El tráfico pesado (HTML, JS, CSS, fuentes) lo atiende Caddy.
+- **IP real del cliente:** Caddy reemplaza cualquier `X-Forwarded-For` que envíe el cliente, así que el rate limit no se puede falsificar. Si pones Cloudflare delante, configura `trusted_proxies` en Caddy.
+- **Servidor `amd64` desde un Mac Apple Silicon:** `DOCKER_DEFAULT_PLATFORM=linux/amd64 docker compose build`, o construye directamente en el servidor.
+- **Windows:** Docker Desktop con WSL 2. Si el puerto 80 está ocupado (IIS o `http.sys`), usa `HTTP_PORT=8080` en `.env`. El repositorio fuerza finales de línea LF (`.gitattributes`), así que los archivos que se copian a las imágenes son idénticos en macOS y en Windows.
+- **Volúmenes:** `caddy-data` guarda los certificados TLS. No lo borres: Let's Encrypt limita las reemisiones.
+
 ### Configuración (variables de entorno, todas opcionales)
 
 | Variable | Por defecto | Uso |
 |---|---|---|
 | `APP_ENV` | `production` | `development` habilita recarga automática y la documentación `/docs` |
 | `HOST` / `PORT` | `127.0.0.1` / `8000` | Usa `0.0.0.0` solo detrás de un proxy o firewall |
-| `CORS_ORIGINS` | — | Orígenes extra separados por coma (el dev server de Vite ya está permitido) |
-| `TRUST_PROXY` | — | `1` para tomar la IP del cliente desde `X-Forwarded-For` (solo detrás de un proxy confiable) |
+| `CORS_ORIGINS` | — | Orígenes extra separados por coma (el dev server de Vite solo se permite con `APP_ENV=development`) |
+| `TRUST_PROXY` | — | `1` detrás de un proxy confiable: la IP del cliente se toma del último salto de confianza (nunca del primer valor de `X-Forwarded-For`, que el cliente puede falsificar) |
+| `FORWARDED_ALLOW_IPS` | `127.0.0.1` | IPs de los proxies en los que confía Uvicorn para `X-Forwarded-For` |
+| `CLIENT_IP_HEADER` | — | Ej. `cf-connecting-ip` detrás de Cloudflare (requiere `TRUST_PROXY=1`; úsalo solo si el CDN garantiza esa cabecera) |
+| `CONTACT_LOG` | `contact_messages.jsonl` | Ruta del archivo de mensajes (en Docker: `/data/…`, un volumen persistente) |
 | `ENABLE_HSTS` | — | `1` cuando el sitio se sirve exclusivamente por HTTPS |
 
 ### Seguridad incluida
