@@ -1,14 +1,20 @@
-# Keep the build context small: everything is rebuilt inside the image
+# Keep the build context small: everything is rebuilt inside the image.
+# The Dockerfile only reads frontend/, backend/app, backend/requirements.lock, config/ and deploy/Caddyfile.
 .git
+.github
 .gitignore
-node_modules
-dist
-dist-ssr
-.venv
-__pycache__
-*.pyc
-contact_messages.jsonl
-auditoria
+.gitattributes
+**/node_modules
+**/dist
+**/dist-ssr
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/contact_messages.jsonl
+backend/tests
+docs
 README.md
 .env
 .env.*
@@ -16,7 +22,6 @@ README.md
 Dockerfile
 docker-compose*.yml
 .dockerignore
-.eslintrc.cjs
 .DS_Store
 .vscode
 .idea

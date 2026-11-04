@@ -1,0 +1,18 @@
+# Python lint (ruff, written in Rust) — `ruff check .` runs in CI
+target-version = "py313"
+line-length = 130
+extend-exclude = [".venv"]
+
+[lint]
+# pyflakes/pycodestyle + bugbear, security (bandit), pyupgrade, simplify, async and ruff-specific rules
+select = ["E", "F", "W", "B", "S", "UP", "SIM", "ASYNC", "LOG", "RUF"]
+ignore = [
+  "S104",   # binding 0.0.0.0 is opt-in through HOST
+  "UP017",  # datetime.UTC: keep timezone.utc, readable on 3.13 and 3.14 alike
+]
+
+[lint.per-file-ignores]
+"tests/**" = [
+  "S101",   # assert is how pytest works
+  "E501",   # long literal fixtures (fake HTML, path lists) read better on one line
+]

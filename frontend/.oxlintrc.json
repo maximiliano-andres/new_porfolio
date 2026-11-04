@@ -1,0 +1,21 @@
+/* oxlint (Rust): the same rule set the ESLint 8 config had (correctness rules, react, rules of hooks,
+   exhaustive deps, react-refresh). The React Compiler rules (purity, refs, set-state-in-effect, immutability)
+   stay off: the code uses the "latest ref" and "mount once" patterns on purpose, correct on React 18. */
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react"],
+  "env": { "browser": true, "es2022": true },
+  "categories": { "correctness": "error" },
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "react/rules-of-hooks": "error",
+    "react/exhaustive-deps": "warn",
+    "react/only-export-components": ["warn", { "allowConstantExport": true }],
+    "react/set-state-in-effect": "off",
+    "react/purity": "off",
+    "react/refs": "off",
+    "react/immutability": "off",
+    "react/exhaustive-effect-dependencies": "off"
+  },
+  "ignorePatterns": ["dist", "dist-ssr", "node_modules", ".venv", "*.config.js"]
+}
