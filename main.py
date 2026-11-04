@@ -8,7 +8,10 @@ Configuration (environment variables, all optional):
   ENABLE_HSTS    "1" when the site is served exclusively over HTTPS
   CONTACT_LOG    path of the contact messages file (default: contact_messages.jsonl next to this file)
   CLIENT_IP_HEADER  e.g. "cf-connecting-ip": header with the client IP set by a trusted CDN (needs TRUST_PROXY=1)
-  FORWARDED_ALLOW_IPS  proxies whose X-Forwarded-For uvicorn trusts (default 127.0.0.1)
+  FORWARDED_ALLOW_IPS  proxies whose X-Forwarded-For is trusted, comma-separated IPs/CIDRs or "*" (default 127.0.0.1)
+
+Server: Granian (Rust, hyper/tokio) runs the ASGI entry point `main:asgi` — `python main.py` or, e.g.,
+`granian --interface asgi --no-ws main:asgi`. `main:app` is the bare FastAPI app (tests, other ASGI servers).
 """
 import base64
 import hashlib
@@ -26,8 +29,8 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
+from granian.utils.proxies import wrap_asgi_with_proxy_headers
 from pydantic import BaseModel, Field, field_validator
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -65,7 +68,8 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
-app.add_middleware(GZipMiddleware, minimum_size=1024)
+# No GZipMiddleware: API answers are < 1 KB, static files ship precompressed (.br/.gz, see static_response)
+# and Caddy encodes /api/* at the edge. It only added per-request work (and ignored "gzip;q=0").
 
 # Inline styles are required by the UI (framer-motion animates style attributes).
 # Scripts come from our own origin, plus the one inline script of the prerendered landing screen,
@@ -104,28 +108,54 @@ def _build_csp(script_hashes: list[str]) -> str:
     return "; ".join(f"{name} {value}" for name, value in directives.items())
 
 
-def apply_security_headers(request: Request, response):
-    if request.url.path == "/api" or request.url.path.startswith("/api/"):
-        response.headers.setdefault("Cache-Control", "no-store")
-    for name, value in SECURITY["headers"].items():
-        response.headers.setdefault(name, value)
-    if not (IS_DEV and request.url.path.startswith(("/docs", "/openapi.json"))):
-        response.headers.setdefault("Content-Security-Policy", content_security_policy())
-    if ENABLE_HSTS:
-        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-    return response
+SECURITY_HEADERS = [(name.lower().encode(), value.encode()) for name, value in SECURITY["headers"].items()]
 
 
-@app.middleware("http")
-async def security_and_limits(request: Request, call_next):
-    # reject oversized API bodies before they are read into memory
-    if request.url.path.startswith("/api/") and request.method == "POST":
-        length = request.headers.get("content-length")
-        if length is None:
-            return apply_security_headers(request, JSONResponse({"detail": "Falta Content-Length."}, status_code=411))
-        if not length.isdigit() or int(length) > MAX_BODY_BYTES:
-            return apply_security_headers(request, JSONResponse({"detail": "El mensaje es demasiado grande."}, status_code=413))
-    return apply_security_headers(request, await call_next(request))
+class SecurityAndLimits:
+    """Security headers on every response + early 411/413 for API bodies, as a pure ASGI middleware.
+
+    Replaces an @app.middleware("http") (BaseHTTPMiddleware), whose extra task and body streaming per request
+    cost ~25 % of /api/status throughput (measured: 1 540 → 2 073 req/s on uvicorn, 1 839 → 2 467 on granian).
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        path = scope["path"]
+        is_api = path == "/api" or path.startswith("/api/")
+        extra = [(b"cache-control", b"no-store")] if is_api else []
+        extra += SECURITY_HEADERS
+        if not (IS_DEV and path.startswith(("/docs", "/openapi.json"))):
+            extra.append((b"content-security-policy", content_security_policy().encode()))
+        if ENABLE_HSTS:
+            extra.append((b"strict-transport-security", b"max-age=31536000; includeSubDomains"))
+
+        async def send_with_headers(message):
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                present = {name.lower() for name, _ in headers}
+                headers += [(name, value) for name, value in extra if name not in present]  # setdefault semantics
+                message = {**message, "headers": headers}
+            await send(message)
+
+        # reject oversized API bodies before they are read into memory
+        if scope["method"] == "POST" and path.startswith("/api/"):
+            length = next((v for k, v in scope["headers"] if k == b"content-length"), None)
+            if length is None:
+                reject = JSONResponse({"detail": "Falta Content-Length."}, status_code=411)
+            elif not length.isdigit() or int(length) > MAX_BODY_BYTES:
+                reject = JSONResponse({"detail": "El mensaje es demasiado grande."}, status_code=413)
+            else:
+                reject = None
+            if reject is not None:
+                return await reject(scope, receive, send_with_headers)
+        await self.app(scope, receive, send_with_headers)
+
+
+app.add_middleware(SecurityAndLimits)
 
 
 # ---------- error handling: concise, consistent JSON; details stay in the server log ----------
@@ -137,7 +167,7 @@ async def validation_error(_: Request, exc: RequestValidationError):
 
 @app.exception_handler(Exception)
 async def unhandled_error(request: Request, exc: Exception):
-    log.exception("Unhandled error on %s %s", request.method, request.url.path)
+    log.error("Unhandled error on %s %s", request.method, request.url.path, exc_info=exc)
     return JSONResponse({"detail": "Error interno del servidor."}, status_code=500)
 
 
@@ -166,7 +196,6 @@ class ContactMessage(BaseModel):
     @classmethod
     def valid_email(cls, v: str) -> str:
         v = v.strip()
-        local, sep, domain = v.rpartition("@")
         if not EMAIL_RE.match(v):
             raise ValueError("email inválido")
         return v
@@ -261,7 +290,7 @@ def submit_contact(payload: ContactMessage, request: Request) -> StatusResponse:
                 f.write(json.dumps(entry, ensure_ascii=False) + "\n")
     except OSError:
         log.exception("Could not write the contact log")
-        raise HTTPException(status_code=500, detail="No se pudo guardar el mensaje.")
+        raise HTTPException(status_code=500, detail="No se pudo guardar el mensaje.") from None
     log.info("Contact message stored")  # never log the content: it is personal data
     return StatusResponse(status="ok")
 
@@ -347,19 +376,18 @@ def serve_frontend(path: str, request: Request):
         candidate = (FRONTEND_DIR / path).resolve()
     except (OSError, ValueError):
         return JSONResponse({"detail": "Recurso no encontrado."}, status_code=404)
-    if path:
-        # resolve() + is_relative_to blocks path traversal (../, symlinks outside dist)
-        if candidate.is_relative_to(root) and candidate.is_file() and candidate.suffix.lower() in STATIC_TYPES:
-            # hashed build assets never change → cache for a year; everything else revalidates
-            if path == "sw.js":
-                cache = "no-cache"  # the browser must always see a new service worker version promptly
-            elif path.startswith("assets/"):
-                cache = "public, max-age=31536000, immutable"  # content-hashed by the build
-            elif path.startswith("fonts/"):
-                cache = "public, max-age=2592000"  # 30 days; rename the file if a font ever changes
-            else:
-                cache = "public, max-age=3600"
-            return static_response(candidate, request, cache)
+    # resolve() + is_relative_to blocks path traversal (../, symlinks outside dist)
+    if candidate.is_relative_to(root) and candidate.is_file() and candidate.suffix.lower() in STATIC_TYPES:
+        # hashed build assets never change → cache for a year; everything else revalidates
+        if path == "sw.js":
+            cache = "no-cache"  # the browser must always see a new service worker version promptly
+        elif path.startswith("assets/"):
+            cache = "public, max-age=31536000, immutable"  # content-hashed by the build
+        elif path.startswith("fonts/"):
+            cache = "public, max-age=2592000"  # 30 days; rename the file if a font ever changes
+        else:
+            cache = "public, max-age=3600"
+        return static_response(candidate, request, cache)
     # a missing file (old hashed chunk, image, font…) must never be answered with the HTML shell
     if path.startswith(("assets/", "fonts/", "img/")) or Path(path).suffix.lower() in STATIC_TYPES:
         return JSONResponse({"detail": "Recurso no encontrado."}, status_code=404, headers={"Cache-Control": "no-store"})
@@ -370,15 +398,38 @@ def serve_frontend(path: str, request: Request):
     return response
 
 
-if __name__ == "__main__":
-    import uvicorn
+# ---------- ASGI entry point for the server ----------
+# With TRUST_PROXY, request.client becomes the last X-Forwarded-For hop that is NOT a trusted proxy (what the proxy
+# itself appended), so a spoofed first value can't dodge the rate limit (C-1). Granian's helper, same rule uvicorn used.
+# Note: with "*" every hop is trusted and the FIRST value wins — only safe when the proxy overwrites the header
+# (Caddy does by default: it ignores incoming X-Forwarded-For unless `trusted_proxies` is configured).
+FORWARDED_ALLOW_IPS = os.getenv("FORWARDED_ALLOW_IPS", "127.0.0.1")
 
-    uvicorn.run(
-        "main:app",
-        host=os.getenv("HOST", "127.0.0.1"),
+
+def with_proxy_headers(inner, trusted_hosts: str):
+    # granian's helper is a plain function returning a coroutine; an `async def` keeps it a valid ASGI 3 app for
+    # any server or test client that inspects the callable
+    wrapped = wrap_asgi_with_proxy_headers(inner, trusted_hosts=trusted_hosts)
+
+    async def proxied(scope, receive, send):
+        await wrapped(scope, receive, send)
+
+    return proxied
+
+
+asgi = with_proxy_headers(app, FORWARDED_ALLOW_IPS) if TRUST_PROXY else app
+
+
+if __name__ == "__main__":
+    from granian import Granian
+    from granian.constants import Interfaces
+
+    Granian(
+        "main:asgi",
+        address=os.getenv("HOST", "127.0.0.1"),
         port=int(os.getenv("PORT", "8000")),
-        reload=IS_DEV,
-        proxy_headers=TRUST_PROXY,
-        forwarded_allow_ips=os.getenv("FORWARDED_ALLOW_IPS", "127.0.0.1"),
-        server_header=False,
-    )
+        interface=Interfaces.ASGI,
+        websockets=False,
+        reload=IS_DEV,  # needs granian[reload] (requirements-dev.txt)
+        log_access=False,
+    ).serve()

@@ -10,7 +10,12 @@
    ============================================================ */
 
 export const LANG = {
-  python: { name: "Python", c1: "#4B8BBE", c2: "#FFD43B", label: "CPython 3.13" },
+  python: {
+    name: "Python",
+    c1: "#4B8BBE",
+    c2: "#FFD43B",
+    label: "CPython 3.13",
+  },
   java: { name: "Java", c1: "#F8981D", c2: "#5382A1", label: "OpenJDK 21 LTS" },
   node: { name: "Node.js", c1: "#3C8C40", c2: "#7CC576", label: "Node 22 LTS" },
 };
@@ -18,9 +23,9 @@ export const LANG = {
 export const CORE = "#22D3EE";
 
 export const SOCIAL_LINKS = {
-  github: "https://github.com/maxcaniullan",
-  linkedin: "https://www.linkedin.com/in/maximiliano-caniullan-lefi%C3%B1ir/",
-  email: "mailto:max.andres.caniullan@gmail.com"
+  github: "https://github.com/maximiliano-andres",
+  linkedin: "https://www.linkedin.com/in/maximiliano-andres",
+  email: "mailto:max.andres1995@outlook.com",
 };
 
 /* gold accent for everything in the recruiter-facing (RRHH) view */

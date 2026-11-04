@@ -1,11 +1,12 @@
 # syntax=docker/dockerfile:1.7
 # Multi-stage build. Targets:
 #   web → Caddy: serves dist/ (precompressed .br/.gz, HTTP/2 + HTTP/3, automatic TLS) and proxies /api/*
-#   api → FastAPI on Uvicorn (uvloop + httptools), non-root, read-only filesystem
+#   api → FastAPI on Granian (Rust HTTP server, uvloop), non-root, read-only filesystem
 # The frontend is compiled once (stage "frontend") and shared by both targets.
 
 ARG NODE_VERSION=24
 ARG PYTHON_VERSION=3.14
+ARG UV_VERSION=0.13.7
 # ≥ 2.11: 2.10.x answers precompressed files with "206 Partial Content" to requests without Range
 ARG CADDY_VERSION=2.11
 
@@ -25,12 +26,16 @@ COPY src ./src
 RUN mkdir -p deploy && npm run build
 
 # ---------- 2. python dependencies in an isolated venv ----------
+# uv (Rust) installs the exact, hash-verified versions from requirements.lock: a tampered or re-published
+# wheel fails the build, and every build gets the same starlette/pydantic the tests ran against
+FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv
 FROM python:${PYTHON_VERSION}-slim AS api-deps
-ENV PIP_DISABLE_PIP_VERSION_CHECK=1
-RUN python -m venv /opt/venv
-COPY requirements.txt .
-RUN --mount=type=cache,target=/root/.cache/pip \
-    /opt/venv/bin/pip install -r requirements.txt
+COPY --from=uv /uv /usr/local/bin/uv
+ENV UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
+RUN uv venv /opt/venv --python /usr/local/bin/python3
+COPY requirements.lock .
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --python /opt/venv/bin/python --require-hashes -r requirements.lock
 
 # ---------- 3. api: runtime image ----------
 FROM python:${PYTHON_VERSION}-slim AS api
@@ -39,6 +44,7 @@ ENV PATH=/opt/venv/bin:$PATH \
     PYTHONDONTWRITEBYTECODE=1 \
     APP_ENV=production \
     TRUST_PROXY=1 \
+    FORWARDED_ALLOW_IPS=* \
     CONTACT_LOG=/data/contact_messages.jsonl
 RUN useradd --system --uid 10001 --no-create-home --shell /usr/sbin/nologin app \
     && mkdir -p /data && chown app:app /data
@@ -53,16 +59,17 @@ USER app
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD ["python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/status', timeout=2).status == 200 else 1)"]
+# - main:asgi = the app behind the X-Forwarded-For handler (TRUST_PROXY=1). FORWARDED_ALLOW_IPS=*: only Caddy can
+#   reach this port (no published ports) and Caddy overwrites X-Forwarded-For with the real peer address
 # - 1 worker on purpose: the contact rate limiter lives in process memory (N workers = N× the limit)
-# - --proxy-headers + --forwarded-allow-ips='*': only Caddy can reach this port (no published ports)
-# - keep-alive above Caddy's 2 min idle pool, so the proxy never reuses a connection uvicorn just closed (502s)
-# - no access log here: Caddy is the edge and logs requests once
-CMD ["uvicorn", "main:app", \
+# - granian never closes idle HTTP/1 keep-alive connections first, so Caddy's 2 min pool can't hit a closed one (502s)
+# - no access log (granian's default): Caddy is the edge and logs requests once.
+#   granian always sends "server: granian"; Caddy strips it (-Server in security-headers.caddy)
+CMD ["granian", "--interface", "asgi", \
      "--host", "0.0.0.0", "--port", "8000", \
-     "--loop", "uvloop", "--http", "httptools", \
-     "--proxy-headers", "--forwarded-allow-ips", "*", \
-     "--timeout-keep-alive", "125", \
-     "--no-access-log", "--no-server-header"]
+     "--workers", "1", "--loop", "uvloop", "--no-ws", \
+     "--log-level", "warning", \
+     "main:asgi"]
 
 # ---------- 4. web: Caddy with the static build ----------
 FROM caddy:${CADDY_VERSION}-alpine AS web

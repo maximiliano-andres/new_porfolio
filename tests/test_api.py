@@ -13,7 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import main  # noqa: E402
+import main
 
 INLINE = "document.documentElement.dataset.x='1'"
 VALID = {"name": "Ana", "email": "ana@example.com", "message": "Hola"}
@@ -160,6 +160,34 @@ def test_contact_cdn_header_only_when_configured(client, monkeypatch):
         for i in range(6)
     ]
     assert codes == [200] * 6  # distinct real visitors behind the CDN keep separate quotas
+
+
+def test_proxy_entrypoint_uses_last_untrusted_hop(client, monkeypatch):
+    # the server runs main:asgi; behind a proxy (TestClient's peer is "testclient") the proxy APPENDS the real IP,
+    # so rotating the first X-Forwarded-For value must not open new quotas
+    proxied = TestClient(main.with_proxy_headers(main.app, "testclient"))
+    codes = [
+        proxied.post("/api/contact", json=VALID, headers={"X-Forwarded-For": f"10.0.{i}.1, 198.51.100.7"}).status_code
+        for i in range(6)
+    ]
+    assert codes == [200] * 5 + [429]
+
+
+def test_proxy_entrypoint_untrusted_peer_ignores_forwarded_for(client):
+    direct = TestClient(main.with_proxy_headers(main.app, "127.0.0.1"))
+    codes = [
+        direct.post("/api/contact", json=VALID, headers={"X-Forwarded-For": f"10.0.{i}.1"}).status_code
+        for i in range(6)
+    ]
+    assert codes[-1] == 429  # a client that is not the proxy can't choose its own IP
+
+
+def test_security_headers_on_early_rejections(client):
+    r = client.post("/api/contact", content=b"x" * (main.MAX_BODY_BYTES + 1), headers={"Content-Type": "application/json"})
+    assert r.status_code == 413
+    assert r.headers["x-content-type-options"] == "nosniff"
+    assert r.headers["cache-control"] == "no-store"
+    assert "content-security-policy" in r.headers
 
 
 def test_rate_limiter_memory_is_bounded():

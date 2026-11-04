@@ -269,7 +269,7 @@ Los parches de `parches/` **ya están aplicados**: `git apply` sobre el código 
 | FE-1 | Tu usuario real de GitHub |
 | C-5(b) | El canal de aviso de mensajes nuevos |
 | D-2 | HSTS gradual, cuando el dominio tenga HTTPS |
-| D-3 | El lock de dependencias Python: hace falta generarlo con `uv` o `pip-tools` por plataforma, porque `uvloop` no existe en Windows |
+| ~~D-3~~ | ✅ Resuelto el 2026-11-04 (ver [AUDITORIA-2.md](AUDITORIA-2.md) DEP-1): lock universal de `uv` con hashes; `uvloop` queda condicionado por marcador de plataforma |
 | D-4 | Borrar las imágenes sin uso |
 
 ### Verificación final

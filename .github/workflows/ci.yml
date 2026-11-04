@@ -28,9 +28,33 @@ jobs:
         with:
           python-version: "3.14"
           cache: pip
-          cache-dependency-path: requirements*.txt
-      - run: python -m pip install -r requirements-dev.txt
+          cache-dependency-path: requirements*.lock
+      # uv (Rust) installs the hash-verified lock: CI tests exactly what the Docker image ships
+      - run: python -m pip install uv==0.13.7
+      - run: uv pip install --system --require-hashes -r requirements-dev.lock
+      - name: lockfiles match requirements*.txt
+        if: runner.os == 'Linux'
+        run: |
+          uv pip compile --universal --python-version 3.13 --generate-hashes -q requirements.txt -o requirements.lock
+          uv pip compile --universal --python-version 3.13 --generate-hashes -q requirements-dev.txt -o requirements-dev.lock
+          git diff --exit-code requirements.lock requirements-dev.lock
+      - run: ruff check .
       - run: python -m pytest
+
+  audit:
+    name: dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: python -m pip install pip-audit==2.10.1
+      - run: pip-audit --require-hashes --disable-pip -r requirements.lock
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm audit --audit-level=moderate
 
   frontend:
     name: frontend · ${{ matrix.os }}
@@ -69,6 +93,8 @@ jobs:
           test "$(code /api/status)" = 200
           test "$(code /assets/no-existe.js)" = 404
           test "$(code /img/README.md)" = 404
+          # granian always sends "server: granian"; Caddy must strip it
+          ! curl -sI http://localhost:8080/api/status | grep -qi '^server:'
           curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' \
             -d '{"name":"CI","email":"ci@example.com","message":"smoke"}' http://localhost:8080/api/contact | grep -q 200
       - if: always()

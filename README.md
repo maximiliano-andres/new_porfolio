@@ -34,9 +34,14 @@ source .venv/bin/activate
 # En Windows (PowerShell):
 # .venv\Scripts\Activate.ps1
 
-# Instalar dependencias
-pip install -r requirements.txt
+# Instalar dependencias (versiones exactas y verificadas por hash, iguales en Windows, macOS, Linux y Docker)
+pip install --require-hashes -r requirements-dev.lock
+# o, más rápido, con uv (Rust): uv pip install --require-hashes -r requirements-dev.lock
 ```
+
+> Si cambias `requirements.txt` o `requirements-dev.txt`, regenera los locks (el CI comprueba que estén al día):
+> `uv pip compile --universal --python-version 3.13 --generate-hashes requirements.txt -o requirements.lock`
+> (y lo mismo con `requirements-dev.txt` → `requirements-dev.lock`).
 
 ### 3. Configurar el Frontend (React)
 Instala las dependencias de Node.js:
@@ -104,7 +109,7 @@ Dos contenedores construidos desde un único `Dockerfile` multi-etapa; el fronte
 | Servicio | Imagen | Rol |
 |---|---|---|
 | `web` | Caddy 2.11 (~90 MB) | Punto de entrada. Sirve `dist/` con Brotli/gzip precomprimidos, HTTP/2 + HTTP/3 y HTTPS automático, y envía `/api/*` a `api`. |
-| `api` | Python 3.14 slim + Uvicorn (uvloop + httptools) | Solo la API. Sin puertos publicados, usuario no-root, sistema de archivos de solo lectura. Los mensajes se guardan en el volumen `contact-data`. |
+| `api` | Python 3.14 slim + Granian (servidor HTTP en Rust, uvloop) | Solo la API. Sin puertos publicados, usuario no-root, sistema de archivos de solo lectura. Los mensajes se guardan en el volumen `contact-data`. |
 
 ```bash
 cp .env.example .env            # en producción: SITE_ADDRESS=tudominio.cl
@@ -127,7 +132,7 @@ docker compose exec api cat /data/contact_messages.jsonl   # leer los mensajes d
 | `HOST` / `PORT` | `127.0.0.1` / `8000` | Usa `0.0.0.0` solo detrás de un proxy o firewall |
 | `CORS_ORIGINS` | — | Orígenes extra separados por coma (el dev server de Vite solo se permite con `APP_ENV=development`) |
 | `TRUST_PROXY` | — | `1` detrás de un proxy confiable: la IP del cliente se toma del último salto de confianza (nunca del primer valor de `X-Forwarded-For`, que el cliente puede falsificar) |
-| `FORWARDED_ALLOW_IPS` | `127.0.0.1` | IPs de los proxies en los que confía Uvicorn para `X-Forwarded-For` |
+| `FORWARDED_ALLOW_IPS` | `127.0.0.1` | IPs o CIDR (separados por coma) de los proxies en los que se confía para `X-Forwarded-For`. Con `*` se toma el **primer** valor: úsalo solo si el proxy sobrescribe la cabecera (Caddy lo hace por defecto) |
 | `CLIENT_IP_HEADER` | — | Ej. `cf-connecting-ip` detrás de Cloudflare (requiere `TRUST_PROXY=1`; úsalo solo si el CDN garantiza esa cabecera) |
 | `CONTACT_LOG` | `contact_messages.jsonl` | Ruta del archivo de mensajes (en Docker: `/data/…`, un volumen persistente) |
 | `ENABLE_HSTS` | — | `1` cuando el sitio se sirve exclusivamente por HTTPS |
@@ -154,7 +159,7 @@ docker compose exec api cat /data/contact_messages.jsonl   # leer los mensajes d
 - `public/fonts/` - Fuentes propias (las mismas que servía Google Fonts). `public/sw.js` - Service worker (offline y visitas repetidas instantáneas).
 - `src/` - Código fuente del frontend en React (`PolyglotPortfolio.jsx` es la app; `components/`, `windows/`, `overlays/`, `data/` y `lib/` contienen los módulos).
 - `dist/` - Frontend compilado listo para producción (generado por `npm run build`).
-- `requirements.txt` - Dependencias de Python (FastAPI, Uvicorn).
+- `requirements.txt` - Dependencias directas de Python (FastAPI, Granian). `requirements.lock` / `requirements-dev.lock`: versiones exactas con hashes (generadas con `uv`).
 - `package.json` - Configuración y dependencias del frontend (Vite, React, TailwindCSS).
 - `src/index.css` - Tailwind CSS 4 (configuración en CSS: tema, variantes y compatibilidad visual).
 
@@ -163,6 +168,8 @@ docker compose exec api cat /data/contact_messages.jsonl   # leer los mensajes d
 ## ✅ Calidad
 
 ```bash
-npm run lint    # ESLint (configuración en .eslintrc.cjs)
+npm run lint    # oxlint, en Rust (configuración en .oxlintrc.json)
+ruff check .    # lint de Python, en Rust (configuración en ruff.toml)
+python -m pytest
 npm run build   # bundle + portada pre-renderizada + Brotli/gzip + cabeceras para Caddy
 ```
