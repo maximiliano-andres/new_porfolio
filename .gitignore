@@ -21,10 +21,21 @@ venv/
 .coverage.*
 htmlcov/
 
+# ── Tests / E2E (Playwright: docs/auditoria/e2e.mjs) ──
+coverage/
+test-results/
+playwright-report/
+blob-report/
+
 # ── Environment / secrets ─────────────────────
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+
+# ── Local tool settings ───────────────────────
+.claude/settings.local.json
 
 # ── Runtime data ──────────────────────────────
 contact_messages.jsonl
@@ -36,5 +47,6 @@ contact_messages.jsonl
 .idea/
 *.swp
 .DS_Store
+._*
 Thumbs.db
 desktop.ini
