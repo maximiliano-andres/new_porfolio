@@ -9,7 +9,7 @@
 
 # ---------- 1. frontend: npm ci + full build (vite, SSR prerender, br/gz, CSP for Caddy) ----------
 # Same layout as the repository (/build/frontend, /build/config, /build/deploy): the build scripts run unchanged
-FROM node:24-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS frontend
+FROM node:25-slim@sha256:81db02c4b671288a03915da9534dbd54f96d0e7c24d80ccc54f5b36b2e684370 AS frontend
 WORKDIR /build/frontend
 ENV npm_config_update_notifier=false
 # dependencies first: this layer is reused while package*.json do not change
