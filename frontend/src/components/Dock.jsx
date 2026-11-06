@@ -6,7 +6,8 @@ import { prefetchWindow } from "../windows/lazy.js";
 // hovering/focusing an icon lights its circuit trace and preloads the window's code
 const hoverOn = (id) => { circuit.hover(id); prefetchWindow(id); };
 const hoverOff = () => circuit.hover(null);
-export const Dock = memo(function Dock({ items, windows, onToggle, scale = 1 }) {
+/* shortcuts: false when the visitor turned the single-key shortcuts off (then they aren't advertised) */
+export const Dock = memo(function Dock({ items, windows, onToggle, scale = 1, shortcuts = true }) {
   return (
     <nav
       data-tour="dock"
@@ -33,13 +34,13 @@ export const Dock = memo(function Dock({ items, windows, onToggle, scale = 1 }) 
             onFocus={() => hoverOn(it.id)}
             onBlur={hoverOff}
             aria-label={it.label}
-            aria-keyshortcuts={String(i + 1)}
+            aria-keyshortcuts={shortcuts ? String(i + 1) : undefined}
             aria-pressed={active}
             className="group relative flex flex-col items-center justify-center w-8 h-8 min-[360px]:w-9 min-[360px]:h-9 sm:w-11 sm:h-11 shrink-0 rounded-xl transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden hover:-translate-y-1"
             style={{
               background: active ? `${it.accent}22` : "transparent",
             }}
-            title={`${it.label} (${i + 1})`}
+            title={shortcuts ? `${it.label} (${i + 1})` : it.label}
           >
             <it.IconCmp
               size={18}
@@ -58,7 +59,7 @@ export const Dock = memo(function Dock({ items, windows, onToggle, scale = 1 }) 
                 fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace",
               }}
             >
-              {it.label} <span className="text-white/40">{i + 1}</span>
+              {it.label}{shortcuts && <span className="text-white/60"> {i + 1}</span>}
             </span>
           </button>
         );

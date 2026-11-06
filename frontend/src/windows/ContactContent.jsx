@@ -7,6 +7,7 @@ import { CORE, LANG, SOCIAL_LINKS } from "../styles/theme.js";
 
 const REQUEST_TIMEOUT_MS = 12000;
 const EMPTY_FORM = { name: "", email: "", message: "", website: "" };
+const PRIVACY_ID = "c-privacy";
 
 /* maps the API's answer to a message the visitor can act on */
 function submitErrorFor(res) {
@@ -29,6 +30,16 @@ export function ContactContent() {
   const [imgError, setImgError] = useState(false);
   const inFlight = useRef(null);
   const mounted = useRef(true);
+  const formRef = useRef(null);
+  const againRef = useRef(null);
+
+  // after a failed validation the focus goes to the first invalid field (it carries the error text)
+  const focusFirstInvalid = () =>
+    requestAnimationFrame(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus());
+  // on success the form unmounts: keep the focus on the next useful control instead of <body>
+  useEffect(() => {
+    if (status === "success") againRef.current?.focus({ preventScroll: true });
+  }, [status]);
 
   // closing the window mid-request aborts it instead of updating an unmounted form
   useEffect(() => {
@@ -59,6 +70,7 @@ export function ContactContent() {
     setErrors(errs);
     if (Object.keys(errs).length) {
       setStatus("error");
+      focusFirstInvalid();
       return;
     }
     setStatus("loading");
@@ -76,6 +88,7 @@ export function ContactContent() {
         }
         setErrors({ ...fieldErrs, submit: submitErrorFor(res) });
         setStatus("error");
+        if (Object.keys(fieldErrs).length) focusFirstInvalid();
         return;
       }
       setStatus("success");
@@ -106,19 +119,22 @@ export function ContactContent() {
 
   // 16px on phones: iOS Safari auto-zooms the page when focusing inputs smaller than that
   const inputCls =
-    "w-full rounded-md bg-black/30 border px-3 py-2.5 sm:py-2 text-[16px] sm:text-[12.5px] text-white/90 placeholder:text-white/30 outline-hidden transition-colors focus:border-[#22D3EE] disabled:opacity-50";
+    "w-full rounded-md bg-black/30 border px-3 py-2.5 sm:py-2 text-[16px] sm:text-[12.5px] text-white/90 placeholder:text-white/50 outline-hidden transition-colors focus:border-[#22D3EE] disabled:opacity-50";
 
   if (status === "success") {
     return (
       <div className="w-full flex flex-col items-center text-center py-6">
-        <CheckCircle2 size={30} style={{ color: LANG.node.c2 }} className="mb-3" />
-        <div className="text-[13.5px] font-medium text-white/90 mb-1" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
-          Mensaje enviado
+        <CheckCircle2 size={30} style={{ color: LANG.node.c2 }} className="mb-3" aria-hidden="true" />
+        <div role="status" className="flex flex-col items-center">
+          <div className="text-[13.5px] font-medium text-white/90 mb-1" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
+            Mensaje enviado
+          </div>
+          <p className="text-[12px] text-white/65 mb-4">Responderé dentro de 24&ndash;48 horas hábiles.</p>
         </div>
-        <p className="text-[12px] text-white/65 mb-4">Responderé dentro de 24&ndash;48 horas hábiles.</p>
         <button
+          ref={againRef}
           onClick={() => { setStatus("idle"); setForm(EMPTY_FORM); }}
-          className="text-[11.5px] px-3 py-1.5 rounded-lg border border-white/15 text-white/70 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
+          className="text-[11.5px] px-3 py-1.5 rounded-lg border border-white/15 text-white/75 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
         >
           Enviar otro mensaje
         </button>
@@ -138,34 +154,34 @@ export function ContactContent() {
               className="w-full h-full object-cover"
             />
           ) : (
-            <span className="text-white/20 font-bold text-[11px] select-none" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>MC</span>
+            <span className="text-white/60 font-bold text-[11px] select-none" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>MC</span>
           )}
         </div>
         <div className="min-w-0">
           <div className="text-[12px] font-medium text-white/90">
             {audience === "rrhh" ? "¿Tienes un proceso de selección abierto?" : "¿Trabajamos juntos?"}
           </div>
-          <div className="text-[10px] text-white/50">
+          <div className="text-[10px] text-white/60">
             {audience === "rrhh" ? "Coordinemos una entrevista; respondo en 24–48 horas hábiles" : "Hablemos sobre tu próximo sistema backend"}
           </div>
         </div>
       </div>
-      <form onSubmit={submit} noValidate className="relative">
+      <form ref={formRef} onSubmit={submit} noValidate className="relative" aria-describedby={PRIVACY_ID}>
         <div className="mb-3">
-          <label htmlFor="c-name" className="block text-[11px] text-white/50 mb-1">Nombre</label>
+          <label htmlFor="c-name" className="block text-[11px] text-white/65 mb-1">Nombre</label>
           <input id="c-name" autoComplete="name" className={inputCls} placeholder="Tu nombre" {...field("name")} />
           {errors.name && <p id="c-name-error" className="text-[10.5px] text-red-400 mt-1 flex items-center gap-1"><AlertCircle size={11} />{errors.name}</p>}
         </div>
         <div className="mb-3">
-          <label htmlFor="c-email" className="block text-[11px] text-white/50 mb-1">Email</label>
+          <label htmlFor="c-email" className="block text-[11px] text-white/65 mb-1">Email</label>
           <input id="c-email" type="email" autoComplete="email" inputMode="email" className={inputCls} placeholder="tu@correo.com" {...field("email")} />
           {errors.email && <p id="c-email-error" className="text-[10.5px] text-red-400 mt-1 flex items-center gap-1"><AlertCircle size={11} />{errors.email}</p>}
         </div>
         <div className="mb-4">
-          <label htmlFor="c-msg" className="block text-[11px] text-white/50 mb-1">Mensaje</label>
+          <label htmlFor="c-msg" className="block text-[11px] text-white/65 mb-1">Mensaje</label>
           <textarea id="c-msg" rows={3} className={inputCls + " resize-none"} placeholder="Cuéntame sobre tu proyecto..." {...field("message")} />
           {form.message.length > LIMITS.message * 0.8 && (
-            <p className="text-[10px] text-white/40 mt-1 text-right tabular-nums">{form.message.length} / {LIMITS.message}</p>
+            <p className="text-[10px] text-white/60 mt-1 text-right tabular-nums">{form.message.length} / {LIMITS.message}</p>
           )}
           {errors.message && <p id="c-message-error" className="text-[10.5px] text-red-400 mt-1 flex items-center gap-1"><AlertCircle size={11} />{errors.message}</p>}
         </div>
@@ -184,15 +200,20 @@ export function ContactContent() {
         >
           {status === "loading" ? (<><Loader2 size={14} className="animate-spin" /> Enviando...</>) : (<><Send size={13} /> Enviar mensaje</>)}
         </button>
+        {/* privacy notice (Ley 21.719): purpose, retention and how to ask for deletion; the backend purges after 365 days */}
+        <p id={PRIVACY_ID} className="mt-2 text-[10.5px] leading-4 text-white/65">
+          Usaré tus datos solo para responderte. Los mensajes se eliminan a los 12 meses; puedes pedir su eliminación antes escribiendo a{" "}
+          <a href={SOCIAL_LINKS.email} className="underline decoration-white/30 underline-offset-2 hover:text-white focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden rounded-sm">max.andres1995@outlook.com</a>.
+        </p>
       </form>
       <div className="flex items-center justify-center gap-4 mt-5 pt-4 border-t border-white/[0.08]">
-        <a href={SOCIAL_LINKS.github} target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="GitHub" className="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/60 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">
+        <a href={SOCIAL_LINKS.github} target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="GitHub" className="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/70 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">
           <Github size={18} />
         </a>
-        <a href={SOCIAL_LINKS.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" aria-label="LinkedIn" className="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/60 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">
+        <a href={SOCIAL_LINKS.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" aria-label="LinkedIn" className="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/70 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">
           <Linkedin size={18} />
         </a>
-        <a href={SOCIAL_LINKS.email} title="Email" aria-label="Email" className="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/60 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">
+        <a href={SOCIAL_LINKS.email} title="Email" aria-label="Email" className="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/70 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">
           <Mail size={18} />
         </a>
       </div>

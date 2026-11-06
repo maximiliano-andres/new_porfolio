@@ -1,9 +1,9 @@
 /* Draggable, minimizable, maximizable window that grows out of its dock icon. */
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useLayoutEffect, useState } from "react";
 import { m, useMotionValue } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { SectionBoundary, WindowSkeleton } from "./SectionBoundary.jsx";
-import { AudienceToggle } from "./ui.jsx";
+import { AudienceToggle } from "./audience.jsx";
 
 export function FloatingWindow({
   id, title, IconCmp, accent, pos, scale = 1,
@@ -13,13 +13,20 @@ export function FloatingWindow({
 }) {
   const collapsedHeight = 44;
 
-  // vector from the window to its dock icon: windows grow out of the dock and shrink back into it
-  const iconEl = typeof document !== "undefined" ? document.querySelector(`[data-dock-id="${id}"]`) : null;
-  const toDock = (() => {
+  // vector from the window to its dock icon: windows grow out of the dock and shrink back into it.
+  // Measured once on mount and again only when the slot changes or the window minimizes — never on every
+  // render of the shell (each measurement is a synchronous layout read).
+  const measureToDock = () => {
+    const iconEl = typeof document !== "undefined" ? document.querySelector(`[data-dock-id="${id}"]`) : null;
     if (!iconEl || typeof pos.left !== "number") return { x: 0, y: 40 };
     const r = iconEl.getBoundingClientRect();
     return { x: r.left + r.width / 2 - (pos.left + pos.width / 2), y: r.top + r.height / 2 - (pos.top + 80) };
-  })();
+  };
+  const [toDock, setToDock] = useState(measureToDock);
+  useLayoutEffect(() => {
+    const next = measureToDock();
+    setToDock((prev) => (prev.x === next.x && prev.y === next.y ? prev : next));
+  }, [pos.left, pos.top, pos.width, isMinimized]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // phones: swipe the title bar sideways to move between open windows
   const onPanEnd = (_, info) => {
@@ -44,6 +51,7 @@ export function FloatingWindow({
       data-win={id}
       role="dialog"
       aria-label={title}
+      tabIndex={-1} // focus target when the window opens (the focus moves on to its controls with Tab)
       layout="position"
       drag={!isMobile && !isMaximized}
       dragMomentum={false}
@@ -61,7 +69,7 @@ export function FloatingWindow({
       }}
       exit={{ opacity: 0, scale: 0.12, x: toDock.x, y: toDock.y, transition: { duration: 0.28, ease: [0.4, 0, 0.6, 1] } }}
       transition={{ type: "spring", stiffness: 340, damping: 30 }}
-      className="pointer-events-auto absolute rounded-xl border shadow-2xl overflow-hidden flex flex-col"
+      className="pointer-events-auto absolute rounded-xl border shadow-2xl overflow-hidden flex flex-col outline-hidden"
       style={{
         x,
         y,
@@ -71,8 +79,9 @@ export function FloatingWindow({
         maxHeight: pos.maxHeight,
         pointerEvents: isMinimized ? "none" : "auto",
         zIndex: z,
-        background: "rgba(13,17,23,0.92)",
-        backdropFilter: "blur(14px)",
+        // no backdrop-filter: behind a 95% opaque surface the blur is invisible, yet it would be recomputed every
+        // frame over the animated background (BG-1)
+        background: "rgba(13,17,23,0.95)",
         borderColor: `${accent}33`,
         boxShadow: `0 20px 60px -15px rgba(0,0,0,0.6), 0 0 0 1px ${accent}14`,
       }}
@@ -101,11 +110,11 @@ export function FloatingWindow({
       </m.div>
       {isMobile && switcher && !isMinimized && (
         <div className="flex items-center justify-between gap-2 px-2 py-1 border-b border-white/[0.06] shrink-0 text-[10.5px]" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
-          <button onClick={() => onSwitch(switcher.prev.id)} className="inline-flex items-center gap-1 min-w-0 rounded-md px-1.5 py-1.5 text-white/55 active:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden" aria-label={`Ir a ${switcher.prev.label}`}>
+          <button onClick={() => onSwitch(switcher.prev.id)} className="inline-flex items-center gap-1 min-w-0 rounded-md px-1.5 py-1.5 text-white/65 active:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden" aria-label={`Ir a ${switcher.prev.label}`}>
             <ChevronLeft size={13} className="shrink-0" /><span className="truncate">{switcher.prev.label}</span>
           </button>
-          <span className="shrink-0 text-white/35">{switcher.index + 1} / {switcher.total} · desliza</span>
-          <button onClick={() => onSwitch(switcher.next.id)} className="inline-flex items-center gap-1 min-w-0 rounded-md px-1.5 py-1.5 text-white/55 active:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden" aria-label={`Ir a ${switcher.next.label}`}>
+          <span className="shrink-0 text-white/60">{switcher.index + 1} / {switcher.total} · desliza</span>
+          <button onClick={() => onSwitch(switcher.next.id)} className="inline-flex items-center gap-1 min-w-0 rounded-md px-1.5 py-1.5 text-white/65 active:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden" aria-label={`Ir a ${switcher.next.label}`}>
             <span className="truncate">{switcher.next.label}</span><ChevronRight size={13} className="shrink-0" />
           </button>
         </div>

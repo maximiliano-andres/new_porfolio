@@ -11,8 +11,9 @@ MESSAGE_MAX = 5000
 HONEYPOT_MAX = 200
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$")
-# bidi overrides/isolates and C0/C1 controls (except \n \t). ZWJ (U+200D) is kept: emoji sequences need it.
-UNSAFE_CHARS = re.compile(r"[‪-‮⁦-⁩\x00-\x08\x0b-\x1f\x7f-\x9f]")
+# bidi embeddings/overrides (U+202A-202E), isolates (U+2066-2069) and C0/C1 controls (except \n \t). Written as escapes,
+# never literally ("Trojan Source": a reviewer can't see literal bidi characters). ZWJ (U+200D) is kept: emoji need it.
+UNSAFE_CHARS = re.compile("[\u202a-\u202e\u2066-\u2069\x00-\x08\x0b-\x1f\x7f-\x9f]")
 
 
 def clean_text(value: str) -> str:

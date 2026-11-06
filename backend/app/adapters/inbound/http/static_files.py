@@ -6,13 +6,16 @@ from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 
 # Only these file types are served from dist/; anything else (e.g. stray .md files) falls back to the SPA.
-STATIC_TYPES = {".js", ".css", ".webp", ".png", ".jpg", ".jpeg", ".svg", ".ico", ".txt", ".woff2", ".json", ".webmanifest"}
+STATIC_TYPES = {
+    ".js", ".css", ".webp", ".png", ".jpg", ".jpeg", ".svg", ".ico", ".txt", ".woff2", ".json", ".webmanifest", ".pdf",
+}
 # explicit types: on Windows `mimetypes` reads the registry, where .js is often "text/plain" — with nosniff the
 # browser would then refuse every module script. These win over whatever the OS reports, on every platform.
 for _ext, _type in {
     ".js": "text/javascript", ".css": "text/css", ".html": "text/html", ".webp": "image/webp", ".png": "image/png",
     ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".svg": "image/svg+xml", ".ico": "image/x-icon",
     ".txt": "text/plain", ".woff2": "font/woff2", ".json": "application/json", ".webmanifest": "application/manifest+json",
+    ".pdf": "application/pdf",
 }.items():
     mimetypes.add_type(_type, _ext)
 
@@ -77,7 +80,14 @@ def cache_policy(path: str) -> str:
         return "public, max-age=31536000, immutable"  # content-hashed by the build
     if path.startswith("fonts/"):
         return "public, max-age=2592000"  # 30 days; rename the file if a font ever changes
+    if path.startswith("cv/"):
+        return "no-cache"  # unversioned file name (CV_….pdf): an updated CV must be seen at once (same as Caddy)
     return "public, max-age=3600"
+
+
+def not_found() -> JSONResponse:
+    """Honest 404 for files: JSON (never the HTML shell) and never cached, so a later deploy can fill the gap."""
+    return JSONResponse({"detail": "Recurso no encontrado."}, status_code=404, headers={"Cache-Control": "no-store"})
 
 
 def build_frontend_router(frontend: StaticFrontend) -> APIRouter:
@@ -95,18 +105,18 @@ def build_frontend_router(frontend: StaticFrontend) -> APIRouter:
         if path in ("", "index.html"):
             return static_response(index, request, "no-cache")
         if "\x00" in path:
-            return JSONResponse({"detail": "Recurso no encontrado."}, status_code=404)
+            return not_found()
         root = frontend.dir.resolve()  # per request: dist/ may be a symlink swapped by an atomic deploy
         try:
             candidate = (frontend.dir / path).resolve()
         except (OSError, ValueError):
-            return JSONResponse({"detail": "Recurso no encontrado."}, status_code=404)
+            return not_found()
         # resolve() + is_relative_to blocks path traversal (../, symlinks outside dist)
         if candidate.is_relative_to(root) and candidate.is_file() and candidate.suffix.lower() in STATIC_TYPES:
             return static_response(candidate, request, cache_policy(path))
         # a missing file (old hashed chunk, image, font…) must never be answered with the HTML shell
-        if path.startswith(("assets/", "fonts/", "img/")) or Path(path).suffix.lower() in STATIC_TYPES:
-            return JSONResponse({"detail": "Recurso no encontrado."}, status_code=404, headers={"Cache-Control": "no-store"})
+        if path.startswith(("assets/", "fonts/", "img/", "cv/")) or Path(path).suffix.lower() in STATIC_TYPES:
+            return not_found()
         # unknown page: same app (the visitor still sees the portfolio) but an honest 404 for crawlers
         response = static_response(index, request, "no-cache")
         if response.status_code == 200:

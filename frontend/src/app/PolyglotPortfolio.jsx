@@ -1,8 +1,8 @@
 /* App shell: owns window state, layout, audience, achievements, tours and keyboard shortcuts,
    and composes the components, windows and overlays from the modules below. */
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, LazyMotion, m, MotionConfig } from "framer-motion";
-import { Code2, Compass, FolderGit2, Github, Hexagon, Linkedin, Mail, Route, Trophy, Users, Volume2, VolumeX, Zap } from "lucide-react";
+import { Code2, Compass, FileText, FolderGit2, Github, Hexagon, Keyboard, Linkedin, Mail, Route, Trophy, Users, Volume2, VolumeX, Zap } from "lucide-react";
 import { BootScreen } from "../components/BootScreen.jsx";
 import { CircuitBackground } from "../components/CircuitBackground.jsx";
 import { Dock } from "../components/Dock.jsx";
@@ -10,21 +10,21 @@ import { FloatingWindow } from "../components/FloatingWindow.jsx";
 import { Hero } from "../components/Hero.jsx";
 import { SectionBoundary } from "../components/SectionBoundary.jsx";
 import { TopBar } from "../components/TopBar.jsx";
-import { AudienceSwap } from "../components/ui.jsx";
+import { AudienceSwap } from "../components/audience.jsx";
 import { AudienceContext, SystemContext } from "./context.js";
-import { NOTIFICATION_MESSAGES, PROJECTS } from "../data/content.js";
-import { AUDIENCES, HR_PROJECTS, PROFILE_NOTIFICATION } from "../data/hr.js";
+import { AUDIENCES, NOTIFICATION_MESSAGES, PROFILE_NOTIFICATION } from "../data/shell.js";
 import { ACHIEVEMENTS, ALL_ITEMS, AUTO_TOUR, DOCK_ITEMS, EXTRA_ITEMS, PROJECT_WIN_WIDTH, WINDOW_CIRCUIT } from "../data/system.js";
 import { centeredPos, corePosition, deskArea, dockSpaceFor, isCompactViewport, makeInitialWindows, maximizedPos, tileWindows, uiScaleFor } from "./layout.js";
 import { circuit } from "../lib/circuitStore.js";
 import { sound } from "../lib/sound.js";
 import { storage } from "../lib/storage.js";
 import { reloadOnce } from "../lib/reload.js";
+import { importWithRetry, lazyWithRetry } from "../lib/lazyWithRetry.js";
 import { AchievementToast } from "../overlays/AchievementToast.jsx";
 import { AutoTourBar } from "../overlays/AutoTourBar.jsx";
 import { CORE, HR_ACCENT, SOCIAL_LINKS } from "../styles/theme.js";
 import {
-  AboutContent, AboutHRContent, BadgesContent, CertificationsContent, CertificationsHRContent, ContactContent,
+  AboutContent, AboutHRContent, BadgesContent, CvContent, CertificationsContent, CertificationsHRContent, ContactContent,
   EducationContent, ExperienceContent, ExperienceHRContent, HRSummaryContent, ProjectDetailContent,
   ProjectDetailHRContent, ProjectsContent, ProjectsHRContent, SimulatorContent, SkillsContent, SkillsHRContent,
   TerminalContent, prefetchWindow,
@@ -33,13 +33,43 @@ import {
 // index.html ships a prerendered copy of the landing screen (scripts/prerender.mjs); React replaces it on mount
 const PRERENDERED = typeof document !== "undefined" && Boolean(document.querySelector("[data-shell-root]"));
 
-// framer-motion's animation engine is fetched after the first paint (strict: any stray `motion.*` fails loudly)
-const loadMotionFeatures = () => import("../lib/motionFeatures.js").then((mod) => mod.default).catch((err) => { reloadOnce(); throw err; });
+// framer-motion's animation engine is fetched after the first paint (strict: any stray `motion.*` fails loudly).
+// A failed download is retried; if it still fails and no reload is possible, index.css shows the UI without
+// animations (data-nomotion) instead of leaving every element frozen at its `initial` opacity 0.
+const loadMotionFeatures = () =>
+  importWithRetry(() => import("../lib/motionFeatures.js"), [400, 1500, 4000])
+    .then((mod) => mod.default)
+    .catch((err) => {
+      if (!reloadOnce()) document.documentElement.dataset.nomotion = "1";
+      throw err;
+    });
 
 // overlays are only needed after an interaction (or on the first visit's tour): load them on demand
-const CommandPalette = lazy(() => import("../overlays/CommandPalette.jsx").then((m) => ({ default: m.CommandPalette })).catch((err) => { reloadOnce(); throw err; }));
-const CoachTour = lazy(() => import("../overlays/CoachTour.jsx").then((m) => ({ default: m.CoachTour })).catch((err) => { reloadOnce(); throw err; }));
-const CoreMenu = lazy(() => import("../overlays/CoreMenu.jsx").then((m) => ({ default: m.CoreMenu })).catch((err) => { reloadOnce(); throw err; }));
+const CommandPalette = lazyWithRetry(() => importWithRetry(() => import("../overlays/CommandPalette.jsx")).then((m) => m.CommandPalette));
+const CoachTour = lazyWithRetry(() => importWithRetry(() => import("../overlays/CoachTour.jsx")).then((m) => m.CoachTour));
+const CoreMenu = lazyWithRetry(() => importWithRetry(() => import("../overlays/CoreMenu.jsx")).then((m) => m.CoreMenu));
+
+// project catalogue for the detail window: fetched on demand, kept once loaded
+let projectLookup = null;
+const loadProjectLookup = () =>
+  projectLookup
+    ? Promise.resolve(projectLookup)
+    : importWithRetry(() => import("../lib/projectLookup.js")).then((mod) => (projectLookup = mod));
+
+/* ---- focus management for windows (WCAG 2.4.3): where focus goes when a window opens, closes or minimizes ---- */
+const selectorFor = (el) =>
+  el?.dataset?.heroAction ? `[data-hero-action="${el.dataset.heroAction}"]`
+    : el?.dataset?.dockId ? `[data-dock-id="${el.dataset.dockId}"]`
+      : null;
+const isLost = (el) => !el || el === document.body || !el.isConnected;
+// focusable, visible, not inside a minimized (inert) window, not inside the window that is going away
+const usable = (el, leavingId) =>
+  el instanceof HTMLElement && el.isConnected && !el.closest("[inert]") && !el.closest(`[data-win="${leavingId}"]`) && el.getClientRects().length > 0;
+const topWindowEl = (exceptId) =>
+  [...document.querySelectorAll("[data-win]:not([inert])")]
+    .filter((el) => el.dataset.win !== exceptId)
+    .reduce((best, el) => (!best || Number(el.style.zIndex) > Number(best.style.zIndex) ? el : best), null);
+const afterPaint = (fn) => requestAnimationFrame(() => requestAnimationFrame(fn));
 
 export default function PolyglotPortfolio() {
   // returning visitors skip the boot sequence entirely (no black frame before the landing screen)
@@ -47,9 +77,15 @@ export default function PolyglotPortfolio() {
   const finishBoot = useCallback(() => setBooted(true), []); // stable: BootScreen effects depend on it
   // the hero skips its fade-in only when taking over the prerendered shell, not when it reappears later
   const heroFromShell = useRef(PRERENDERED);
-  useEffect(() => { heroFromShell.current = false; }, []);
-  const [windows, setWindows] = useState(makeInitialWindows());
+  useEffect(() => {
+    heroFromShell.current = false;
+    // tells the prerendered shell's head script to stop resizing the (now replaced) static landing screen
+    document.documentElement.dataset.app = "1";
+  }, []);
+  const [windows, setWindows] = useState(makeInitialWindows);
   const [projectWin, setProjectWin] = useState({ open: false, id: null, z: 1, minimized: false, maximized: false });
+  const windowsRef = useRef(windows);
+  windowsRef.current = windows;
   const projectWinRef = useRef(projectWin);
   projectWinRef.current = projectWin;
   const [windowSize, setWindowSize] = useState({
@@ -83,6 +119,12 @@ export default function PolyglotPortfolio() {
     storage.set("sound", v ? "on" : "off");
     sound.setEnabled(v);
     sound.play("toggle");
+  }, []);
+  // single-key shortcuts (1–9, ?) can be turned off (WCAG 2.1.4): voice control users say "uno" and a window opens
+  const [singleKeys, setSingleKeysState] = useState(() => storage.get("shortcuts") !== "off");
+  const setSingleKeys = useCallback((v) => {
+    setSingleKeysState(v);
+    storage.set("shortcuts", v ? "on" : "off");
   }, []);
 
   // achievements + exploration progress (persisted). Refs make unlock() idempotent and side-effect safe.
@@ -228,57 +270,119 @@ export default function PolyglotPortfolio() {
     }
   }, []);
 
-  const toggleWindow = useCallback((id) => {
-    setWindows((w) => {
-      const cur = w[id];
-      if (!cur.open) {
-        zRef.current += 1;
-        return { ...w, [id]: { open: true, minimized: false, maximized: false, z: zRef.current } };
+  /* focus: remember what opened a window, move into it when the focus would otherwise be lost (or when asked),
+     and give it back — to the opener, its dock icon, or a sensible landmark — when the window goes away */
+  const openersRef = useRef({});
+  const rememberOpener = useCallback((id) => {
+    const el = document.activeElement;
+    if (isLost(el) || el.closest(`[data-win="${id}"]`)) return;
+    // inside a closing overlay (palette, CORE): it restores the focus first; take whatever it lands on
+    openersRef.current[id] = el.closest('[aria-modal="true"]') ? { deferred: true } : { el, selector: selectorFor(el) };
+  }, []);
+  const focusWindowSoon = useCallback((id, force) => {
+    afterPaint(() => {
+      const win = document.querySelector(`[data-win="${id}"]`);
+      if (!win || win.hasAttribute("inert")) return;
+      const active = document.activeElement;
+      if (openersRef.current[id]?.deferred) {
+        openersRef.current[id] = isLost(active) || win.contains(active) ? {} : { el: active, selector: selectorFor(active) };
       }
-      if (cur.minimized) {
-        zRef.current += 1;
-        return { ...w, [id]: { ...cur, minimized: false, z: zRef.current } };
-      }
-      
-      const pw = projectWinRef.current;
-      const zs = Object.values(w).filter((win) => win.open && !win.minimized).map((win) => win.z);
-      if (pw.open && !pw.minimized) zs.push(pw.z); // the project detail counts as a window in front
-      const isFrontmost = zs.length === 0 || cur.z === Math.max(...zs);
-
-      if (isFrontmost) {
-        return { ...w, [id]: { ...cur, minimized: true } };
-      } else {
-        zRef.current += 1;
-        return { ...w, [id]: { ...cur, minimized: false, z: zRef.current } };
-      }
+      if (win.contains(active)) return; // e.g. the terminal's input took it already
+      // the Hero unmounts as soon as a window opens: focus left on it would fall to <body>
+      if (force || isLost(active) || active.closest("[data-hero]")) win.focus({ preventScroll: true });
+    });
+  }, []);
+  // call before hiding a window: only acts when the focus was inside it (or already lost)
+  const restoreFocusLater = useCallback((id) => {
+    const active = document.activeElement;
+    if (!isLost(active) && !active.closest(`[data-win="${id}"]`)) return;
+    afterPaint(() => {
+      const now = document.activeElement;
+      if (!isLost(now) && !now.closest(`[data-win="${id}"]`) && !now.closest("[inert]")) return; // someone else moved it
+      const entry = openersRef.current[id] || {};
+      const candidates = [
+        entry.el,
+        entry.selector && document.querySelector(entry.selector),
+        document.querySelector(`[data-dock-id="${id}"]`),
+        topWindowEl(id),
+        document.querySelector("[data-hero-action]"),
+        document.querySelector('[data-tour="core"]'),
+        document.querySelector('[data-tour="dock"] button'),
+      ];
+      candidates.find((el) => usable(el, id))?.focus({ preventScroll: true });
     });
   }, []);
 
-  // open (or restore and raise) without the dock's toggle-to-minimize behaviour
-  const openWindow = useCallback((id) => {
+  const toggleWindow = useCallback((id) => {
+    const cur = windowsRef.current[id];
+    if (!cur) return;
+    let minimize = false;
+    if (cur.open && !cur.minimized) {
+      const pw = projectWinRef.current;
+      const zs = Object.values(windowsRef.current).filter((win) => win.open && !win.minimized).map((win) => win.z);
+      if (pw.open && !pw.minimized) zs.push(pw.z); // the project detail counts as a window in front
+      minimize = zs.length === 0 || cur.z === Math.max(...zs);
+    }
+    if (minimize) restoreFocusLater(id);
+    else if (!cur.open || cur.minimized) { rememberOpener(id); focusWindowSoon(id, false); }
+    zRef.current += minimize ? 0 : 1;
+    const z = zRef.current;
+    setWindows((w) => {
+      if (!w[id]) return w;
+      if (minimize) return { ...w, [id]: { ...w[id], minimized: true } };
+      if (!w[id].open) return { ...w, [id]: { open: true, minimized: false, maximized: false, z } };
+      return { ...w, [id]: { ...w[id], minimized: false, z } };
+    });
+  }, [rememberOpener, focusWindowSoon, restoreFocusLater]);
+
+  // open (or restore and raise) without the dock's toggle-to-minimize behaviour.
+  // The new window takes the focus (the Hero, palette or CORE that opened it may be gone); opts.auto: tours don't move it.
+  const openWindow = useCallback((id, opts) => {
+    if (typeof id !== "string" || !Object.hasOwn(windowsRef.current, id)) return; // unknown ids never create entries
+    const auto = Boolean(opts?.auto);
+    if (!auto) { rememberOpener(id); focusWindowSoon(id, true); }
     zRef.current += 1;
-    setWindows((w) => ({ ...w, [id]: { ...w[id], open: true, minimized: false, z: zRef.current } }));
-  }, []);
+    setWindows((w) => (w[id] ? { ...w, [id]: { ...w[id], open: true, minimized: false, z: zRef.current } } : w));
+  }, [rememberOpener, focusWindowSoon]);
 
   const closeWindow = useCallback((id) => {
-    // only when the focus is inside that window (close button, Esc): programmatic closes (tours) don't move it
-    const focusWasInside = Boolean(document.activeElement?.closest?.(`[data-win="${id}"]`));
-    setWindows((w) => ({ ...w, [id]: { ...w[id], open: false, minimized: false, maximized: false } }));
-    if (focusWasInside) requestAnimationFrame(() => document.querySelector(`[data-dock-id="${id}"]`)?.focus({ preventScroll: true }));
-  }, []);
+    if (!windowsRef.current[id]) return;
+    // moves the focus only when it was inside that window (close button, Esc): programmatic closes don't
+    restoreFocusLater(id);
+    setWindows((w) => (w[id] ? { ...w, [id]: { ...w[id], open: false, minimized: false, maximized: false } } : w));
+  }, [restoreFocusLater]);
   const minimizeWindow = useCallback((id) => {
+    if (!windowsRef.current[id]?.minimized) restoreFocusLater(id);
     setWindows((w) => ({ ...w, [id]: { ...w[id], minimized: !w[id].minimized } }));
-  }, []);
+  }, [restoreFocusLater]);
   const maximizeWindow = useCallback((id) => {
     setWindows((w) => ({ ...w, [id]: { ...w[id], maximized: !w[id].maximized } }));
     bringFront(id);
   }, [bringFront]);
 
-  const openProject = useCallback((id) => {
+  const openProject = useCallback((id, opts) => {
+    if (!opts?.auto) { rememberOpener("project-detail"); focusWindowSoon("project-detail", true); }
     zRef.current += 1;
     setProjectWin({ open: true, id, z: zRef.current, minimized: false, maximized: false });
     unlock("architect");
-  }, [unlock]);
+  }, [unlock, rememberOpener, focusWindowSoon]);
+  const closeProject = useCallback(() => {
+    restoreFocusLater("project-detail");
+    setProjectWin((p) => ({ ...p, open: false }));
+  }, [restoreFocusLater]);
+  const minimizeProject = useCallback(() => {
+    if (!projectWinRef.current.minimized) restoreFocusLater("project-detail");
+    setProjectWin((p) => ({ ...p, minimized: !p.minimized }));
+  }, [restoreFocusLater]);
+  // project catalogue: loaded the first time a project opens (also warmed when the browser is idle)
+  const [lookupReady, setLookupReady] = useState(() => Boolean(projectLookup));
+  useEffect(() => {
+    if (!projectWin.open || lookupReady) return;
+    let alive = true;
+    // a project was asked for and its data can't be downloaded even after retries: stale deploy → fresh HTML
+    loadProjectLookup().then(() => alive && setLookupReady(true)).catch(() => reloadOnce());
+    return () => { alive = false; };
+  }, [projectWin.open, lookupReady]);
 
   /* ---- reactions to windows opening/closing: sound, circuit pulses, exploration, badges ---- */
   const prevWindowsRef = useRef(windows);
@@ -346,7 +450,7 @@ export default function PolyglotPortfolio() {
   const stopAutoTour = useCallback(() => setAutoTour(null), []);
   const nextAutoStep = useCallback(() => setAutoTour((t) => (t ? { ...t, i: t.i + 1 } : t)), []);
   const toggleAutoPlay = useCallback(() => setAutoTour((t) => (t ? { ...t, playing: !t.playing } : t)), []);
-  // each step: clear the desk, open its window (and the IACC case where relevant); past the last step → done
+  // each step: clear the desk, open its window (and the BUK migration case where relevant); past the last step → done
   useEffect(() => {
     if (!autoTour) return;
     if (autoTour.i >= autoTour.steps.length) {
@@ -355,10 +459,11 @@ export default function PolyglotPortfolio() {
       return;
     }
     const st = autoTour.steps[autoTour.i];
-    setWindows((w) => Object.fromEntries(Object.entries(w).map(([id, win]) => [id, { ...win, open: false, minimized: false, maximized: false }])));
-    setProjectWin((p) => ({ ...p, open: false }));
-    const t1 = setTimeout(() => openWindow(st.open), 280);
-    const t2 = st.project ? setTimeout(() => openProject(st.project), 1700) : null;
+    // minimize (not close) what is on the desk: contact drafts and terminal history survive the tour
+    setWindows((w) => Object.fromEntries(Object.entries(w).map(([id, win]) => [id, win.open ? { ...win, minimized: true, maximized: false } : win])));
+    setProjectWin((p) => (p.open ? { ...p, minimized: true, maximized: false } : p));
+    const t1 = setTimeout(() => openWindow(st.open, { auto: true }), 280);
+    const t2 = st.project ? setTimeout(() => openProject(st.project, { auto: true }), 1700) : null;
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [autoTour?.i, autoTour?.steps]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -366,13 +471,16 @@ export default function PolyglotPortfolio() {
   useEffect(() => {
     const onKey = (e) => {
       if (!booted) return;
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      // e.key can be missing on synthetic keydowns (Chrome's autofill)
+      if ((e.ctrlKey || e.metaKey) && e.key?.toLowerCase() === "k") {
         e.preventDefault();
+        // one modal at a time: CORE closes (the palette's commands open windows that CORE would cover)
+        setCoreOpen(false);
         setPaletteOpen((o) => !o);
         unlock("shortcut");
         return;
       }
-      const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
+      const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName) || e.target?.isContentEditable;
       if (typing || paletteOpen || coachOpen || coreOpen || e.altKey || e.ctrlKey || e.metaKey) return;
       if (e.key === "Escape") {
         if (autoTour) return stopAutoTour();
@@ -380,9 +488,11 @@ export default function PolyglotPortfolio() {
         if (projectWin.open && !projectWin.minimized) open.push({ id: "project", z: projectWin.z });
         if (!open.length) return;
         const top = open.reduce((a, b) => (b.z > a.z ? b : a));
-        if (top.id === "project") setProjectWin((p) => ({ ...p, open: false }));
+        if (top.id === "project") closeProject();
         else closeWindow(top.id);
         unlock("shortcut");
+      } else if (!singleKeys) {
+        return;
       } else if (/^[1-9]$/.test(e.key)) {
         const it = DOCK_ITEMS[Number(e.key) - 1];
         if (it) { toggleWindow(it.id); unlock("shortcut"); }
@@ -393,7 +503,7 @@ export default function PolyglotPortfolio() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [booted, paletteOpen, coachOpen, coreOpen, autoTour, windows, projectWin, unlock, toggleWindow, closeWindow, stopAutoTour, startCoachTour]);
+  }, [booted, paletteOpen, coachOpen, coreOpen, autoTour, windows, projectWin, singleKeys, unlock, toggleWindow, closeWindow, closeProject, stopAutoTour, startCoachTour]);
 
   const hr = audience === "rrhh";
   const toggleFromDock = useCallback((id) => { setCoreOpen(false); toggleWindow(id); }, [toggleWindow]);
@@ -411,6 +521,7 @@ export default function PolyglotPortfolio() {
       case "contact": return <ContactContent />;
       case "terminal": return <TerminalContent onTriggerNotification={triggerNotification} onOpenHR={() => openWindow("hr")} />;
       case "simulator": return <SimulatorContent />;
+      case "cv": return <CvContent />;
       case "badges": return <BadgesContent unlocked={unlocked} progress={progress} visitedCount={visited.size} totalSections={DOCK_ITEMS.length} onReset={resetProgress} />;
       default: return null;
     }
@@ -450,19 +561,23 @@ export default function PolyglotPortfolio() {
     if (!booted) return;
     const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 1500));
     const cancel = window.cancelIdleCallback || clearTimeout;
-    const handle = idle(() => ["about", "hr", "projects"].forEach(prefetchWindow));
+    const handle = idle(() => {
+      ["about", "hr", "projects"].forEach(prefetchWindow);
+      loadProjectLookup().then(() => setLookupReady(true)).catch(() => {});
+    });
     return () => cancel(handle);
   }, [booted]);
 
   const commands = useMemo(() => [
     ...dockItems.map((it, i) => ({
-      id: `open-${it.id}`, group: "Secciones", label: it.label, Icon: it.IconCmp, color: it.accent, hint: String(i + 1),
+      id: `open-${it.id}`, group: "Secciones", label: it.label, Icon: it.IconCmp, color: it.accent, hint: singleKeys ? String(i + 1) : undefined,
       keywords: `${it.id} ${it.hrLabel || ""} abrir ver`, action: () => openWindow(it.id),
     })),
-    { id: "simulator", group: "Experiencias", label: "Simulador de optimización", Icon: Zap, keywords: "juego optimizar proceso iacc simular", action: () => openWindow("simulator") },
+    { id: "cv", group: "Secciones", label: "Ver mi CV", Icon: FileText, color: CORE, keywords: "cv curriculum curriculo resume pdf descargar hoja de vida", action: () => openWindow("cv") },
+    { id: "simulator", group: "Experiencias", label: "Simulador de optimización", Icon: Zap, keywords: "juego optimizar proceso migracion buk simular", action: () => openWindow("simulator") },
     { id: "badges", group: "Experiencias", label: "Insignias y progreso", Icon: Trophy, color: HR_ACCENT, keywords: "logros progreso achievements explorar", action: () => openWindow("badges") },
     { id: "autotour", group: "Experiencias", label: "Recorrido guiado de 60 segundos", Icon: Route, color: HR_ACCENT, keywords: "tour presentacion resumen rapido", action: startAutoTour },
-    { id: "coach", group: "Experiencias", label: "Tour por la interfaz", Icon: Compass, hint: "?", keywords: "ayuda guia tutorial como funciona", action: startCoachTour },
+    { id: "coach", group: "Experiencias", label: "Tour por la interfaz", Icon: Compass, hint: singleKeys ? "?" : undefined, keywords: "ayuda guia tutorial como funciona", action: startCoachTour },
     { id: "core", group: "Experiencias", label: "Centro de control CORE", Icon: Hexagon, keywords: "nucleo menu modulos", action: openCore },
     {
       id: "mode", group: "Preferencias", label: hr ? "Cambiar a perfil TI (técnico)" : "Cambiar a perfil RRHH (negocio)",
@@ -470,11 +585,15 @@ export default function PolyglotPortfolio() {
       action: () => setAudience(hr ? "ti" : "rrhh"),
     },
     { id: "sound", group: "Preferencias", label: soundOn ? "Desactivar sonidos" : "Activar sonidos", Icon: soundOn ? VolumeX : Volume2, keywords: "audio sonido silencio", action: () => setSoundOn(!soundOn) },
+    {
+      id: "shortcuts", group: "Preferencias", label: singleKeys ? "Desactivar atajos de una tecla (1–9, ?)" : "Activar atajos de una tecla (1–9, ?)",
+      Icon: Keyboard, keywords: "teclado atajos numeros accesibilidad voz", action: () => setSingleKeys(!singleKeys),
+    },
     { id: "linkedin", group: "Enlaces", label: "Abrir LinkedIn", Icon: Linkedin, color: "#0077b5", keywords: "perfil red", action: () => window.open(SOCIAL_LINKS.linkedin, "_blank", "noopener") },
     { id: "github", group: "Enlaces", label: "Abrir GitHub", Icon: Github, keywords: "codigo repositorios", action: () => window.open(SOCIAL_LINKS.github, "_blank", "noopener") },
     { id: "email", group: "Enlaces", label: "Enviar un email", Icon: Mail, keywords: "correo", action: () => { window.location.href = SOCIAL_LINKS.email; } },
   ].map((c) => ({ ...c, action: () => { unlock("navigator"); c.action(); } })),
-  [dockItems, hr, soundOn, openWindow, startAutoTour, startCoachTour, openCore, setAudience, setSoundOn, unlock]);
+  [dockItems, hr, soundOn, singleKeys, openWindow, startAutoTour, startCoachTour, openCore, setAudience, setSoundOn, setSingleKeys, unlock]);
 
   const systemCtx = useMemo(() => ({
     unlock, openWindow, openProject, startCoachTour, startAutoTour, closeWindow, soundOn, setSoundOn,
@@ -482,7 +601,13 @@ export default function PolyglotPortfolio() {
   }), [unlock, openWindow, openProject, startCoachTour, startAutoTour, closeWindow, soundOn, setSoundOn]);
   const core = corePosition(windowSize);
 
-  const activeProject = PROJECTS.find((p) => p.id === projectWin.id);
+  const activeEntry = lookupReady && projectWin.id ? projectLookup.findProject(projectWin.id) : null;
+  const activeProject = activeEntry?.project;
+  // screen readers: one persistent live region announces toasts (a region mounted with its text is often skipped)
+  const achievement = achQueue[0] ? ACHIEVEMENTS.find((a) => a.id === achQueue[0]) : null;
+  const liveText = achievement
+    ? `Insignia desbloqueada: ${achievement.title}. ${achievement.desc}`
+    : activeToast && !autoTour ? [activeToast.title, activeToast.text].filter(Boolean).join(". ") : "";
 
   return (
     <LazyMotion features={loadMotionFeatures} strict>
@@ -535,8 +660,9 @@ export default function PolyglotPortfolio() {
               hr={hr}
               insets={{ top: area.y + 8, bottom: windowSize.height - area.y - area.h + 8 }}
               animateIn={!heroFromShell.current}
-              onPrimary={() => (hr ? openWindow("hr") : toggleWindow("projects"))}
-              onAbout={() => toggleWindow("about")}
+              onPrimary={() => openWindow(hr ? "hr" : "projects")}
+              onAbout={() => openWindow("about")}
+              onCv={() => openWindow("cv")}
               onTour={startAutoTour}
             />
           )}
@@ -585,7 +711,7 @@ export default function PolyglotPortfolio() {
             <FloatingWindow
               key={`project-detail-${projectWin.id}`}
               id="project-detail"
-              title={hr ? HR_PROJECTS[activeProject.id].title : activeProject.title}
+              title={hr ? activeEntry.hrTitle : activeEntry.title}
               IconCmp={FolderGit2}
               accent={CORE}
               pos={projectWin.maximized ? maximizedPos(area) : centeredPos(area, PROJECT_WIN_WIDTH, isMobile, uiScale)}
@@ -595,8 +721,8 @@ export default function PolyglotPortfolio() {
               isMaximized={projectWin.maximized}
               isMobile={isMobile}
               boundsRef={boundsRef}
-              onClose={() => setProjectWin((p) => ({ ...p, open: false }))}
-              onMinimize={() => setProjectWin((p) => ({ ...p, minimized: !p.minimized }))}
+              onClose={closeProject}
+              onMinimize={minimizeProject}
               onMaximize={() => setProjectWin((p) => ({ ...p, maximized: !p.maximized }))}
               onFocus={() => bringFront("project")}
             >
@@ -606,11 +732,11 @@ export default function PolyglotPortfolio() {
         </AnimatePresence>
       </div>
 
-      {booted && <Dock items={dockItems} windows={windows} onToggle={toggleFromDock} scale={uiScale} />}
+      {booted && <Dock items={dockItems} windows={windows} onToggle={toggleFromDock} scale={uiScale} shortcuts={singleKeys} />}
 
       <AnimatePresence>
         {coreOpen && (
-          <SectionBoundary key="core" name="core-menu" silent>
+          <SectionBoundary key="core" name="core-menu" silent resetKey={coreOpen}>
             <Suspense fallback={null}>
               <CoreMenu
                 open={coreOpen}
@@ -638,14 +764,14 @@ export default function PolyglotPortfolio() {
       </AnimatePresence>
 
       {paletteMounted.current && (
-        <SectionBoundary name="command-palette" silent>
+        <SectionBoundary name="command-palette" silent resetKey={paletteOpen}>
           <Suspense fallback={null}>
             <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} commands={commands} />
           </Suspense>
         </SectionBoundary>
       )}
       {coachMounted.current && (
-        <SectionBoundary name="coach-tour" silent>
+        <SectionBoundary name="coach-tour" silent resetKey={coachOpen}>
           <Suspense fallback={null}>
             <CoachTour open={coachOpen} onClose={closeCoach} onFinish={finishCoach} />
           </Suspense>
@@ -655,6 +781,7 @@ export default function PolyglotPortfolio() {
       <AnimatePresence>
         {achQueue[0] && <AchievementToast key={achQueue[0]} id={achQueue[0]} onDone={popAchievement} />}
       </AnimatePresence>
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">{liveText}</div>
 
       {/* Toast Notification — on phones it sits just above the dock (58px tall + 8px gap) so it never
           covers a window's title bar and its close/minimize controls; top-right card on larger screens */}
@@ -665,13 +792,11 @@ export default function PolyglotPortfolio() {
             animate={{ opacity: 1, x: 0, y: 0 }}
             exit={{ opacity: 0, x: 100 }}
             transition={{ type: "spring", stiffness: 300, damping: 25 }}
-            role="status"
-            aria-live="polite"
             className="fixed bottom-[66px] sm:bottom-auto sm:top-14 inset-x-2 sm:inset-x-auto sm:right-4 z-[999] sm:w-[400px] short:w-[330px] short:max-h-[calc(100dvh-150px)] short:overflow-y-auto rounded-xl border p-3 sm:p-4 short:p-3 pointer-events-auto flex items-start gap-3 sm:gap-4 shadow-2xl select-none"
             style={{
               zoom: uiScale,
-              background: "rgba(10,14,20,0.94)",
-              backdropFilter: "blur(12px)",
+              // opaque enough that a backdrop blur would be invisible: skipping it saves a re-blur per frame (BG-1)
+              background: "rgba(10,14,20,0.96)",
               borderColor: `${activeToast.accent ?? CORE}33`,
               boxShadow: `0 10px 30px -10px rgba(0,0,0,0.5), 0 0 0 1px ${activeToast.accent ?? CORE}11`,
             }}
@@ -717,7 +842,7 @@ export default function PolyglotPortfolio() {
                       );
                     })}
                   </div>
-                  <p className="text-[10px] text-white/40 mt-2 short:hidden" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
+                  <p className="text-[10px] text-white/60 mt-2 short:hidden" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
                     Puedes cambiarlo cuando quieras desde la barra superior.
                   </p>
                 </>
@@ -735,7 +860,7 @@ export default function PolyglotPortfolio() {
             {/* Close button (absolute top-right) */}
             <button
               onClick={() => setActiveToast(null)}
-              className="absolute top-1.5 right-1.5 w-7 h-7 flex items-center justify-center rounded-md text-white/40 hover:text-white transition-colors text-[18px] leading-none focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
+              className="absolute top-1.5 right-1.5 w-7 h-7 flex items-center justify-center rounded-md text-white/60 hover:text-white transition-colors text-[18px] leading-none focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
               aria-label="Cerrar notificación"
             >
               &times;

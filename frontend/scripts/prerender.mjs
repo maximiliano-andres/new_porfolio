@@ -1,6 +1,10 @@
 /* Post-build step: injects the prerendered landing screen and its head script into dist/index.html.
-   The head script is executed in a sandbox first and must reproduce the app's layout values exactly. */
-import { readFileSync, writeFileSync, rmSync } from "node:fs";
+   The head script is executed in a sandbox first and must reproduce the app's layout values exactly.
+   Then stamps dist/sw.js with a hash of the whole build, so every deploy ships a byte-different service worker
+   (the browser installs it and the old caches are purged on activate) — no manual VERSION bump needed. */
+import { createHash } from "node:crypto";
+import { readdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import vm from "node:vm";
 
@@ -28,9 +32,29 @@ const html = ssr.renderShell();
 const file = "dist/index.html";
 let index = readFileSync(file, "utf8");
 if (!index.includes('<div id="root"></div>')) throw new Error("prerender: #root placeholder not found in dist/index.html");
+// replacer FUNCTIONS, never strings: a string replacement interprets $&, $` and $' — any of those in the rendered
+// text would corrupt the HTML silently (and the CSP hash would still "match", being computed afterwards)
 index = index
-  .replace('<div id="root"></div>', `<div id="root">${html}</div>`)
-  .replace("</head>", `  <script>${script}</script>\n</head>`);
+  .replace('<div id="root"></div>', () => `<div id="root">${html}</div>`)
+  .replace("</head>", () => `  <script>${script}</script>\n</head>`);
 writeFileSync(file, index);
 rmSync("dist-ssr", { recursive: true, force: true });
 console.log(`prerender: landing screen injected (${(html.length / 1024).toFixed(1)} KB HTML), layout verified at ${SIZES.length} viewports`);
+
+// ---- service worker build id ----
+const SW_FILE = "dist/sw.js";
+const BUILD_PLACEHOLDER = 'const BUILD = "dev";';
+const hash = createHash("sha256");
+const walk = (dir) => {
+  for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) walk(path);
+    else if (path !== join("dist", "sw.js")) hash.update(path.replaceAll("\\", "/")).update(readFileSync(path));
+  }
+};
+walk("dist");
+const build = hash.digest("hex").slice(0, 12);
+const sw = readFileSync(SW_FILE, "utf8");
+if (!sw.includes(BUILD_PLACEHOLDER)) throw new Error(`prerender: ${BUILD_PLACEHOLDER} not found in ${SW_FILE}`);
+writeFileSync(SW_FILE, sw.replace(BUILD_PLACEHOLDER, () => `const BUILD = "${build}";`));
+console.log(`prerender: sw.js stamped with build ${build}`);

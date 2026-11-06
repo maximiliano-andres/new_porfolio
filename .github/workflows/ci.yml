@@ -1,5 +1,6 @@
 # Tests the backend, lint + full frontend build on Linux, macOS and Windows, then builds and smoke-tests
 # the Docker stack. Any failure blocks the merge.
+# Actions are pinned by full commit SHA (a moved tag can't inject code); Dependabot (.github/dependabot.yml) bumps them.
 name: CI
 
 on:
@@ -26,8 +27,8 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.14"
           cache: pip
@@ -49,13 +50,15 @@ jobs:
     name: dependency audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.14"
       - run: python -m pip install pip-audit==2.10.1
+      # runtime AND dev/CI tooling: a vulnerable pytest runs on every developer machine and CI runner too
       - run: pip-audit --require-hashes --disable-pip -r backend/requirements.lock
-      - uses: actions/setup-node@v4
+      - run: pip-audit --require-hashes --disable-pip -r backend/requirements-dev.lock
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
       - run: npm audit --audit-level=moderate
@@ -72,8 +75,8 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24
           cache: npm
@@ -91,7 +94,7 @@ jobs:
     needs: [backend, frontend]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - run: docker compose build
       - run: HTTP_PORT=8080 HTTPS_PORT=8443 docker compose up -d --wait --wait-timeout 90
       - name: smoke test through Caddy
@@ -106,5 +109,21 @@ jobs:
           ! curl -sI http://localhost:8080/api/status | grep -qi '^server:'
           curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' \
             -d '{"name":"CI","email":"ci@example.com","message":"smoke"}' http://localhost:8080/api/contact | grep -q 200
+          # CV: the real PDF as a PDF and always revalidated (same policy as the backend); a missing one is an honest
+          # 404, never the HTML shell (DEP-8)
+          hdr() { curl -s -o /dev/null -D - "http://localhost:8080$1" | tr -d '\r'; }
+          cv=$(hdr /cv/CV_Maximiliano_Caniullan.pdf)
+          echo "$cv" | grep -q '^HTTP/[0-9.]* 200'
+          echo "$cv" | grep -qi '^content-type: application/pdf'
+          echo "$cv" | grep -qi '^cache-control: no-cache'
+          old=$(hdr /cv/viejo.pdf)
+          echo "$old" | grep -q '^HTTP/[0-9.]* 404'
+          ! echo "$old" | grep -qi '^content-type: text/html'
+          echo "$old" | grep -qi '^x-content-type-options: nosniff'   # handle_errors keeps the security headers
+          # HSTS (gradual max-age from config/security-headers.json) and the access log on stdout
+          hdr / | grep -qi '^strict-transport-security: max-age='
+          docker compose logs web | grep -q '"logger":"http.log.access'
+          # Caddy runs as a non-root user
+          test "$(docker compose exec -T web id -u)" != 0
       - if: always()
         run: docker compose logs --no-color && docker compose down -v

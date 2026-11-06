@@ -1,162 +1,226 @@
-/* Portfolio content in technical language (TI view) plus boot log and circuit traces. */
-import { CORE, LANG } from "../styles/theme.js";
+/* Portfolio content in technical language (TI view). Loaded only by window chunks; shell data lives in shell.js. */
 
-export const NOTIFICATION_MESSAGES = [
+/* Project history behind the Skills chart. Every `tech` entry comes from the CV, LinkedIn or the
+   project's own repository; usage counts are computed from this list, never typed by hand. */
+export const PROJECT_HISTORY = [
   {
-    title: "Guía de Interacción",
-    text: "¡Bienvenido! Haz clic en los iconos de la barra inferior (Dock) para abrir las ventanas. Puedes arrastrarlas, minimizarlas o maximizarlas a pantalla completa. ¡Prueba Terminal.exe para ejecutar comandos!"
+    id: "document-migrations", name: "Migraciones masivas de documentos", org: "Freelance · PUMA, GyG, IACC", period: "2023–2024",
+    tech: ["Python", "Node.js", "SQL", "PostgreSQL", "MongoDB"],
   },
   {
-    title: "Optimización IACC",
-    text: "⚡ En IACC, logré reducir el tiempo de un proceso crítico de 1 hora a solo 5-10 minutos (una mejora superior al 83%)."
+    id: "graalvm-microservices", name: "Optimización de microservicios", org: "BiceVida", period: "2024",
+    tech: ["Java", "Spring Boot", "Microservicios", "GraalVM Native Image", "SQL", "MySQL", "AWS", "Terraform"],
   },
   {
-    title: "Latencia Reducida",
-    text: "🚀 En PUMA, optimicé las interfaces reduciendo los tiempos de respuesta de 4 segundos a milisegundos."
+    id: "buk-migration", name: "Migración masiva de documentos a BUK", org: "Push HR", period: "2024–2026",
+    tech: ["Concurrencia", "Procesamiento asincrónico", "APIs REST"],
   },
   {
-    title: "Rendimiento SQL",
-    text: "💾 En GyG, optimicé las consultas a bases de datos incrementando la velocidad en más de un 20%."
+    id: "finance-platforms", name: "Aplicaciones internas de finanzas", org: "Push HR", period: "2024–2026",
+    tech: ["Python", "FastAPI", "Java", "Spring Boot", "SQL", "PostgreSQL", "SQLAlchemy", "Polars", "Pydantic v2", "orjson", "Procesamiento asincrónico", "Docker", "uv"],
   },
   {
-    title: "Eficiencia & Nube",
-    text: "☁️ Mi especialidad es la optimización de código para disminuir el consumo de CPU y memoria, reduciendo costos de infraestructura."
+    id: "pushhr-apis", name: "APIs REST y flujos de datos", org: "Push HR", period: "2024–2026",
+    tech: ["Node.js", "APIs REST", "SQL", "MySQL", "MongoDB", "Docker"],
   },
   {
-    title: "Stack Políglota",
-    text: "🛠️ Desarrollo sistemas backend robustos usando Java (Spring Boot con compilación GraalVM), Python (FastAPI/Django) y Node.js."
-  }
+    id: "excel-consolidator", name: "Consolidador de planillas Excel", org: "Automatización RRHH", period: "2026",
+    tech: ["Python", "Polars"],
+  },
+  {
+    id: "payroll-history", name: "Histórico de nómina consultable", org: "Automatización RRHH", period: "2026",
+    tech: ["Python", "SQL", "SQLite"],
+  },
+  {
+    id: "multi-db-workbook", name: "Multi-DB Workbook", org: "Herramienta interna", period: "2026",
+    tech: ["Java", "Spring Boot", "APIs REST", "React", "SQL", "PostgreSQL", "MySQL", "SQL Server", "Oracle", "MariaDB", "SQLite", "Docker"],
+  },
+  {
+    id: "hr-bpo-platform", name: "Plataforma BPO de Recursos Humanos", org: "Proyecto empresarial", period: "2026",
+    tech: ["Java", "Spring Boot", "GraalVM Native Image", "APIs REST", "Arquitectura hexagonal", "React", "SQL", "PostgreSQL", "Docker"],
+  },
+  {
+    id: "portfolio", name: "Polyglot Core · este portafolio", org: "Proyecto personal", period: "2026",
+    tech: ["Python", "FastAPI", "Node.js", "APIs REST", "Arquitectura hexagonal", "React", "Docker", "GitHub Actions"],
+  },
 ];
 
-export const BOOT_LINES = [
-  { t: "$ init polyglot_core --runtime=python,java,node", kind: "cmd" },
-  { t: "  \u251c\u2500 mounting CPython 3.13 ................. OK", kind: "ok" },
-  { t: "  \u251c\u2500 mounting OpenJDK 21 (virtual threads) .. OK", kind: "ok" },
-  { t: "  \u2514\u2500 mounting Node 22 LTS ................... OK", kind: "ok" },
-  { t: "$ verify --memory-safety --tls --no-known-cves", kind: "cmd" },
-  { t: "  \u2514\u2500 0 vulnerabilities \u00b7 0 GC pauses > 4ms .. OK", kind: "ok" },
-  { t: "$ compile ui --target=web --mode=release", kind: "cmd" },
-  { t: "  \u2514\u2500 build ready in 84ms", kind: "ok" },
-  { t: "$ boot complete \u2014 welcome", kind: "cmd" },
+/* display order of the chart; technologies used in no project are skipped (list those under `TECH_KNOWN`) */
+export const TECH_GROUPS = [
+  { id: "lang", label: "Lenguajes", items: ["Java", "Python", "Node.js", "SQL"] },
+  { id: "backend", label: "Frameworks y arquitectura", items: ["Spring Boot", "FastAPI", "APIs REST", "Microservicios", "Arquitectura hexagonal", "React"] },
+  { id: "data", label: "Bases de datos", items: ["PostgreSQL", "MySQL", "MongoDB", "SQLite", "SQL Server", "Oracle", "MariaDB", "SQLAlchemy"] },
+  { id: "perf", label: "Rendimiento", items: ["Procesamiento asincrónico", "Concurrencia", "GraalVM Native Image", "Polars", "Pydantic v2", "orjson"] },
+  { id: "infra", label: "Infraestructura y herramientas", items: ["Docker", "AWS", "Terraform", "GitHub Actions", "uv"] },
 ];
 
-/* circuit traces drawn by CircuitBackground (1440×900 viewBox) */
-export const CIRCUIT_PATHS = [
-  { d: "M0,120 H260 V260 H520 V180 H760", color: LANG.python.c1, dur: 5.5, delay: 0 },
-  { d: "M0,420 H180 V520 H460 V420 H720", color: LANG.java.c1, dur: 6.2, delay: 0.6 },
-  { d: "M0,680 H320 V600 H580 V680 H760", color: LANG.node.c1, dur: 5.8, delay: 1.1 },
-  { d: "M1440,140 H1180 V280 H920 V180 H760", color: LANG.python.c2, dur: 6.6, delay: 0.3 },
-  { d: "M1440,400 H1260 V500 H980 V400 H760", color: LANG.java.c2, dur: 5.4, delay: 0.9 },
-  { d: "M1440,660 H1120 V580 H860 V660 H760", color: LANG.node.c2, dur: 6.1, delay: 1.4 },
-  { d: "M760,0 V180", color: CORE, dur: 4.4, delay: 0.2 },
-  { d: "M760,900 V680", color: CORE, dur: 4.4, delay: 0.7 },
-];
+/* in the CV but not tied to a specific project yet: shown as plain chips, without a count */
+export const TECH_KNOWN = ["Express", "Django", "Git", "Postman"];
 
-export const RADAR_AXES = ["Speed", "Memory", "Security", "Concurrency", "Ecosystem"];
+/* projects that used a technology, in history order */
+export const projectsUsing = (tech) => PROJECT_HISTORY.filter((p) => p.tech.includes(tech));
 
-export const RADAR = {
-  java: [92, 85, 90, 88, 92],
-  python: [88, 82, 80, 85, 94],
-  node: [86, 78, 82, 84, 93],
-};
-
-export const SKILL_BARS = {
-  java: [
-    { name: "Spring Boot / Core", v: 90 },
-    { name: "GraalVM Native Image", v: 85 },
-    { name: "JVM Performance Tuning", v: 88 },
-    { name: "Multithreading & Concurrency", v: 84 },
-  ],
-  python: [
-    { name: "FastAPI / Django", v: 92 },
-    { name: "Code Optimization (CPU/RAM)", v: 88 },
-    { name: "Async / Asyncio", v: 86 },
-    { name: "Data Processing Pipelines", v: 82 },
-  ],
-  node: [
-    { name: "Node.js / Express / NestJS", v: 87 },
-    { name: "TypeScript", v: 85 },
-    { name: "API REST / Event-Driven", v: 84 },
-  ],
-};
-
-export const DB_TOOLS = [
-  { name: "PostgreSQL", icon: "Database" },
-  { name: "MySQL", icon: "Database" },
-  { name: "MongoDB", icon: "Database" },
-  { name: "Docker", icon: "Layers" },
-  { name: "AWS (EC2, S3, RDS)", icon: "Layers" },
-  { name: "GraalVM", icon: "Lock" },
-];
-
+/* `org` = where the work was done; private/internal names are deliberately omitted */
 export const PROJECTS = [
   {
-    id: "iacc-optimizer",
-    title: "Optimizador de Procesos Críticos",
-    langs: ["java", "python"],
+    id: "buk-migration",
+    title: "Migración masiva de documentos a BUK",
+    org: "Push HR",
+    langs: [], // the CV doesn't state the language of this process
     summary:
-      "Reestructuración y optimización de un proceso pesado para IACC. Se redujo el tiempo de procesamiento de más de 1 hora a solo 5–10 minutos (más del 83% de mejora).",
-    stack: ["Java", "Spring Boot", "Python", "Multithreading", "PostgreSQL"],
-    diagram: "gateway",
+      "Rediseño del proceso de migración masiva de archivos y documentos hacia la plataforma BUK con procesamiento concurrente y asincrónico: pasó de más de 1 hora a 5–10 minutos.",
+    stack: ["Concurrencia", "Procesamiento asincrónico", "API BUK", "Trazabilidad"],
+    diagram: "migration",
   },
   {
-    id: "puma-api",
-    title: "API Gateway de Respuestas Ultra-Rápidas",
-    langs: ["node", "java"],
+    id: "finance-platforms",
+    title: "Plataformas internas de alto rendimiento",
+    org: "Push HR",
+    langs: ["python", "java"],
     summary:
-      "Optimización de tiempos de respuesta en interfaces de PUMA. Se disminuyó la latencia de respuestas lentas de 3–4 segundos a milisegundos usando caché distribuido y optimización de consultas.",
-    stack: ["Node.js", "Express", "GraalVM", "MySQL", "Docker"],
-    diagram: "auth",
+      "Aplicaciones internas de gestión de finanzas, configurables por cliente y formato financiero, diseñadas para bajo consumo de recursos. La optimización de plataformas internas redujo el uso de CPU en 30–40% y de RAM en 15–30%.",
+    stack: ["FastAPI", "Spring Boot", "PostgreSQL", "SQLAlchemy Core", "Polars", "Pydantic v2", "orjson", "Docker"],
+    diagram: "finance",
   },
   {
-    id: "gyg-performance",
-    title: "Sistema de Eficiencia de Datos",
+    id: "graalvm-microservices",
+    title: "Microservicios Java: de segundos a milisegundos",
+    org: "BiceVida",
+    langs: ["java"],
+    summary:
+      "Optimización de microservicios Spring Boot: tiempos de respuesta de 3–4 segundos a milisegundos, 4 servicios migrados a GraalVM Native Image, consultas SQL ≈20% más rápidas y migración de infraestructura a AWS.",
+    stack: ["Java", "Spring Boot", "GraalVM Native Image", "MySQL", "AWS", "Terraform"],
+    diagram: "native",
+  },
+  {
+    id: "document-migrations",
+    title: "Migraciones masivas con trazabilidad total",
+    org: "Freelance · PUMA, GyG, IACC",
+    langs: ["python", "node"],
+    summary:
+      "Automatización de migraciones masivas de documentos con normalización y limpieza de datos, un motor de búsqueda y validación con 98% de coincidencia (nombre, RUT y documentos) y reportes 100% exactos de lo migrado y no migrado.",
+    stack: ["Python", "Node.js", "PostgreSQL", "MongoDB", "Normalización de datos"],
+    diagram: "validation",
+  },
+  {
+    id: "hr-bpo-platform",
+    title: "Plataforma BPO de Recursos Humanos",
+    org: "Proyecto empresarial · código privado",
+    langs: ["java"],
+    summary:
+      "Plataforma multiempresa para operar un servicio de outsourcing de RRHH: ciclo completo de novedades de nómina con plantillas BUK, integración segura con la API de BUK, OCR de documentos y calendario corporativo.",
+    stack: ["Java 21", "Spring Boot", "Arquitectura hexagonal", "PostgreSQL", "React", "JWT + 2FA", "AES-256-GCM", "Docker"],
+    diagram: "hexagonal",
+  },
+  {
+    id: "multi-db-workbook",
+    title: "Multi-DB Workbook",
+    org: "Herramienta interna",
+    langs: ["java"],
+    summary:
+      "Convierte una base de datos corporativa en una hoja de cálculo segura para RRHH y Finanzas: traduce códigos a nombres reales, cruza tablas y exporta a Excel sin escribir SQL. Compatible con 6 motores, en modo solo lectura y con 258 pruebas automatizadas.",
+    stack: ["Java 21", "Spring Boot", "React", "SQL Server", "PostgreSQL", "MySQL", "Oracle", "Docker"],
+    diagram: "workbook",
+  },
+  {
+    id: "payroll-history",
+    title: "Histórico de nómina: 3,5 millones de filas",
+    org: "Automatización RRHH",
     langs: ["python"],
     summary:
-      "Sintonía fina de base de datos y procesamiento asíncrono para GyG. Se logró una mejora de más del 20% en el rendimiento de consultas a bases de datos y reducción de consumo de CPU/RAM.",
-    stack: ["Python", "FastAPI", "PostgreSQL", "Optimización de Memoria", "AWS"],
-    diagram: "events",
+      "Carga de 9 archivos Excel de nómina (2024–2026) a una base consultable: 3,55 millones de registros de 2.006 trabajadores. Lectura en streaming fila a fila, inserción por lotes de 10.000 registros e índices para consultar por trabajador, fecha de pago y centro de costo.",
+    stack: ["Python", "SQLite", "SQL", "openpyxl (read-only)", "Inserción por lotes", "Índices"],
+    diagram: "batch",
+  },
+  {
+    id: "excel-consolidator",
+    title: "Consolidador de planillas de remuneraciones",
+    org: "Automatización RRHH",
+    langs: ["python"],
+    summary:
+      "Aplicación de escritorio que consolida múltiples planillas XLSX/XLS (liquidaciones, haberes y descuentos) en un solo archivo, con concatenación en Polars, liberación de memoria entre archivos, procesamiento en segundo plano y reporte de auditoría por archivo y hoja.",
+    stack: ["Python", "Polars", "pandas", "xlsxwriter", "Threading", "PyInstaller"],
+    diagram: "consolidator",
+  },
+  {
+    id: "portfolio",
+    title: "Polyglot Core · este portafolio",
+    org: "Proyecto personal",
+    langs: ["python", "node"],
+    summary:
+      "Portafolio con forma de escritorio. API en FastAPI servida por Granian (Rust), middleware ASGI puro, portada pre-renderizada, carga diferida por ventana y assets precomprimidos con Brotli: ≈540 KB → ≈140 KB (−74%).",
+    stack: ["FastAPI", "Granian", "Arquitectura hexagonal", "React", "Vite", "Brotli", "Docker", "GitHub Actions"],
+    diagram: "webperf",
   },
 ];
 
 export const EXPERIENCE = [
   {
     role: "Backend Developer",
-    company: "Proyectos y Consultorías Independientes (PUMA, GyG, IACC)",
-    period: "2024 — Presente",
-    location: "Chile (Remoto / Presencial)",
+    company: "Push HR",
+    period: "2024 — 2026",
+    location: "Chile",
     bullets: [
-      "Diseñé e implementé soluciones de backend de alto rendimiento resolviendo problemas de velocidad crítica y latencia.",
-      "Reduje la duración de procesos críticos de procesamiento de datos de más de 1 hora a solo 5-10 minutos (mejora >83%).",
-      "Optimicé tiempos de respuesta de endpoints que demoraban de 3 a 4 segundos a milisegundos usando técnicas avanzadas de optimización de código y bases de datos.",
-      "Reduje en más de un 20% el tiempo de ejecución de consultas de bases de datos mediante reindexación, análisis de planes de ejecución y optimización de query builders."
+      "Rediseñé la migración masiva de archivos y documentos hacia la plataforma BUK con procesamiento concurrente y asincrónico, reduciendo su duración de más de 1 hora a 5–10 minutos.",
+      "Optimicé plataformas internas: −30–40% de uso de CPU y −15–30% de consumo de memoria RAM.",
+      "Desarrollé aplicaciones internas de gestión de finanzas con Python (FastAPI) y Java (Spring Boot), con PostgreSQL, SQLAlchemy, procesamiento asincrónico y librerías basadas en Rust (Polars, Pydantic v2, orjson).",
+      "Aceleré consultas SQL con SQLAlchemy Core y desarrollé APIs REST y flujos de datos que automatizan procesos operativos.",
+      "Implementé sistemas configurables para múltiples formatos financieros y reportes automáticos y trazables para equipos de RRHH.",
     ],
   },
   {
-    role: "Backend Engineer",
-    company: "Desarrollo y Optimización de Software",
-    period: "2022 — 2024",
+    role: "Backend Developer (Practicante)",
+    company: "BiceVida",
+    period: "Mar 2024 — Ago 2024",
     location: "Chile",
     bullets: [
-      "Desarrollé APIs REST robustas y escalables utilizando Java, Python (FastAPI/Django) y Node.js (Express).",
-      "Mejoré la eficiencia del consumo de memoria y CPU en servidores cloud, traduciéndose en una reducción significativa de costos de infraestructura en la nube.",
-      "Autometicé y diseñé pipelines para el procesamiento masivo de datos, asegurando una alta disponibilidad y resiliencia ante picos de demanda."
-    ]
-  }
+      "Reduje los tiempos de respuesta de servicios de 3–4 segundos a milisegundos optimizando microservicios Java.",
+      "Migré 4 microservicios Spring Boot a GraalVM Native Image para un arranque más rápido y menor consumo de memoria.",
+      "Participé en la migración de infraestructura y servicios a AWS, con infraestructura como código (Terraform).",
+      "Mejoré en ≈20% el rendimiento de consultas SQL mediante indexación y rediseño de la base de datos.",
+    ],
+  },
+  {
+    role: "Backend Developer",
+    company: "Freelance · PUMA, GyG, IACC",
+    period: "2023 — 2024",
+    location: "Chile",
+    bullets: [
+      "Automaticé migraciones masivas de documentos con trazabilidad completa para empresas como PUMA, GyG e IACC.",
+      "Desarrollé un motor de búsqueda y validación con 98% de coincidencia por nombre, RUT y documentos.",
+      "Normalicé, limpié y estructuré grandes volúmenes de datos antes de cada migración.",
+      "Generé reportes 100% exactos de documentos migrados y no migrados, facilitando la auditoría.",
+    ],
+  },
 ];
 
 export const EDUCATION = [
   {
-    title: "Ingeniería en Informática / Computación",
-    place: "Institución Académica",
-    period: "2019 — 2023",
-    detail: "Formación centrada en ingeniería de software, bases de datos y algoritmos eficientes.",
+    title: "Técnico Universitario en Programación Computacional",
+    place: "Universidad Mayor — Santiago, Chile",
+    period: "2023 — 2025",
+    detail: "Formación en desarrollo de software, programación y bases de datos.",
   },
 ];
 
 export const CERTS = [
-  { name: "AWS Certified Developer / Cloud Practitioner", org: "Amazon Web Services", year: "2024" },
-  { name: "Oracle Certified Professional — Java SE", org: "Oracle", year: "2023" },
-  { name: "Especialización en Bases de Datos Relacionales", org: "Udemy / Coursera", year: "2023" },
-  { name: "Desarrollo Backend de Alto Rendimiento", org: "Tech Academy", year: "2022" },
+  { name: "Capacitación ISO 27001 (Seguridad de la Información)", org: "Push HR y Hackmetrix", year: "2025" },
+  { name: "Capacitación Oracle Backend", org: "Oracle Next Education", year: "2023" },
+  { name: "Curso Python Native Avances", org: "Universidad Mayor", year: "2023" },
 ];
+
+/* CV shown in the "Mi CV" window. Source: docs/cv/. When the CV changes: copy the PDF to public/cv/ and
+   re-render the pages under a NEW version prefix (the service worker caches /img/* forever):
+     pdftocairo -png -scale-to-x 1240 -scale-to-y -1 CV.pdf p1240   (and 760)  →  cwebp -q 85 / sips → .jpg */
+const CV_VERSION = "2026-11";
+export const CV = {
+  pdf: "/cv/CV_Maximiliano_Caniullan.pdf",
+  fileName: "CV_Maximiliano_Caniullan.pdf",
+  size: "94 KB",
+  updated: "Actualizado nov. 2026",
+  pages: [1, 2].map((n) => ({
+    webp: `/img/cv/cv-${CV_VERSION}-p${n}-1240.webp`,
+    webpSmall: `/img/cv/cv-${CV_VERSION}-p${n}-760.webp`,
+    jpg: `/img/cv/cv-${CV_VERSION}-p${n}-1240.jpg`,
+  })),
+};

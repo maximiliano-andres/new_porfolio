@@ -2,13 +2,14 @@
    fails to download — shows a recoverable message there instead of taking the whole portfolio down. */
 import { Component } from "react";
 import { AlertTriangle, RotateCcw } from "lucide-react";
+import { resetFailedLazies } from "../lib/lazyWithRetry.js";
 import { reloadOnce } from "../lib/reload.js";
 
 const isChunkLoadError = (error) =>
   /dynamically imported module|Importing a module script failed|Loading chunk|Failed to fetch|Unable to preload/i.test(String(error?.message));
 
 export class SectionBoundary extends Component {
-  state = { error: null };
+  state = { error: null, resetKey: this.props.resetKey };
 
   static getDerivedStateFromError(error) {
     return { error };
@@ -20,9 +21,17 @@ export class SectionBoundary extends Component {
     if (this.props.silent && isChunkLoadError(error)) reloadOnce();
   }
 
-  // a stale or failed download is only recoverable with fresh assets; other errors get a fresh render
+  // resetKey: silent overlays pass a value that changes when they are reopened, which retries a failed download
+  static getDerivedStateFromProps(props, state) {
+    if (props.resetKey === state.resetKey) return null;
+    if (state.error) resetFailedLazies(); // idempotent: swaps the failed lazy components for fresh ones
+    return { resetKey: props.resetKey, error: null };
+  }
+
+  // a failed download is retried in place (no page reload, drafts in other windows survive);
+  // a reload is the last resort, when there is nothing left to retry
   retry = () => {
-    if (isChunkLoadError(this.state.error)) window.location.reload();
+    if (isChunkLoadError(this.state.error) && !resetFailedLazies()) window.location.reload();
     else this.setState({ error: null });
   };
 
@@ -35,7 +44,7 @@ export class SectionBoundary extends Component {
         <AlertTriangle size={26} className="text-amber-400" />
         <div>
           <p className="text-[13px] font-medium text-white/90">Esta sección no se pudo mostrar.</p>
-          <p className="text-[12px] text-white/55 mt-1">
+          <p className="text-[12px] text-white/60 mt-1">
             {offline ? "Revisa tu conexión a internet e inténtalo otra vez." : "Ocurrió un error inesperado. El resto del portafolio sigue funcionando."}
           </p>
         </div>

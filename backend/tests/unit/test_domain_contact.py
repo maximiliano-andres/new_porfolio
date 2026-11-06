@@ -5,11 +5,11 @@ from app.domain.contact import ContactSubmission, clean_text, normalize_email
 
 
 def test_clean_text_strips_bidi_and_controls_but_keeps_emoji_zwj_and_newlines():
-    assert clean_text("  Ana‮ 👨‍👩‍👧\x07 ") == "Ana 👨‍👩‍👧"
+    assert clean_text("  Ana\u202e 👨\u200d👩\u200d👧\x07 ") == "Ana 👨\u200d👩\u200d👧"
     assert clean_text("Hola,\n\tok\x00") == "Hola,\n\tok"
 
 
-@pytest.mark.parametrize("value", ["", "   ", "‮‭ ", "\x00\x07"])
+@pytest.mark.parametrize("value", ["", "   ", "\u202e\u202d ", "\x00\x07"])
 def test_clean_text_rejects_blank(value):
     with pytest.raises(ValueError):
         clean_text(value)

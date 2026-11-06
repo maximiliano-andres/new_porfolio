@@ -1,5 +1,5 @@
 /* Window catalogue (dock + extra windows), achievements and window → circuit-trace mapping. */
-import { Award, Briefcase, Code2, Compass, Egg, FolderGit2, Gauge, GraduationCap, Hexagon, Keyboard, Languages, Mail, Route, Search, Send, Sparkles, Terminal, Trophy, User, Users, Zap } from "lucide-react";
+import { Award, Briefcase, Code2, Compass, Egg, FileText, FolderGit2, Gauge, GraduationCap, Hexagon, Keyboard, Languages, Mail, Route, Search, Send, Sparkles, Terminal, Trophy, User, Users, Zap } from "lucide-react";
 import { CORE, HR_ACCENT, LANG } from "../styles/theme.js";
 
 export const ACHIEVEMENTS = [
@@ -21,7 +21,7 @@ export const ACHIEVEMENTS = [
 /* each window energizes one trace of the circuit background (index into CIRCUIT_PATHS) */
 export const WINDOW_CIRCUIT = {
   about: 6, hr: 3, skills: 0, projects: 2, experience: 1, education: 3,
-  certifications: 4, contact: 5, terminal: 7, badges: 6, simulator: 1, "project-detail": 2,
+  certifications: 4, contact: 5, terminal: 7, badges: 6, simulator: 1, cv: 4, "project-detail": 2,
 };
 
 /* `hrLabel`: window/dock name shown in RRHH mode (falls back to `label`) */
@@ -39,6 +39,7 @@ export const DOCK_ITEMS = [
 
 /* windows reachable from the CORE hub, palette and terminal but not from the dock (it must fit 320px) */
 export const EXTRA_ITEMS = [
+  { id: "cv", label: "Mi CV", IconCmp: FileText, accent: CORE, width: 700 },
   { id: "simulator", label: "Simulador", IconCmp: Zap, accent: CORE, width: 560 },
   { id: "badges", label: "Insignias", IconCmp: Trophy, accent: HR_ACCENT, width: 600 },
 ];
@@ -51,17 +52,17 @@ export const PROJECT_WIN_WIDTH = 520;
 export const AUTO_TOUR = {
   ti: [
     { open: "about", text: "Quién soy: Backend Developer especializado en optimización de rendimiento." },
-    { open: "skills", text: "Stack políglota: Java, Python y Node.js, con métricas por runtime." },
-    { open: "projects", project: "iacc-optimizer", text: "Caso IACC: un proceso de más de 1 hora reducido a 5–10 minutos." },
-    { open: "experience", text: "Trayectoria: latencia de segundos a milisegundos, SQL +20% y costos cloud." },
+    { open: "skills", text: "Stack políglota: Java (Spring Boot), Python (FastAPI) y Node.js, con métricas por runtime." },
+    { open: "projects", project: "buk-migration", text: "Caso Push HR: migración masiva de documentos a BUK, de más de 1 hora a 5–10 minutos." },
+    { open: "experience", text: "Trayectoria: Push HR, BiceVida (de segundos a milisegundos, GraalVM) y freelance." },
     { open: "simulator", text: "Pruébalo tú: el simulador recrea cómo se optimiza un proceso así." },
     { open: "contact", text: "¿Conversamos? Escríbeme desde aquí." },
   ],
   rrhh: [
     { open: "hr", text: "Ficha para RRHH: datos clave, resultados medibles y cargos donde encajo." },
     { open: "skills", text: "Competencias explicadas en lenguaje de negocio, con los términos que piden los avisos." },
-    { open: "projects", project: "iacc-optimizer", text: "Un logro concreto: un proceso de 1 hora que hoy toma 10 minutos." },
-    { open: "experience", text: "Trayectoria: 2 años resolviendo problemas de rendimiento para empresas." },
+    { open: "projects", project: "buk-migration", text: "Un logro concreto: una migración de 1 hora que hoy toma 10 minutos." },
+    { open: "experience", text: "Trayectoria: más de 2 años en Push HR, BiceVida y proyectos para PUMA, GyG e IACC." },
     { open: "contact", text: "¿Te interesa el perfil? Coordinemos una entrevista." },
   ],
 };

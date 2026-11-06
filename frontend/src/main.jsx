@@ -4,10 +4,10 @@ import PolyglotPortfolio from './app/PolyglotPortfolio.jsx'
 import ErrorBoundary from './app/ErrorBoundary.jsx'
 import './styles/fonts.css'
 import './styles/index.css'
-import { reloadOnce } from './lib/reload.js'
 
-// Vite's preload helper: a CSS/JS dependency of a lazy chunk is gone after a redeploy
-window.addEventListener('vite:preloadError', (event) => { if (reloadOnce()) event.preventDefault() })
+// No global 'vite:preloadError' → reload handler on purpose: it fired on the first failed attempt and reloaded the
+// page before lib/lazyWithRetry.js could retry (a brief network drop would lose the drafts in other windows).
+// Every dynamic import retries with backoff and falls back to reloadOnce() itself (stale chunks after a redeploy).
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

@@ -69,6 +69,16 @@ def test_storage_errors_propagate():
         SubmitContact(FakeRepository(fail=True), FakeLimiter())(SUBMISSION, "ip")
 
 
+def test_global_quota_applies_after_the_per_client_one_and_skips_spam():
+    repo, per_client, global_ = FakeRepository(), FakeLimiter(), FakeLimiter(wait=60)
+    use_case = SubmitContact(repo, per_client, global_limiter=global_)
+    with pytest.raises(RateLimitExceeded) as exc:
+        use_case(SUBMISSION, "ip")
+    assert exc.value.retry_after_s == 60 and repo.saved == [] and global_.keys == ["*"]
+    use_case(ContactSubmission("Bot", "b@b.cl", "buy", honeypot="x"), "ip")
+    assert global_.keys == ["*"]  # discarded spam never consumes the shared quota
+
+
 @pytest.mark.parametrize("writable,built,require,ready", [
     (True, True, True, True),
     (False, True, True, False),

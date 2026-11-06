@@ -1,5 +1,5 @@
 /* Command palette (Ctrl/⌘ + K). */
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
 import { CornerDownLeft, Search } from "lucide-react";
 import { norm } from "../lib/env.js";
@@ -65,7 +65,13 @@ export function CommandPalette({ open, onClose, commands }) {
     else if (e.key === "Enter") { e.preventDefault(); run(results[sel]); }
   };
 
-  let lastGroup = null;
+  // listbox → group → option (headers are the groups' labels, not stray children of the listbox)
+  const groups = [];
+  results.forEach((c, i) => {
+    const last = groups[groups.length - 1];
+    if (last?.name === c.group) last.items.push({ c, i });
+    else groups.push({ name: c.group, items: [{ c, i }] });
+  });
   return (
     <AnimatePresence>
       {open && (
@@ -87,7 +93,7 @@ export function CommandPalette({ open, onClose, commands }) {
             style={{ background: "rgba(10,14,20,0.97)", borderColor: `${CORE}33` }}
           >
             <div className="flex items-center gap-2.5 px-4 py-3 border-b border-white/10">
-              <Search size={15} className="text-white/40 shrink-0" />
+              <Search size={15} className="text-white/60 shrink-0" aria-hidden="true" />
               <input
                 ref={inputRef}
                 value={q}
@@ -99,47 +105,47 @@ export function CommandPalette({ open, onClose, commands }) {
                 aria-expanded="true"
                 aria-controls="palette-list"
                 aria-activedescendant={results[sel] ? `cmd-${results[sel].id}` : undefined}
-                className="flex-1 min-w-0 bg-transparent outline-hidden text-[16px] sm:text-[14px] text-white placeholder:text-white/30"
+                className="flex-1 min-w-0 bg-transparent outline-hidden text-[16px] sm:text-[14px] text-white placeholder:text-white/50"
               />
-              <button onClick={onClose} className="shrink-0 rounded-sm border border-white/10 px-1.5 py-0.5 text-[10px] text-white/40 hover:text-white focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
+              <button onClick={onClose} className="shrink-0 rounded-sm border border-white/10 px-1.5 py-0.5 text-[10px] text-white/60 hover:text-white focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
                 esc
               </button>
             </div>
-            <div ref={listRef} id="palette-list" role="listbox" className="relative overflow-y-auto overscroll-contain py-1.5 min-h-0" style={{ scrollbarWidth: "thin" }}>
+            <div ref={listRef} id="palette-list" role="listbox" aria-label="Comandos" tabIndex={-1} className="relative overflow-y-auto overscroll-contain py-1.5 min-h-0" style={{ scrollbarWidth: "thin" }}>
               {results.length === 0 && (
-                <p className="px-4 py-6 text-center text-[12.5px] text-white/45">Sin resultados para «{q}»</p>
+                <p className="px-4 py-6 text-center text-[12.5px] text-white/60">Sin resultados para «{q}»</p>
               )}
-              {results.map((c, i) => {
-                const header = c.group !== lastGroup ? c.group : null;
-                lastGroup = c.group;
-                const active = i === sel;
-                return (
-                  <React.Fragment key={c.id}>
-                    {header && (
-                      <div className="px-4 pt-2.5 pb-1 text-[10px] uppercase tracking-wider text-white/35" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{header}</div>
-                    )}
-                    <button
-                      id={`cmd-${c.id}`}
-                      data-idx={i}
-                      role="option"
-                      aria-selected={active}
-                      onMouseMove={() => setSel(i)}
-                      onClick={() => run(c)}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left focus:outline-hidden"
-                      style={{ background: active ? "rgba(255,255,255,0.06)" : "transparent" }}
-                    >
-                      <span className="w-7 h-7 rounded-md flex items-center justify-center shrink-0" style={{ background: `${c.color || CORE}17`, color: c.color || CORE }}>
-                        <c.Icon size={14} />
-                      </span>
-                      <span className="flex-1 min-w-0 text-[13px] text-white/85 truncate">{c.label}</span>
-                      {c.hint && <span className="shrink-0 text-[10.5px] text-white/35" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{c.hint}</span>}
-                      {active && <CornerDownLeft size={12} className="shrink-0 text-white/35 hidden sm:block" />}
-                    </button>
-                  </React.Fragment>
-                );
-              })}
+              {groups.map((g) => (
+                <div key={g.name} role="group" aria-labelledby={`cmd-group-${g.name}`}>
+                  <div id={`cmd-group-${g.name}`} role="presentation" className="px-4 pt-2.5 pb-1 text-[10px] uppercase tracking-wider text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{g.name}</div>
+                  {g.items.map(({ c, i }) => {
+                    const active = i === sel;
+                    return (
+                      <button
+                        key={c.id}
+                        id={`cmd-${c.id}`}
+                        data-idx={i}
+                        role="option"
+                        aria-selected={active}
+                        tabIndex={-1} // combobox pattern: the input keeps the focus, arrows move the selection
+                        onMouseMove={() => setSel(i)}
+                        onClick={() => run(c)}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-left focus:outline-hidden"
+                        style={{ background: active ? "rgba(255,255,255,0.06)" : "transparent" }}
+                      >
+                        <span className="w-7 h-7 rounded-md flex items-center justify-center shrink-0" style={{ background: `${c.color || CORE}17`, color: c.color || CORE }}>
+                          <c.Icon size={14} />
+                        </span>
+                        <span className="flex-1 min-w-0 text-[13px] text-white/85 truncate">{c.label}</span>
+                        {c.hint && <span className="shrink-0 text-[10.5px] text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{c.hint}</span>}
+                        {active && <CornerDownLeft size={12} className="shrink-0 text-white/50 hidden sm:block" aria-hidden="true" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
-            <div className="hidden sm:flex items-center gap-4 px-4 py-2 border-t border-white/10 text-[10px] text-white/35" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
+            <div className="hidden sm:flex items-center gap-4 px-4 py-2 border-t border-white/10 text-[10px] text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
               <span>↑↓ navegar</span><span>↵ abrir</span><span>esc cerrar</span>
             </div>
           </m.div>

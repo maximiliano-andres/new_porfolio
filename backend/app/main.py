@@ -6,17 +6,22 @@ ASGI entry points (Granian, Rust HTTP server):
 Run locally from backend/:  `python -m app`  (APP_ENV=development enables auto-reload and /docs).
 """
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.adapters.inbound.http.api import build_api_router
 from app.adapters.inbound.http.errors import register_exception_handlers
 from app.adapters.inbound.http.proxy import client_ip_resolver, with_proxy_headers
-from app.adapters.inbound.http.security import SecurityAndLimits, SecurityPolicy
+from app.adapters.inbound.http.security import SecurityAndLimits, SecurityHeaders, SecurityPolicy
 from app.adapters.inbound.http.static_files import StaticFrontend, build_frontend_router
 from app.adapters.outbound.jsonl_contact_repository import JsonlContactRepository
 from app.adapters.outbound.memory_rate_limiter import InMemoryRateLimiter
+from app.adapters.outbound.webhook_notifier import WebhookNotifier
+from app.application.contact_retention import PurgeExpiredContacts
+from app.application.notify_owner import NotifyOwner
 from app.application.submit_contact import SubmitContact
 from app.application.system_status import SystemStatus
 from app.config import Settings
@@ -26,13 +31,27 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 
 def create_app(settings: Settings) -> FastAPI:
     # ---- outbound adapters (driven) ----
-    repository = JsonlContactRepository(settings.contact_log)
+    repository = JsonlContactRepository(
+        settings.contact_log, max_bytes=settings.contact_log_max_bytes, min_free_bytes=settings.min_free_disk_bytes
+    )
     rate_limiter = InMemoryRateLimiter(settings.rate_limit, settings.rate_window_s)
+    global_limiter = (
+        InMemoryRateLimiter(settings.global_rate_limit, settings.global_rate_window_s, max_keys=1)
+        if settings.global_rate_limit > 0 else None
+    )
+    notifier = WebhookNotifier(settings.contact_notify_webhook) if settings.contact_notify_webhook else None
     frontend = StaticFrontend(settings.frontend_dir)
 
     # ---- use cases ----
-    submit_contact = SubmitContact(repository, rate_limiter)
+    submit_contact = SubmitContact(repository, rate_limiter, global_limiter=global_limiter)
     system_status = SystemStatus(repository, frontend, require_frontend=not settings.is_dev)
+    notify_owner = NotifyOwner(notifier)
+    purge_expired = PurgeExpiredContacts(repository, settings.contact_retention_days)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI):
+        await run_in_threadpool(purge_expired)  # retention also applies to messages stored while the server was down
+        yield
 
     # ---- inbound adapter (driving): HTTP ----
     app = FastAPI(
@@ -41,6 +60,7 @@ def create_app(settings: Settings) -> FastAPI:
         docs_url="/docs" if settings.is_dev else None,
         redoc_url=None,
         openapi_url="/openapi.json" if settings.is_dev else None,
+        lifespan=lifespan,
     )
     app.add_middleware(
         CORSMiddleware,
@@ -52,17 +72,26 @@ def create_app(settings: Settings) -> FastAPI:
     # No GZipMiddleware: API answers are < 1 KB, static files ship precompressed (.br/.gz) and Caddy encodes
     # /api/* at the edge. It only added per-request work (and ignored "gzip;q=0").
     # Added after CORS on purpose → outermost: security headers also reach CORS preflights and early rejections.
-    app.add_middleware(
-        SecurityAndLimits,
-        policy=SecurityPolicy(settings.security_headers_file, settings.frontend_dir),
+    security_headers = SecurityHeaders(
+        SecurityPolicy(settings.security_headers_file, settings.frontend_dir),
         is_dev=settings.is_dev,
         enable_hsts=settings.enable_hsts,
-        max_body_bytes=settings.max_body_bytes,
     )
-    register_exception_handlers(app)
+    app.add_middleware(SecurityAndLimits, headers=security_headers, max_body_bytes=settings.max_body_bytes)
+    register_exception_handlers(app, security_headers)  # the 500 handler runs outside the middleware
 
-    client_ip = client_ip_resolver(trust_proxy=settings.trust_proxy, client_ip_header=settings.client_ip_header)
-    app.include_router(build_api_router(submit_contact=submit_contact, system_status=system_status, client_ip=client_ip))
+    client_ip = client_ip_resolver(
+        trust_proxy=settings.trust_proxy, client_ip_header=settings.client_ip_header, ipv6_prefix=settings.ipv6_prefix
+    )
+    app.include_router(
+        build_api_router(
+            submit_contact=submit_contact,
+            system_status=system_status,
+            client_ip=client_ip,
+            notify_owner=notify_owner,
+            purge_expired=purge_expired,
+        )
+    )
     app.include_router(build_frontend_router(frontend))  # catch-all: always last
     return app
 

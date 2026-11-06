@@ -1,8 +1,7 @@
 /* Boot sequence staged as a compile log; ends by asking which profile to explore. */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, m } from "framer-motion";
-import { BOOT_LINES } from "../data/content.js";
-import { AUDIENCES } from "../data/hr.js";
+import { AUDIENCES, BOOT_LINES } from "../data/shell.js";
 import { prefersReducedMotion } from "../lib/env.js";
 import { sound } from "../lib/sound.js";
 import { storage } from "../lib/storage.js";
@@ -13,6 +12,7 @@ export function BootScreen({ onDone, onChoose, current }) {
   const [count, setCount] = useState(0);
   const [leaving, setLeaving] = useState(false);
   const firstChoiceRef = useRef(null);
+  const rootRef = useRef(null);
   const done = count >= BOOT_LINES.length;
 
   const finish = useCallback(() => {
@@ -40,6 +40,29 @@ export function BootScreen({ onDone, onChoose, current }) {
     if (done) firstChoiceRef.current?.focus({ preventScroll: true });
   }, [done]);
 
+  // modal while it lasts: the shell underneath (top bar…) is inert, so neither Tab nor a screen reader
+  // can reach invisible controls; the dialog itself takes the focus until the profile buttons appear
+  useEffect(() => {
+    const root = rootRef.current;
+    if (leaving || !root?.parentElement) return;
+    const siblings = [...root.parentElement.children].filter((el) => el !== root && !el.hasAttribute("inert"));
+    siblings.forEach((el) => el.setAttribute("inert", ""));
+    if (!root.contains(document.activeElement)) root.focus({ preventScroll: true });
+    return () => siblings.forEach((el) => el.removeAttribute("inert"));
+  }, [leaving]);
+  // keyboard skip: Esc anywhere, Enter unless it is activating one of the profile buttons
+  useEffect(() => {
+    if (leaving) return;
+    const onKey = (e) => {
+      if (e.key === "Escape" || (e.key === "Enter" && !(e.target instanceof HTMLButtonElement))) {
+        e.preventDefault();
+        finish();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [leaving, finish]);
+
   const choose = (id) => (e) => {
     e.stopPropagation();
     onChoose(id);
@@ -49,13 +72,16 @@ export function BootScreen({ onDone, onChoose, current }) {
 
   return (
     <m.div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-[#05070b] px-4 cursor-pointer"
+      ref={rootRef}
+      tabIndex={-1}
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-[#05070b] px-4 cursor-pointer outline-hidden"
       onClick={finish}
       animate={leaving ? { opacity: 0 } : { opacity: 1 }}
       transition={{ duration: 0.55, ease: "easeInOut" }}
       style={{ pointerEvents: leaving ? "none" : "auto" }}
       aria-hidden={leaving}
       role="dialog"
+      aria-modal="true"
       aria-label="Inicio del portafolio"
     >
       <div
@@ -72,7 +98,7 @@ export function BootScreen({ onDone, onChoose, current }) {
           <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]" />
           <span className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]" />
           <span className="w-2.5 h-2.5 rounded-full bg-[#27c93f]" />
-          <span className="ml-3 text-[11px] text-white/40">boot — polyglot_core</span>
+          <span className="ml-3 text-[11px] text-white/60">boot — polyglot_core</span>
         </div>
         <div className="text-[9.5px] min-[380px]:text-[11px] sm:text-[13px] leading-5 sm:leading-6 min-h-[180px] sm:min-h-[210px] short:min-h-0 overflow-x-auto" role="status" aria-live="polite">
           {BOOT_LINES.slice(0, count).map((line, i) => (
@@ -122,8 +148,8 @@ export function BootScreen({ onDone, onChoose, current }) {
             </m.div>
           )}
         </AnimatePresence>
-        <p className="mt-3 text-right text-[10px] text-white/30" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
-          {done ? "puedes cambiarlo después desde la barra superior" : <>clic para saltar &rarr;</>}
+        <p className="mt-3 text-right text-[10px] text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
+          {done ? "puedes cambiarlo después desde la barra superior" : <>clic o Esc para saltar &rarr;</>}
         </p>
       </div>
     </m.div>

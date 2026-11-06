@@ -1,0 +1,32 @@
+# Weekly dependency PRs. CI must pass before merging, which also checks that:
+#   - backend/requirements*.lock match requirements*.txt (after a pip bump, regenerate the locks with the command in
+#     backend/requirements.txt: uv pip compile --universal --python-version 3.13 --generate-hashes …)
+#   - deploy/security-headers.caddy still matches the build
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      frontend-minor-patch:
+        update-types: [minor, patch]
+
+  # base images in the Dockerfile (pinned by digest: Dependabot refreshes tag + digest together)
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+
+  # actions in .github/workflows (pinned by commit SHA with a version comment)
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

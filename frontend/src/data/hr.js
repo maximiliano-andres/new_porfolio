@@ -1,108 +1,88 @@
 /* Plain-language (RRHH) versions of the portfolio content. Only re-explains existing facts. */
-import { Briefcase, Code2, Gauge, Laptop, MapPin, ShieldCheck, Sparkles, TrendingDown, Users } from "lucide-react";
+import { Briefcase, Gauge, Laptop, MapPin, ShieldCheck, Sparkles, TrendingDown } from "lucide-react";
 import { CORE, HR_ACCENT, LANG } from "../styles/theme.js";
 
-export const AUDIENCES = [
-  { id: "ti", label: "TI", long: "Perfil TI", hint: "Ver en lenguaje técnico", Icon: Code2, color: CORE },
-  { id: "rrhh", label: "RRHH", long: "Perfil RRHH", hint: "Ver en lenguaje para RRHH y reclutadores", Icon: Users, color: HR_ACCENT },
-];
-
-/* second intro toast: explains both reading profiles and lets the visitor pick one */
-export const PROFILE_NOTIFICATION = {
-  title: "Dos formas de leer este portafolio",
-  accent: HR_ACCENT,
-  duration: 20000,
-  profiles: [
-    { id: "ti", name: "Perfil TI", text: "Lenguaje técnico: tecnologías, arquitectura y métricas de rendimiento." },
-    { id: "rrhh", name: "Perfil RRHH", text: "Lenguaje de negocio: qué aporto, resultados medibles y competencias sin tecnicismos." },
-  ],
-};
-
 export const HR_FACTS = [
-  { Icon: Briefcase, label: "Experiencia", value: "2 años" },
-  { Icon: MapPin, label: "Ubicación", value: "Chile" },
+  { Icon: Briefcase, label: "Experiencia", value: "+2 años" },
+  { Icon: MapPin, label: "Ubicación", value: "Peñaflor, RM · Chile" },
   { Icon: Laptop, label: "Modalidad", value: "Remoto o presencial" },
   { Icon: Sparkles, label: "Estado", value: "Disponible" },
 ];
 
 export const HR_KPIS = [
-  { value: "−83%", label: "Tiempo de un proceso crítico", detail: "De más de 1 hora a 5–10 minutos", client: "IACC", color: LANG.java.c1 },
-  { value: "< 1 s", label: "Tiempo de respuesta", detail: "Antes tardaba 3–4 segundos", client: "PUMA", color: LANG.node.c2 },
-  { value: "+20%", label: "Velocidad en consultas de datos", detail: "Con menor consumo de servidores", client: "GyG", color: LANG.python.c1 },
+  { value: "−83%", label: "Tiempo de migración de documentos", detail: "De más de 1 hora a 5–10 minutos", client: "Push HR · BUK", color: LANG.java.c1 },
+  { value: "< 1 s", label: "Tiempo de respuesta", detail: "Antes tardaba 3–4 segundos", client: "BiceVida", color: LANG.node.c2 },
+  { value: "−40%", label: "Uso de procesador (CPU)", detail: "−30–40% de CPU y −15–30% de memoria", client: "Push HR", color: LANG.python.c1 },
 ];
 
 export const HR_VALUE = [
   {
-    Icon: TrendingDown,
-    title: "Menores costos de operación",
-    text: "Reduzco el consumo de servidores en la nube. Como ese servicio se paga por uso, el ahorro se refleja directamente en la factura mensual.",
+    Icon: Gauge,
+    title: "Procesos más rápidos",
+    text: "Transformo procesos lentos y pesados en sistemas rápidos y estables: tareas de más de una hora que hoy terminan en minutos.",
   },
   {
-    Icon: Gauge,
-    title: "Mejor experiencia para los usuarios",
-    text: "Sistemas que responden en milésimas de segundo en lugar de segundos: menos esperas para clientes y colaboradores.",
+    Icon: TrendingDown,
+    title: "Menor consumo de recursos",
+    text: "Hago que los sistemas hagan más con menos: menos uso de procesador y memoria, lo que reduce el costo de operarlos.",
   },
   {
     Icon: ShieldCheck,
-    title: "Operación estable",
-    text: "Automatizo procesos que manejan grandes volúmenes de información y que siguen funcionando en momentos de alta demanda.",
+    title: "Datos confiables y trazables",
+    text: "Automatizo migraciones, validaciones y reportes sobre grandes volúmenes de información, con control de cada registro procesado.",
   },
 ];
 
 export const HR_ROLES = [
-  "Desarrollador/a Backend", "Backend Developer", "Ingeniero/a de Software",
+  "Backend Developer", "Desarrollador/a Backend", "Software Developer",
   "Desarrollador/a Java", "Desarrollador/a Python", "Desarrollador/a Node.js",
 ];
 
 export const ATS_KEYWORDS = [
-  "Backend", "Java", "Spring Boot", "GraalVM", "Python", "FastAPI", "Django",
-  "Node.js", "Express", "NestJS", "TypeScript", "API REST", "SQL", "PostgreSQL",
-  "MySQL", "MongoDB", "AWS", "Docker", "Multithreading", "Optimización de rendimiento",
+  "Backend", "Java", "Spring Boot", "GraalVM Native Image", "Python", "FastAPI", "Django",
+  "Node.js", "Express", "API REST", "Microservicios", "SQL", "PostgreSQL", "MySQL", "MongoDB",
+  "SQLAlchemy", "Polars", "Pydantic v2", "AWS", "Docker", "Git", "Concurrencia",
+  "Procesamiento asincrónico", "Optimización de rendimiento", "Migración de datos",
 ];
 
-/* levels mirror the self-assessed percentages of the TI view (≥88 → Avanzado);
-   areas without a percentage show the evidence instead of an invented level */
+/* the badge counts projects of PROJECT_HISTORY (content.js) that used any `tech` of the area,
+   or the explicit `projects` ids when the area is a practice rather than a technology */
 export const HR_COMPETENCIES = [
   {
-    area: "Construcción de sistemas empresariales",
-    plain: "Desarrollo el “motor” de las aplicaciones: procesa la información, aplica las reglas del negocio y conecta servicios entre sí.",
-    level: "Avanzado",
-    tech: ["Java", "Spring Boot", "Python", "FastAPI", "Django", "Node.js", "NestJS"],
-    color: LANG.java.c1,
-  },
-  {
-    area: "Optimización de rendimiento y costos",
-    plain: "Hago que los sistemas respondan más rápido usando menos recursos, lo que baja el gasto en servidores.",
-    level: "Avanzado",
-    tech: ["GraalVM", "Ajuste de JVM", "Código eficiente (CPU / memoria)"],
+    area: "Optimización de rendimiento",
+    plain: "Encuentro los cuellos de botella de un sistema y lo hago responder más rápido usando menos procesador y memoria.",
+    tech: ["GraalVM Native Image", "Concurrencia", "Procesamiento asincrónico", "Polars", "orjson"],
     color: CORE,
   },
   {
+    area: "Construcción de sistemas empresariales",
+    plain: "Desarrollo el “motor” de las aplicaciones: procesa la información, aplica las reglas del negocio y conecta servicios entre sí.",
+    tech: ["Java", "Spring Boot", "Python", "FastAPI", "Django", "Node.js", "Express"],
+    color: LANG.java.c1,
+  },
+  {
+    area: "Migración y calidad de datos",
+    plain: "Traslado grandes volúmenes de información entre sistemas sin perder nada: valido, limpio y dejo un reporte de cada registro.",
+    projects: ["document-migrations", "buk-migration", "payroll-history"],
+    tech: ["Migración masiva", "Normalización", "Validación", "Reportes automáticos"],
+    color: HR_ACCENT,
+  },
+  {
     area: "Gestión de bases de datos",
-    plain: "Organizo y acelero los “archivos digitales” donde la empresa guarda su información: clientes, ventas, registros.",
-    level: "Comprobado en proyectos",
-    tech: ["SQL", "PostgreSQL", "MySQL", "MongoDB"],
+    plain: "Organizo y acelero los “archivos digitales” donde la empresa guarda su información: clientes, nóminas, registros.",
+    tech: ["SQL", "PostgreSQL", "MySQL", "MongoDB", "SQLAlchemy"],
     color: LANG.python.c1,
   },
   {
     area: "Integración entre sistemas",
     plain: "Construyo los “puentes” que permiten que distintas aplicaciones intercambien información de forma ordenada y segura.",
-    level: "Sólido",
-    tech: ["API REST", "Arquitectura orientada a eventos", "TypeScript"],
+    tech: ["APIs REST", "Microservicios", "API de BUK"],
     color: LANG.node.c2,
   },
   {
-    area: "Automatización de procesos de datos",
-    plain: "Automatizo tareas que procesan grandes volúmenes de información sin intervención manual.",
-    level: "Sólido",
-    tech: ["Python", "Asyncio", "Pipelines de datos"],
-    color: HR_ACCENT,
-  },
-  {
     area: "Nube e infraestructura",
-    plain: "Publico y mantengo aplicaciones en servidores de Amazon (AWS) y las empaqueto para que funcionen igual en cualquier entorno.",
-    level: "Experiencia práctica",
-    tech: ["AWS (EC2, S3, RDS)", "Docker"],
+    plain: "Publico aplicaciones en servidores de Amazon (AWS) y las empaqueto para que funcionen igual en cualquier entorno.",
+    tech: ["AWS", "Docker", "Git"],
     color: LANG.java.c2,
   },
 ];
@@ -120,52 +100,102 @@ export const HR_GLOSSARY = [
 
 /* plain-language versions of the TI data, keyed by the same ids */
 export const HR_PROJECTS = {
-  "iacc-optimizer": {
-    title: "Proceso crítico: de 1 hora a 10 minutos",
-    challenge: "Un proceso de datos clave para la operación tardaba más de una hora en completarse.",
-    action: "Lo rediseñé para ejecutar varias tareas en paralelo y optimicé el acceso a la información.",
+  "buk-migration": {
+    title: "Migración de documentos: de 1 hora a 10 minutos",
+    challenge: "Trasladar masivamente archivos y documentos de clientes a la plataforma de RRHH BUK tomaba más de una hora.",
+    action: "Rediseñé el proceso para trabajar con muchos documentos a la vez, sin esperas innecesarias entre uno y otro.",
     result: "Hoy termina en 5–10 minutos: más de un 83% menos de tiempo.",
     before: "+1 h", after: "5–10 min",
   },
-  "puma-api": {
-    title: "Respuestas instantáneas en las plataformas de PUMA",
-    challenge: "Algunas pantallas tardaban entre 3 y 4 segundos en responder.",
-    action: "Optimicé las consultas de datos y dejé en memoria la información más solicitada.",
-    result: "El tiempo de respuesta bajó de segundos a milésimas de segundo.",
+  "finance-platforms": {
+    title: "Aplicaciones de finanzas que gastan menos recursos",
+    challenge: "Las plataformas internas consumían mucho procesador y memoria, y cada cliente necesitaba formatos financieros distintos.",
+    action: "Construí aplicaciones configurables por cliente usando herramientas de alto rendimiento y optimicé su consumo.",
+    result: "Entre 30% y 40% menos uso de procesador y entre 15% y 30% menos memoria.",
+    before: null, after: "−30–40% CPU",
+  },
+  "graalvm-microservices": {
+    title: "Respuestas instantáneas en servicios de BiceVida",
+    challenge: "Algunos servicios tardaban entre 3 y 4 segundos en responder.",
+    action: "Optimicé los servicios, los migré a una tecnología de arranque rápido y aceleré las consultas a la base de datos.",
+    result: "El tiempo de respuesta bajó de segundos a milésimas de segundo y las consultas mejoraron cerca de un 20%.",
     before: "3–4 s", after: "< 1 s",
   },
-  "gyg-performance": {
-    title: "Bases de datos más rápidas y eficientes en GyG",
-    challenge: "Las consultas a la base de datos y el consumo de recursos limitaban el rendimiento.",
-    action: "Reorganicé la estructura de búsqueda de los datos y reduje el uso de memoria y procesador.",
-    result: "Más de un 20% de mejora en velocidad de consultas, con menor consumo de servidores.",
-    before: null, after: "+20%",
+  "document-migrations": {
+    title: "Migraciones sin perder un solo documento",
+    challenge: "Empresas como PUMA, GyG e IACC necesitaban trasladar grandes volúmenes de documentos con datos desordenados.",
+    action: "Automaticé la migración, limpié los datos y creé un buscador que valida cada documento por nombre, RUT y archivo.",
+    result: "98% de coincidencia automática y reportes 100% exactos de lo migrado y lo pendiente.",
+    before: null, after: "98%",
+  },
+  "hr-bpo-platform": {
+    title: "Plataforma para gestionar la nómina de muchas empresas",
+    challenge: "Un servicio de outsourcing de RRHH necesitaba ordenar las novedades de nómina de muchas empresas cliente en un solo lugar.",
+    action: "Desarrollé una plataforma segura (doble factor de autenticación y datos cifrados) conectada directamente con BUK.",
+    result: "Todo el ciclo de novedades —carga, revisión, procesamiento y cierre— en una sola herramienta, respaldada por ~1.100 pruebas automáticas.",
+    before: null, after: "~1.100 pruebas",
+  },
+  "multi-db-workbook": {
+    title: "Reportes sin depender de TI",
+    challenge: "Para obtener un reporte, RRHH y Finanzas debían pedírselo a TI y recibían datos llenos de códigos.",
+    action: "Creé una herramienta con apariencia de planilla para explorar, cruzar y descargar datos a Excel con clics.",
+    result: "Equipos no técnicos consultan la información por su cuenta, de forma segura (solo lectura) y en 6 tipos de bases de datos.",
+    before: null, after: "6 motores",
+  },
+  "payroll-history": {
+    title: "3,5 millones de registros de nómina, consultables",
+    challenge: "El historial de remuneraciones estaba repartido en planillas Excel enormes, imposibles de abrir y cruzar con fluidez.",
+    action: "Automaticé su carga a una base de datos leyendo los archivos por partes y guardando miles de registros a la vez.",
+    result: "3,55 millones de registros de 2.006 trabajadores en un solo lugar, listos para buscar por persona, fecha o centro de costo.",
+    before: "9 planillas", after: "1 base",
+  },
+  "excel-consolidator": {
+    title: "Planillas de remuneraciones unidas en un clic",
+    challenge: "Consolidar a mano muchas planillas de liquidaciones, haberes y descuentos tomaba tiempo y se prestaba a errores.",
+    action: "Creé una aplicación de escritorio que las une automáticamente y deja un reporte de control de cada archivo.",
+    result: "Un consolidado único por tipo de planilla, con auditoría que confirma cuántas filas se copiaron de cada archivo.",
+    before: "Manual", after: "Automático",
+  },
+  "portfolio": {
+    title: "Un portafolio rápido de cargar",
+    challenge: "Un sitio interactivo, con muchas ventanas y animaciones, corre el riesgo de ser pesado y lento.",
+    action: "Lo construí para que cargue solo lo necesario, con la portada lista de antemano y archivos comprimidos.",
+    result: "Los archivos del sitio pesan 74% menos al enviarse (de ≈540 KB a ≈140 KB).",
+    before: "≈540 KB", after: "≈140 KB",
   },
 };
 
 export const HR_EXPERIENCE = [
   {
-    plainRole: "Desarrollador de sistemas · Consultor independiente",
+    plainRole: "Desarrollador Backend",
     bullets: [
-      "Resuelvo problemas de lentitud en sistemas de clientes como PUMA, GyG e IACC.",
-      "Reduje un proceso crítico de más de 1 hora a 5–10 minutos (83% menos tiempo).",
-      "Logré que pantallas que tardaban 3–4 segundos respondan de forma prácticamente instantánea.",
-      "Aceleré en más de un 20% las consultas a bases de datos.",
+      "Reduje la migración masiva de documentos a BUK de más de 1 hora a 5–10 minutos.",
+      "Bajé el consumo de procesador en 30–40% y de memoria en 15–30% en plataformas internas.",
+      "Desarrollé aplicaciones internas de finanzas adaptables a los requerimientos de cada cliente.",
+      "Automaticé reportes completos y trazables para los equipos de RRHH.",
     ],
   },
   {
-    plainRole: "Desarrollador de sistemas",
+    plainRole: "Desarrollador Backend en práctica",
     bullets: [
-      "Construí sistemas que conectan aplicaciones entre sí, usando tres lenguajes de amplio uso empresarial (Java, Python y Node.js).",
-      "Reduje el consumo de servidores en la nube, generando ahorros en costos de infraestructura.",
-      "Automaticé procesos de grandes volúmenes de datos, manteniendo los sistemas disponibles en momentos de alta demanda.",
+      "Logré que servicios que tardaban 3–4 segundos respondan de forma prácticamente instantánea.",
+      "Modernicé 4 servicios para que arranquen más rápido y usen menos memoria.",
+      "Participé en el traslado de la infraestructura a la nube de Amazon (AWS).",
+      "Aceleré cerca de un 20% las consultas a bases de datos.",
+    ],
+  },
+  {
+    plainRole: "Desarrollador Backend independiente",
+    bullets: [
+      "Automaticé migraciones masivas de documentos para empresas como PUMA, GyG e IACC.",
+      "Creé un buscador que valida documentos con 98% de coincidencia por nombre, RUT y archivo.",
+      "Entregué reportes 100% exactos de lo migrado y lo pendiente, facilitando las auditorías.",
     ],
   },
 ];
 
 export const HR_CERT_NOTES = {
-  "AWS Certified Developer / Cloud Practitioner": "Valida conocimientos en los servicios de nube de Amazon, uno de los proveedores líderes del mercado.",
-  "Oracle Certified Professional — Java SE": "Certificación oficial de Oracle, la empresa responsable del lenguaje Java.",
-  "Especialización en Bases de Datos Relacionales": "Formación específica en diseño y manejo de bases de datos.",
-  "Desarrollo Backend de Alto Rendimiento": "Formación en construcción de sistemas rápidos y eficientes.",
+  "Capacitación ISO 27001 (Seguridad de la Información)": "Norma internacional de seguridad de la información: cómo proteger los datos de la empresa y de sus clientes.",
+  "Capacitación Oracle Backend": "Programa de formación en desarrollo backend de Oracle Next Education.",
+  "Curso Python Native Avances": "Curso de Python dictado por la Universidad Mayor.",
 };

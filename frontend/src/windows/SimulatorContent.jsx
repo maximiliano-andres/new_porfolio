@@ -1,4 +1,4 @@
-/* "Optimize this process" simulator inspired by the IACC case (illustrative model). */
+/* "Optimize this process" simulator inspired by the BUK migration case (illustrative model). */
 import { useEffect, useState } from "react";
 import { Play } from "lucide-react";
 import { useAudience, useSystem } from "../app/context.js";
@@ -6,7 +6,7 @@ import { prefersReducedMotion } from "../lib/env.js";
 import { sound } from "../lib/sound.js";
 import { CORE, HR_ACCENT, LANG } from "../styles/theme.js";
 
-/* ---------- optimization simulator (inspired by the IACC case) ----------
+/* ---------- optimization simulator (inspired by the BUK document migration) ----------
    Amdahl-style model on an 8-core machine: parallelism helps up to the core
    count, more threads add coordination overhead; caching shrinks the serial
    part and indexes shrink the per-record work. Illustrative, not a benchmark. */
@@ -56,7 +56,7 @@ export function SimulatorContent() {
 
   const done = run && progress >= 1;
   const verdict = !done ? null : run.minutes <= 10
-    ? { text: hr ? "¡Objetivo logrado! Así se redujo un proceso real en IACC de más de 1 hora a 5–10 minutos." : "¡Optimizado! Mismo orden de mejora que el caso real de IACC (>1 h → 5–10 min).", color: LANG.node.c2 }
+    ? { text: hr ? "¡Objetivo logrado! Así se redujo en Push HR la migración masiva de documentos a BUK: de más de 1 hora a 5–10 minutos." : "¡Optimizado! Mismo orden de mejora que el caso real de la migración masiva de documentos a BUK en Push HR (>1 h → 5–10 min).", color: LANG.node.c2 }
     : run.minutes <= 30
       ? { text: hr ? "Mucho mejor, pero aún se puede más. Prueba combinando las opciones." : "Mejor, pero queda margen: combina paralelismo con caché e índices.", color: HR_ACCENT }
       : { text: hr ? "Sigue lento. Prueba repartir el trabajo entre más trabajadores." : "Cuello de botella: el proceso sigue siendo casi secuencial.", color: "#f87171" };
@@ -85,7 +85,7 @@ export function SimulatorContent() {
             className="w-full accent-[#22D3EE] h-6"
             aria-describedby="sim-cores"
           />
-          <span id="sim-cores" className="block text-[10.5px] text-white/40 mt-0.5">
+          <span id="sim-cores" className="block text-[10.5px] text-white/60 mt-0.5">
             {SIM_CORES} {L.cores}{cfg.threads > SIM_CORES && <span className="text-[#f87171]"> · más {hr ? "trabajadores" : "hilos"} que {hr ? "capacidad" : "núcleos"}: se pierde tiempo coordinándolos</span>}
           </span>
         </label>
@@ -107,11 +107,11 @@ export function SimulatorContent() {
 
       <div className="grid grid-cols-2 gap-3 my-4">
         <div className="rounded-lg border border-white/10 p-3">
-          <div className="text-[10px] uppercase tracking-wider text-white/40" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>Tiempo estimado</div>
+          <div className="text-[10px] uppercase tracking-wider text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>Tiempo estimado</div>
           <div className="text-[22px] font-semibold tabular-nums mt-1" style={{ color: minutes <= 10 ? LANG.node.c2 : minutes <= 30 ? HR_ACCENT : "#f87171", fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>{fmtMin(minutes)}</div>
         </div>
         <div className="rounded-lg border border-white/10 p-3">
-          <div className="text-[10px] uppercase tracking-wider text-white/40" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{hr ? "Mejora" : "Speed-up"}</div>
+          <div className="text-[10px] uppercase tracking-wider text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{hr ? "Mejora" : "Speed-up"}</div>
           <div className="text-[22px] font-semibold tabular-nums mt-1 text-white/90" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
             {hr ? `−${Math.max(0, Math.round((1 - minutes / SIM_BASE_MIN) * 100))}%` : `×${(SIM_BASE_MIN / minutes).toFixed(1)}`}
           </div>
@@ -127,16 +127,18 @@ export function SimulatorContent() {
         <Play size={14} /> {run && !done ? (hr ? "Procesando…" : "Ejecutando…") : hr ? "Ejecutar proceso" : "Ejecutar batch"}
       </button>
 
+      {/* screen readers hear only the verdict: the progress below changes every frame and would flood them */}
+      <div className="sr-only" role="status" aria-live="polite">{verdict ? verdict.text : run ? (hr ? "Procesando…" : "Ejecutando…") : ""}</div>
       {run && (
-        <div className="mt-4" aria-live="polite">
-          <div className="space-y-1.5">
+        <div className="mt-4">
+          <div className="space-y-1.5" aria-hidden="true">
             {Array.from({ length: run.lanes }).map((_, i) => (
               <div key={i} className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
                 <div className="h-full rounded-full" style={{ width: `${Math.min(100, progress * (100 + i * 3))}%`, background: `linear-gradient(90deg, ${CORE}88, ${CORE})` }} />
               </div>
             ))}
           </div>
-          <div className="flex justify-between mt-1.5 text-[10.5px] text-white/40" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
+          <div aria-hidden="true" className="flex justify-between mt-1.5 text-[10.5px] text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
             <span>{run.lanes} {hr ? (run.lanes === 1 ? "trabajador" : "trabajadores") : run.lanes === 1 ? "hilo" : "hilos"}</span>
             <span>{fmtMin(run.minutes * progress)} / {fmtMin(run.minutes)}</span>
           </div>
@@ -148,8 +150,8 @@ export function SimulatorContent() {
         </div>
       )}
 
-      <p className="mt-4 text-[10.5px] text-white/35 leading-4">
-        Simulación ilustrativa inspirada en el caso real de IACC (de más de 1 hora a 5–10 minutos). Los valores son aproximados.
+      <p className="mt-4 text-[10.5px] text-white/60 leading-4">
+        Simulación ilustrativa inspirada en el caso real de la migración masiva de documentos a BUK (Push HR): de más de 1 hora a 5–10 minutos. Los valores son aproximados.
       </p>
     </div>
   );

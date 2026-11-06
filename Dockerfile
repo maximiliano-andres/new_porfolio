@@ -3,16 +3,13 @@
 #   web → Caddy: serves dist/ (precompressed .br/.gz, HTTP/2 + HTTP/3, automatic TLS) and proxies /api/*
 #   api → FastAPI on Granian (Rust HTTP server, uvloop), non-root, read-only filesystem
 # The frontend is compiled once (stage "frontend") and shared by both targets.
-
-ARG NODE_VERSION=24
-ARG PYTHON_VERSION=3.14
-ARG UV_VERSION=0.13.7
-# ≥ 2.11: 2.10.x answers precompressed files with "206 Partial Content" to requests without Range
-ARG CADDY_VERSION=2.11
+# Base images are pinned by tag AND digest (a re-pushed tag can't change the build); the full reference is written
+# in each FROM so Dependabot (.github/dependabot.yml) can bump tag + digest together. Versions: node 24, python 3.14,
+# uv 0.13.7, caddy ≥ 2.11 (2.10.x answers precompressed files with "206 Partial Content" to requests without Range).
 
 # ---------- 1. frontend: npm ci + full build (vite, SSR prerender, br/gz, CSP for Caddy) ----------
 # Same layout as the repository (/build/frontend, /build/config, /build/deploy): the build scripts run unchanged
-FROM node:${NODE_VERSION}-slim AS frontend
+FROM node:24-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS frontend
 WORKDIR /build/frontend
 ENV npm_config_update_notifier=false
 # dependencies first: this layer is reused while package*.json do not change
@@ -30,8 +27,8 @@ RUN npm run build
 # ---------- 2. python dependencies in an isolated venv ----------
 # uv (Rust) installs the exact, hash-verified versions from backend/requirements.lock: a tampered or re-published
 # wheel fails the build, and every build gets the same starlette/pydantic the tests ran against
-FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv
-FROM python:${PYTHON_VERSION}-slim AS api-deps
+FROM ghcr.io/astral-sh/uv:0.13.7@sha256:96f40d3904aad8d0bd010539001d36c8e2188b981e1334471a90c4a1d93bb490 AS uv
+FROM python:3.14-slim@sha256:af8a5aa14780025dbfbcfbc81bd8a91ebd87711dd5b0f48ed71090949dd7cb1d AS api-deps
 COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
 RUN uv venv /opt/venv --python /usr/local/bin/python3
@@ -40,7 +37,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install --python /opt/venv/bin/python --require-hashes -r requirements.lock
 
 # ---------- 3. api: runtime image ----------
-FROM python:${PYTHON_VERSION}-slim AS api
+FROM python:3.14-slim@sha256:af8a5aa14780025dbfbcfbc81bd8a91ebd87711dd5b0f48ed71090949dd7cb1d AS api
 ENV PATH=/opt/venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
@@ -69,8 +66,9 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 #   reach this port (no published ports) and Caddy overwrites X-Forwarded-For with the real peer address
 # - 1 worker on purpose: the contact rate limiter lives in process memory (N workers = N× the limit)
 # - granian never closes idle HTTP/1 keep-alive connections first, so Caddy's 2 min pool can't hit a closed one (502s)
-# - no access log (granian's default): Caddy is the edge and logs requests once.
-#   granian always sends "server: granian"; Caddy strips it (-Server in security-headers.caddy)
+# - no access log here (granian's default): Caddy is the edge and writes the only access log, as JSON lines on
+#   stdout (`log` in deploy/Caddyfile → docker compose logs web). granian always sends "server: granian"; Caddy strips
+#   it (-Server in security-headers.caddy)
 CMD ["granian", "--interface", "asgi", \
      "--host", "0.0.0.0", "--port", "8000", \
      "--workers", "1", "--loop", "uvloop", "--no-ws", \
@@ -78,7 +76,16 @@ CMD ["granian", "--interface", "asgi", \
      "app.main:asgi"]
 
 # ---------- 4. web: Caddy with the static build ----------
-FROM caddy:${CADDY_VERSION}-alpine AS web
+FROM caddy:2.11-alpine@sha256:ae5e525ca6773b0a4ce579c774cb39b3147e1576084139229517bdbcfe3ed812 AS web
+# non-root (fixed uid/gid 10002): /data (TLS certificates) and /config (autosaved config) are the only writable paths.
+# Ports 80/443 still bind: Docker sets net.ipv4.ip_unprivileged_port_start=0 in the container (docker-compose.yml also
+# sets it explicitly) and compose keeps NET_BIND_SERVICE for runtimes that don't.
+# Upgrading an existing deploy whose caddy-data volume was written as root: run once
+#   docker compose run --rm --user root --entrypoint chown web -R 10002:10002 /data /config
+RUN addgroup -S -g 10002 caddy \
+    && adduser -S -D -H -u 10002 -G caddy -s /sbin/nologin caddy \
+    && mkdir -p /data/caddy /config/caddy \
+    && chown -R caddy:caddy /data /config
 WORKDIR /srv
 # same Caddyfile as a bare-metal deploy; imports are resolved relative to the Caddyfile's directory
 COPY deploy/Caddyfile /etc/caddy/Caddyfile
@@ -87,5 +94,8 @@ COPY --from=frontend /build/frontend/dist /srv/dist
 ENV SITE_ROOT=/srv/dist
 RUN caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 EXPOSE 80 443 443/udp
+USER caddy
+# the site itself, not the admin API: an empty or broken dist/ turns the container unhealthy. Loopback-only listener
+# (deploy/Caddyfile, 127.0.0.1:2080) so the probe works whatever SITE_ADDRESS is (":80" locally, a domain with HTTPS)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD ["wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
+    CMD ["wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2080/robots.txt"]

@@ -1,5 +1,5 @@
 {
-  "_comment": "Single source of the HTTP security policy. Read by the backend at startup (backend/app/adapters/inbound/http/security.py); frontend/scripts/deploy-headers.mjs turns it into deploy/security-headers.caddy. The SHA-256 of the inline <head> script is appended to script-src at runtime/build.",
+  "_comment": "Single source of the HTTP security policy. Read by the backend at startup (backend/app/adapters/inbound/http/security.py); frontend/scripts/deploy-headers.mjs turns it into deploy/security-headers.caddy. The SHA-256 of the inline <head> script is appended to script-src at runtime/build. \"hsts\": Strict-Transport-Security, always sent by Caddy (browsers ignore it over plain HTTP) and by the backend only with ENABLE_HSTS=1. Gradual rollout: start at max-age=300; after a week of stable HTTPS raise it to max-age=31536000 (never add includeSubDomains/preload unless every subdomain is HTTPS), then rebuild (npm run build) so deploy/security-headers.caddy picks it up.",
   "csp": {
     "default-src": "'self'",
     "script-src": "'self'",
@@ -18,5 +18,6 @@
     "X-Frame-Options": "DENY",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
     "Cross-Origin-Opener-Policy": "same-origin"
-  }
+  },
+  "hsts": "max-age=300"
 }

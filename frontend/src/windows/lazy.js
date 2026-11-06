@@ -1,18 +1,19 @@
 /* Code-split window contents: each group is downloaded the first time one of its windows opens
    (or earlier, when its dock icon is hovered/focused or the browser is idle). */
-import { lazy } from "react";
-import { reloadOnce } from "../lib/reload.js";
+import { importWithRetry, lazyWithRetry } from "../lib/lazyWithRetry.js";
 
 const loaders = {
-  tech: () => import("./tech.jsx"),
-  hr: () => import("./hr.jsx"),
-  contact: () => import("./ContactContent.jsx"),
-  terminal: () => import("./TerminalContent.jsx"),
-  simulator: () => import("./SimulatorContent.jsx"),
-  badges: () => import("./BadgesContent.jsx"),
+  tech: () => importWithRetry(() => import("./tech.jsx")),
+  hr: () => importWithRetry(() => import("./hr.jsx")),
+  contact: () => importWithRetry(() => import("./ContactContent.jsx")),
+  terminal: () => importWithRetry(() => import("./TerminalContent.jsx")),
+  simulator: () => importWithRetry(() => import("./SimulatorContent.jsx")),
+  badges: () => importWithRetry(() => import("./BadgesContent.jsx")),
+  cv: () => importWithRetry(() => import("./CvContent.jsx")),
 };
 
-const pick = (chunk, name) => lazy(() => loaders[chunk]().then((m) => ({ default: m[name] })).catch((err) => { reloadOnce(); throw err; }));
+// a failed download is retried with backoff; "Reintentar" (SectionBoundary) can try again without a page reload
+const pick = (chunk, name) => lazyWithRetry(() => loaders[chunk]().then((m) => m[name]));
 
 export const AboutContent = pick("tech", "AboutContent");
 export const SkillsContent = pick("tech", "SkillsContent");
@@ -34,11 +35,12 @@ export const ContactContent = pick("contact", "ContactContent");
 export const TerminalContent = pick("terminal", "TerminalContent");
 export const SimulatorContent = pick("simulator", "SimulatorContent");
 export const BadgesContent = pick("badges", "BadgesContent");
+export const CvContent = pick("cv", "CvContent");
 
 const WINDOW_CHUNKS = {
   about: ["tech", "hr"], hr: ["hr"], skills: ["tech", "hr"], projects: ["tech", "hr"],
   experience: ["tech", "hr"], education: ["tech"], certifications: ["tech", "hr"],
-  contact: ["contact"], terminal: ["terminal"], simulator: ["simulator"], badges: ["badges"],
+  contact: ["contact"], terminal: ["terminal"], simulator: ["simulator"], badges: ["badges"], cv: ["cv"],
 };
 const requested = new Set();
 

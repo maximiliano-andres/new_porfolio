@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Users } from "lucide-react";
 import { useAudience, useSystem } from "../app/context.js";
+import { EXPERIENCE, TECH_GROUPS } from "../data/content.js";
 import { norm } from "../lib/env.js";
 import { HR_ACCENT, LANG } from "../styles/theme.js";
 
@@ -10,12 +11,12 @@ const TERMINAL_OPEN_ALIASES = {
   proyectos: "projects", projects: "projects", logros: "projects", experiencia: "experience", experience: "experience",
   trayectoria: "experience", educacion: "education", education: "education", certificaciones: "certifications",
   certs: "certifications", contacto: "contact", contact: "contact", insignias: "badges", badges: "badges",
-  simulador: "simulator", simulator: "simulator",
+  simulador: "simulator", simulator: "simulator", cv: "cv", curriculum: "cv",
 };
 
 const TERMINAL_COMMANDS = [
   "help", "about", "skills", "experience", "neofetch", "clear", "notify", "ls", "open ", "ti", "rrhh",
-  "tour", "recorrido", "simular", "sound on", "sound off", "whoami", "date", "exit",
+  "tour", "recorrido", "simular", "cv", "sound on", "sound off", "whoami", "date", "exit",
 ];
 
 const TERMINAL_SUGGESTIONS = {
@@ -23,9 +24,42 @@ const TERMINAL_SUGGESTIONS = {
   rrhh: ["help", "about", "open rrhh", "recorrido", "simular"],
 };
 
-// the log is bounded so a long session can't grow memory (or render cost) without limit
+// the log is bounded so a long session can't grow memory (or render cost) without limit;
+// every line gets a stable id, so trimming the head doesn't re-render the 300 remaining nodes
 const MAX_LINES = 300;
-const capped = (lines) => (lines.length > MAX_LINES ? lines.slice(-MAX_LINES) : lines);
+const MAX_CMD_HISTORY = 100;
+let lineSeq = 0;
+const withIds = (lines) => lines.map((l) => (l.id ? l : { ...l, id: ++lineSeq }));
+const capped = (lines) => {
+  const next = withIds(lines);
+  return next.length > MAX_LINES ? next.slice(-MAX_LINES) : next;
+};
+// own keys only: `open constructor` must not resolve to Object.prototype members
+const aliasFor = (name) => (Object.hasOwn(TERMINAL_OPEN_ALIASES, name) ? TERMINAL_OPEN_ALIASES[name] : null);
+
+/* about / skills / experience come from data/content.js: the terminal never repeats the CV by hand */
+const ABOUT_LINES = () => {
+  const langs = TECH_GROUPS.find((g) => g.id === "lang")?.items ?? [];
+  const frameworks = TECH_GROUPS.find((g) => g.id === "backend")?.items ?? [];
+  return [
+    { text: "PERFIL PROFESIONAL:", type: "accent" },
+    { text: `${EXPERIENCE[0]?.role ?? "Backend Developer"} · ${EXPERIENCE.map((e) => e.company).join(" · ")}`, type: "info" },
+    { text: `Lenguajes: ${langs.join(", ")}. Frameworks y arquitectura: ${frameworks.join(", ")}.`, type: "info" },
+    { text: "Especialidad: optimización de rendimiento (tiempos de respuesta, CPU y memoria).", type: "info" },
+    { text: "Escribe 'experience' para ver resultados medidos o 'open about' para el perfil completo.", type: "info" },
+  ];
+};
+const SKILLS_LINES = () => [
+  { text: "TECNOLOGÍAS PRINCIPALES:", type: "accent" },
+  ...TECH_GROUPS.map((g) => ({ text: `  - ${g.label}: ${g.items.join(", ")}`, type: "info" })),
+];
+const EXPERIENCE_LINES = () => [
+  { text: "TRAYECTORIA LABORAL:", type: "accent" },
+  ...EXPERIENCE.flatMap((e) => [
+    { text: `  - ${e.role} · ${e.company} [${e.period}]`, type: "info" },
+    ...e.bullets.slice(0, 2).map((b) => ({ text: `    * ${b}`, type: "info" })),
+  ]),
+];
 
 export function TerminalContent({ onTriggerNotification, onOpenHR }) {
   const { audience, setAudience } = useAudience();
@@ -40,11 +74,11 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
     })) : []),
     [matrix]
   );
-  const [history, setHistory] = useState([
+  const [history, setHistory] = useState(() => withIds([
     { text: "Max OS [Version 1.0.0]", type: "info" },
     { text: "Escribe 'help' para ver los comandos disponibles.", type: "info" },
     { text: "", type: "info" },
-  ]);
+  ]));
   const [inputVal, setInputVal] = useState("");
   const [cmdHistory, setCmdHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -69,6 +103,9 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
     timers.current.add(t);
   };
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  // the matrix rain has its own timer: running it again restarts the 2.6 s instead of ending early
+  const matrixTimer = useRef(0);
+  useEffect(() => () => clearTimeout(matrixTimer.current), []);
 
   // commands that reach the rest of the app (windows, tours, audience) and the easter eggs
   const extraCommand = (cmd, arg) => {
@@ -76,7 +113,7 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
     switch (cmd) {
       case "open":
       case "abrir": {
-        const id = TERMINAL_OPEN_ALIASES[arg.split(" ")[0]];
+        const id = aliasFor(arg.split(" ")[0]);
         if (!id) return [{ text: "Uso: open <sección> · ej: open proyectos, open rrhh, open contacto (escribe 'ls' para verlas)", type: "error" }];
         sys.openWindow(id);
         return [{ text: `Abriendo ${arg}…`, type: "info" }];
@@ -84,7 +121,7 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
       case "ls":
         return [
           { text: "about/  rrhh/  skills/  proyectos/  experiencia/  educacion/", type: "accent" },
-          { text: "certificaciones/  contacto/  simulador/  insignias/", type: "accent" },
+          { text: "certificaciones/  contacto/  simulador/  insignias/  cv/", type: "accent" },
           { text: "Tip: 'open <nombre>' abre cualquiera.", type: "info" },
         ];
       case "ti":
@@ -97,6 +134,10 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
       case "recorrido":
         sys.startAutoTour();
         return [{ text: "Iniciando recorrido de 60 segundos…", type: "info" }];
+      case "cv":
+      case "curriculum":
+        sys.openWindow("cv");
+        return [{ text: "Abriendo el CV (también puedes descargarlo en PDF)…", type: "info" }];
       case "simular":
       case "simulate":
         sys.openWindow("simulator");
@@ -126,17 +167,18 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
         return [{ text: "sudo: permiso concedido solo para 'sudo contratar' 😉", type: "error" }];
       case "matrix":
         setMatrix(true);
-        later(() => setMatrix(false), 2600);
+        clearTimeout(matrixTimer.current);
+        matrixTimer.current = setTimeout(() => setMatrix(false), 2600);
         return egg([{ text: "Wake up, Neo…", type: "accent" }]);
       case "coffee":
       case "cafe":
         return egg([
-          { text: "    ( (", type: "accent" },
-          { text: "     ) )", type: "accent" },
-          { text: "  ........", type: "accent" },
-          { text: "  |      |]", type: "accent" },
-          { text: "  \\      /", type: "accent" },
-          { text: "   `----'", type: "accent" },
+          { text: "    ( (", type: "accent", art: true },
+          { text: "     ) )", type: "accent", art: true },
+          { text: "  ........", type: "accent", art: true },
+          { text: "  |      |]", type: "accent", art: true },
+          { text: "  \\      /", type: "accent", art: true },
+          { text: "   `----'", type: "accent", art: true },
           { text: "Café listo en 0.3 s — hasta el café está optimizado.", type: "info" },
         ]);
       case "rm":
@@ -158,7 +200,7 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
     const newHistory = [...history, { text: `mc-portfolio$ ${inputVal}`, type: "command" }];
 
     if (inputVal.trim()) {
-      setCmdHistory((prev) => [...prev, inputVal.trim()]);
+      setCmdHistory((prev) => [...prev, inputVal.trim()].slice(-MAX_CMD_HISTORY));
     }
     setHistoryIndex(-1);
 
@@ -180,7 +222,8 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
     }
 
     let reply = [];
-    switch (cmdClean) {
+    // switch on the normalized command: arguments ("skills --all") or accents don't break it
+    switch (cmd) {
       case "help":
         reply = [
           { text: "Comandos disponibles:", type: "info" },
@@ -190,6 +233,7 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
           { text: "  recorrido   - Recorrido automático de 60 segundos", type: "info" },
           { text: "  simular     - Abre el simulador de optimización", type: "info" },
           { text: "  sound on|off - Activa o desactiva los sonidos", type: "info" },
+          { text: "  cv          - Abre mi CV (ver y descargar en PDF)", type: "info" },
           { text: "  whoami / date / exit", type: "info" },
           { text: "  neofetch    - Muestra info del sistema en estilo ASCII", type: "info" },
           { text: "  about       - Muestra el perfil profesional", type: "info" },
@@ -213,48 +257,30 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
         return;
       case "neofetch":
         reply = [
-          { text: "      ███╗   ███╗ ██████╗", type: "accent" },
-          { text: "      ████╗ ████║██╔════╝", type: "accent" },
-          { text: "      ██╔████╔██║██║     ", type: "accent" },
-          { text: "      ██║╚██╔╝██║██║     ", type: "accent" },
-          { text: "      ██║ ╚═╝ ██║╚██████╗", type: "accent" },
-          { text: "      ╚═╝     ╚═╝ ╚══════╝", type: "accent" },
+          { text: "      ███╗   ███╗ ██████╗", type: "accent", art: true },
+          { text: "      ████╗ ████║██╔════╝", type: "accent", art: true },
+          { text: "      ██╔████╔██║██║     ", type: "accent", art: true },
+          { text: "      ██║╚██╔╝██║██║     ", type: "accent", art: true },
+          { text: "      ██║ ╚═╝ ██║╚██████╗", type: "accent", art: true },
+          { text: "      ╚═╝     ╚═╝ ╚══════╝", type: "accent", art: true },
           { text: "--------------------------", type: "info" },
           { text: "OS: Maximiliano Portfolio OS v1.0", type: "info" },
           { text: "Host: MacBook Air M5", type: "info" },
           { text: "Kernel: React / FastAPI Hybrid", type: "info" },
-          { text: "Uptime: 2 years (Experience)", type: "info" },
+          { text: "Uptime: 2+ years (Experience)", type: "info" },
           { text: "Shell: zsh (optimización-mode)", type: "info" },
           { text: "CPU: High Performance Backend Dev", type: "info" },
           { text: "Primary Stacks: Java, Python, Node.js", type: "info" },
         ];
         break;
       case "about":
-        reply = [
-          { text: "PERFIL PROFESIONAL:", type: "accent" },
-          { text: "Backend Developer enfocado en crear sistemas rápidos, eficientes y preparados para soportar miles de usuarios en simultáneo.", type: "info" },
-          { text: "Especialidad en optimización de CPU y memoria, reducción de costos en la nube y alta escalabilidad.", type: "info" },
-        ];
+        reply = ABOUT_LINES();
         break;
       case "skills":
-        reply = [
-          { text: "TECNOLOGÍAS PRINCIPALES:", type: "accent" },
-          { text: "  - Java / Spring Boot / GraalVM", type: "info" },
-          { text: "  - Python / FastAPI / Django", type: "info" },
-          { text: "  - Node.js / Express / NestJS", type: "info" },
-          { text: "  - Databases: PostgreSQL, MySQL, MongoDB", type: "info" },
-          { text: "  - Cloud & DevOps: AWS, Docker", type: "info" },
-        ];
+        reply = SKILLS_LINES();
         break;
       case "experience":
-        reply = [
-          { text: "TRAYECTORIA LABORAL:", type: "accent" },
-          { text: "  - Proyectos Independientes (PUMA, GyG, IACC) [2024 - Presente]", type: "info" },
-          { text: "    * Optimización crítica de 1 hora a 5-10 min en IACC (83% mejora).", type: "info" },
-          { text: "    * Tiempos de respuesta de 4s a milisegundos en PUMA.", type: "info" },
-          { text: "    * Más de 20% de mejora en consultas DB en GyG.", type: "info" },
-          { text: "  - Backend Engineer (Desarrollo y Optimización) [2022 - 2024]", type: "info" },
-        ];
+        reply = EXPERIENCE_LINES();
         break;
       default:
         reply = [{ text: `Comando no reconocido: '${cmdClean}'. Escribe 'help' para ver opciones.`, type: "error" }];
@@ -272,9 +298,10 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
     if (e.key === "Tab") {
       const typed = norm(inputVal);
       if (!typed || e.shiftKey) return; // empty input or Shift+Tab: normal focus navigation
-      e.preventDefault();
       const pool = [...TERMINAL_COMMANDS, ...Object.keys(TERMINAL_OPEN_ALIASES).map((k) => `open ${k}`)];
       const hits = [...new Set(pool.filter((c) => c.startsWith(typed) && c !== typed))];
+      if (!hits.length) return; // nothing to complete: Tab moves the focus as usual
+      e.preventDefault();
       if (hits.length === 1) setInputVal(hits[0]);
       else if (hits.length > 1) setHistory((h) => capped([...h, { text: hits.join("   "), type: "info" }]));
       return;
@@ -319,14 +346,17 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
       className="relative w-full flex-1 min-h-[240px] flex flex-col font-mono text-[11px] sm:text-[12px] bg-black/90 p-2.5 rounded-md overflow-hidden border"
       style={{ color: LANG.node.c2, borderColor: `${LANG.node.c1}33` }}
       onClick={() => {
+        // selecting text to copy it must not jump to the end or move the focus
+        if (window.getSelection?.()?.toString()) return;
         scrollToEnd();
         inputRef.current?.focus();
       }}
     >
-      <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto pr-1 select-text space-y-1" style={{ scrollbarWidth: "thin" }}>
-        {history.map((line, idx) => (
+      <div ref={scrollRef} role="log" aria-live="polite" aria-label="Salida de la terminal" className="flex-1 min-h-0 overflow-y-auto pr-1 select-text space-y-1" style={{ scrollbarWidth: "thin" }}>
+        {history.map((line) => (
           <div
-            key={idx}
+            key={line.id}
+            aria-hidden={line.art || undefined}
             className={`whitespace-pre-wrap break-words ${line.type === "command"
                 ? "text-white"
                 : line.type === "accent"
@@ -361,7 +391,7 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
             key={c}
             type="button"
             onClick={(e) => { e.stopPropagation(); runCommand(c); }}
-            className="rounded-sm border px-1.5 py-1 text-[10.5px] text-white/60 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
+            className="rounded-sm border px-1.5 py-1 text-[10.5px] text-white/70 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
             style={{ borderColor: `${LANG.node.c1}44` }}
           >
             {c}

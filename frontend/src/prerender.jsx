@@ -54,7 +54,9 @@ export function shellVars(width, height) {
 }
 
 /* inline <head> script: picks the audience, flags first visits, and sizes the shell using the very
-   same layout functions (their source is embedded, so the formulas can't drift apart) */
+   same layout functions (their source is embedded, so the formulas can't drift apart).
+   Its resize listener removes itself once the app has mounted (the app sets data-app on <html>).
+   Changing this script changes its CSP hash: deploy dist/ together with deploy/security-headers.caddy. */
 export function shellScript() {
   const fns = [uiScaleFor, isCompactViewport, dockSpaceFor, deskArea].map((f) => f.toString()).join("\n");
   return `(function(){var d=document.documentElement;
@@ -63,7 +65,7 @@ try{var s=window.localStorage;d.dataset.audience=q==="rrhh"||q==="ti"?q:(s.getIt
 if(!s.getItem("boot_seen"))d.dataset.boot="1";}catch(e){d.dataset.audience=q==="rrhh"?"rrhh":"ti";d.dataset.boot="1";}
 var TILE_GAP=12;
 ${fns}
-function apply(){var size={width:innerWidth,height:innerHeight};var c=isCompactViewport(size);var k=c?1:uiScaleFor(size);var a=deskArea(size,c,k,0);
+function apply(){if(d.dataset.app){removeEventListener("resize",apply);return;}var size={width:innerWidth,height:innerHeight};var c=isCompactViewport(size);var k=c?1:uiScaleFor(size);var a=deskArea(size,c,k,0);
 d.style.setProperty("--ui-scale",String(k));d.style.setProperty("--hero-pt",(a.y+8)+"px");d.style.setProperty("--hero-pb",(size.height-a.y-a.h+8)+"px");}
 apply();addEventListener("resize",apply);})();`;
 }

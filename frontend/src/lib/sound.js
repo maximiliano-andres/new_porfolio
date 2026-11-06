@@ -14,8 +14,12 @@ export const sound = (() => {
   };
   const play = (name) => {
     if (!enabled) return;
+    // before any user gesture an AudioContext is born "suspended" and would stay mute all session:
+    // wait for the first interaction (a returning visitor's toast at 3 s comes before it)
+    if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return;
     try {
       ctx ??= new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
       let t = ctx.currentTime;
       for (const [freq, dur] of TONES[name] || []) {
         const osc = ctx.createOscillator();

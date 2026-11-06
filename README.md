@@ -58,6 +58,10 @@ El visitante abre ventanas, usa una terminal, prueba un simulador y gana insigni
     <td><img src="docs/screenshots/05-paleta-comandos.png" alt="Paleta de comandos" /><br/><b>Paleta de comandos</b>: búsqueda rápida con <kbd>Ctrl</kbd> + <kbd>K</kbd>.</td>
     <td><img src="docs/screenshots/06-contacto.png" alt="Formulario de contacto" /><br/><b>Contacto</b>: formulario con validación y protección anti-spam.</td>
   </tr>
+  <tr>
+    <td><img src="docs/screenshots/07-skills.png" alt="Gráfico de Skills" /><br/><b>Skills</b>: en cuántos proyectos del histórico se usó cada tecnología.</td>
+    <td></td>
+  </tr>
 </table>
 
 <sub>Capturas generadas con Playwright sobre el build de producción (1440×900). El formulario de contacto tiene datos ficticios y no se envió.</sub>
@@ -77,20 +81,22 @@ El visitante abre ventanas, usa una terminal, prueba un simulador y gana insigni
 | 🧭 | **Tour por la interfaz** | Recibir una guía de 5 pasos la primera vez que se entra al sitio. |
 | ⚡ | **Simulador** | Probar cómo un proceso de unos 62 minutos baja de tiempo al ajustar hilos, caché e índices. Es un modelo ilustrativo inspirado en un caso real. |
 | 🏆 | **Insignias y progreso** | Ver qué secciones faltan por revisar. Hay 13 insignias, como «Reclutador» o «Explorador». |
-| ✉️ | **Contacto** | Enviar un mensaje al autor sin salir del sitio y recibir confirmación inmediata. |
+| 📄 | **Mi CV** | Ver el CV completo (2 páginas) en cualquier navegador o celular, descargarlo en PDF o abrirlo en otra pestaña. Se abre desde **Ver CV** en la portada, la ficha RRHH, `Ctrl/⌘ + K` o el comando `cv` de la terminal. |
+| ✉️ | **Contacto** | Enviar un mensaje al autor sin salir del sitio y recibir confirmación inmediata. Bajo el botón se informa para qué se usan los datos y cuánto tiempo se guardan. |
 
 ### Para el perfil técnico
 
 | | Funcionalidad | Detalle técnico |
 |---|---|---|
+| 📈 | **Skills basado en evidencia** | En lugar de porcentajes autoevaluados, un gráfico cuenta en cuántos proyectos del histórico (2023–2026) se usó cada tecnología. Los conteos se calculan desde `PROJECT_HISTORY`, y se navega con flechas (radiogroup accesible). |
 | 🪟 | **Gestor de ventanas** | Ventanas arrastrables, minimizables y maximizables, con orden z, motor de layout responsivo y atajos `1`–`9` y `Esc`. |
 | ⌨️ | **Paleta de comandos y terminal** | Búsqueda sin distinguir acentos (`Ctrl/⌘ + K`) y una terminal con `help`, `ls`, `open <sección>`, `neofetch` y otros comandos. |
 | 🧩 | **Code-splitting por ventana** | Cada grupo de ventanas es un chunk `lazy()` que se precarga al pasar el cursor por el dock o cuando el navegador queda inactivo. |
 | 🚀 | **Portada pre-renderizada** | El build hace SSR de la portada dentro de `index.html` y verifica el layout en 18 viewports, así que el primer pintado no espera a JavaScript. |
-| 📦 | **Assets precomprimidos** | Archivos Brotli (calidad 11) y gzip (nivel 9) generados en el build: 526 KB → 137 KB en Brotli. FastAPI y Caddy los sirven según `Accept-Encoding`. |
-| 📴 | **Service Worker** | Usa cache-first para assets con hash, fuentes e imágenes, y network-first para las páginas. Funciona sin conexión y no intercepta nunca `/api/*`. |
+| 📦 | **Assets precomprimidos** | Archivos Brotli (calidad 11) y gzip (nivel 9) generados en el build (≈560 KB → ≈150 KB en Brotli); no se escribe la variante si no es más chica que el original. FastAPI y Caddy los sirven según `Accept-Encoding`. |
+| 📴 | **Service Worker** | Usa cache-first para assets con hash, fuentes e imágenes, y network-first (con timeout de 3 s y navigation preload) para las páginas. Solo guarda la portada HTML: abrir el PDF del CV nunca reemplaza la copia offline. El build estampa un hash en `sw.js`, así que cada deploy renueva las cachés. No intercepta `/api/*`. |
 | 🏛️ | **API hexagonal** | Dominio y casos de uso en Python puro. Los adaptadores HTTP, de archivo JSONL y de rate limiter implementan puertos `Protocol`. |
-| 🩺 | **Readiness probe** | `GET /api/status` devuelve `503` si no se puede escribir el archivo de mensajes o si falta el build en producción. Lo usan los healthchecks de Docker. |
+| 🩺 | **Readiness probe** | `GET /api/status` devuelve `503` si no se puede escribir el archivo de mensajes, si queda poco disco (`MIN_FREE_DISK_MB`) o si falta el build en producción. Lo usan los healthchecks de Docker. |
 
 ---
 
@@ -115,7 +121,7 @@ El visitante abre ventanas, usa una terminal, prueba un simulador y gana insigni
 - **Seguridad aplicada**: CSP sin `'unsafe-inline'` en scripts, con el hash SHA-256 del script de la portada. El rate limit por IP resiste cabeceras `X-Forwarded-For` falsificadas, y el cuerpo de las peticiones se limita antes de leerlo.
 - **Rendimiento**: middleware ASGI puro en lugar de `BaseHTTPMiddleware`, assets precomprimidos con ETag y `304`, portada pre-renderizada y chunks por ventana.
 - **UX y accesibilidad**: navegación completa por teclado, focus trap en los diálogos, `aria-*` en los controles, respeto de `prefers-reduced-motion` y textos de error que indican qué hacer.
-- **Ingeniería de software**: 89 pruebas, lint con cero advertencias, lockfiles verificados en CI, comprobación de que la CSP generada coincide con la versión en el repositorio y smoke test del stack Docker completo.
+- **Ingeniería de software**: 137 pruebas, lint con cero advertencias, lockfiles verificados en CI, comprobación de que la CSP generada coincide con la versión en el repositorio y smoke test del stack Docker completo.
 
 ---
 
@@ -320,7 +326,14 @@ Ninguna variable es obligatoria: sin `.env`, el stack arranca en `http://localho
 | `SITE_ADDRESS` | — | Dirección que atiende Caddy. Con un dominio (`tudominio.cl`), Caddy obtiene HTTPS automáticamente. | `:80` |
 | `HTTP_PORT` | — | Puerto HTTP del host. Cámbialo si el 80 está ocupado. | `80` |
 | `HTTPS_PORT` | — | Puerto HTTPS del host (TCP y UDP para HTTP/3). | `443` |
-| `ENABLE_HSTS` | — | `1` si el sitio se sirve solo por HTTPS. | `0` |
+| `ENABLE_HSTS` | — | `1` si el sitio se sirve solo por HTTPS. Caddy ya envía HSTS con `max-age=300` (ver `config/security-headers.json`); súbelo cuando HTTPS sea estable. | `0` |
+| `CONTACT_RATE_LIMIT` / `CONTACT_RATE_WINDOW_S` | — | Mensajes por cliente y ventana en segundos. | `5` / `600` |
+| `CONTACT_IPV6_PREFIX` | — | Las IPv6 comparten cupo por prefijo, para que rotar direcciones no evada el límite. | `64` |
+| `CONTACT_GLOBAL_LIMIT` | — | Tope de mensajes por hora entre todos los visitantes (`429` al superarlo). | `100` |
+| `CONTACT_LOG_MAX_MB` | — | Tamaño máximo del archivo de mensajes (`503` al superarlo). | `50` |
+| `CONTACT_RETENTION_DAYS` | — | Los mensajes más antiguos se borran solos (al arrancar y una vez al día). `0` lo desactiva. | `365` |
+| `CONTACT_NOTIFY_WEBHOOK` | — | URL `https` que recibe un aviso (sin datos personales) por cada mensaje nuevo. Vacío = desactivado. | vacío |
+| `MIN_FREE_DISK_MB` | — | Espacio libre mínimo para que `/api/status` responda `ok`. | `100` |
 
 <details>
 <summary><b>Variables del backend</b> (ejecución sin Docker; la imagen ya trae valores para contenedores)</summary>
@@ -402,7 +415,8 @@ Abre **http://localhost:8000**: FastAPI sirve la API y el build compilado. Si qu
 - **No hay usuarios ni contraseñas.** El sitio es público y no tiene login, roles, recuperación de contraseña ni MFA. Por lo mismo, no hay credenciales que configurar ni que cambiar.
 - **Quién ve los mensajes:** solo quien tiene acceso al servidor. El archivo se crea con permisos `0600` (solo lo lee el usuario del proceso), y en Docker vive en el volumen `contact-data`, que sobrevive a reconstrucciones.
 - **Si falta configuración:** la API arranca con valores seguros (escucha solo en `127.0.0.1`, sin `/docs` y sin CORS externo). Si en producción falta el build del frontend, la portada responde `503` con un mensaje que indica ejecutar `npm run build`, y `/api/status` informa `degraded`.
-- **Límites de seguridad:** 5 mensajes cada 10 minutos por IP y cuerpo máximo de 16 KB. El contador vive en memoria, por eso la API corre con **1 worker**.
+- **Límites de seguridad:** 5 mensajes cada 10 minutos por IP (las IPv6 agrupadas por /64), 100 mensajes por hora en total, archivo de mensajes de 50 MB como máximo y cuerpo de 16 KB. El contador vive en memoria, por eso la API corre con **1 worker**.
+- **Retención:** los mensajes se borran a los 12 meses (`CONTACT_RETENTION_DAYS`).
 
 ---
 
@@ -412,9 +426,9 @@ Abre **http://localhost:8000**: FastAPI sirve la API y el build compilado. Si qu
 
 **Paso 2 · Seguir el tour.** Un tour de 5 pasos muestra las partes del escritorio. Avanza con **Siguiente**, vuelve con **Atrás**, cierra con **Saltar tour** o termina con **¡Listo!**. Para repetirlo, pulsa la tecla `?`.
 
-**Paso 3 · Explorar las secciones.** Cada ícono del dock inferior abre una ventana: **Sobre mí**, **Para RRHH**, **Skills**, **Proyectos**, **Experiencia**, **Educación**, **Certificaciones**, **Contacto** y **Terminal.exe**. También puedes usar las teclas `1` a `9`. Las ventanas se arrastran, se minimizan, se maximizan y se cierran con los botones de su barra o con `Esc`.
+**Paso 3 · Explorar las secciones.** Cada ícono del dock inferior abre una ventana: **Sobre mí**, **Para RRHH**, **Skills**, **Proyectos**, **Experiencia**, **Educación**, **Certificaciones**, **Contacto** y **Terminal.exe**. También puedes usar las teclas `1` a `9` (se pueden desactivar desde `Ctrl` + `K` → «Desactivar atajos de una tecla»). El CV, el simulador y las insignias se abren desde el núcleo **CORE**, la paleta o la terminal. Las ventanas se arrastran, se minimizan, se maximizan y se cierran con los botones de su barra o con `Esc`.
 
-**Paso 4 · Ver el resumen rápido.** En la portada, pulsa **Recorrido de 60 s** para un resumen automático. Con **Ficha para RRHH** (perfil RRHH) o **Ver proyectos** (perfil TI) vas directo a lo principal.
+**Paso 4 · Ver el resumen rápido.** En la portada, pulsa **Recorrido de 60 s** para un resumen automático. Con **Ficha para RRHH** (perfil RRHH) o **Ver proyectos** (perfil TI) vas directo a lo principal, y con **Ver CV** abres el currículum para leerlo o descargarlo.
 
 **Paso 5 · Buscar.** Pulsa el ícono de lupa o `Ctrl` + `K` y escribe, por ejemplo, «contacto», «logros» o «simulador». Usa las flechas para elegir y `Enter` para abrir.
 
@@ -445,16 +459,17 @@ Abre **http://localhost:8000**: FastAPI sirve la API y el build compilado. Si qu
 |---|---|
 | Inyección de scripts (XSS) | CSP con `script-src 'self'` más el hash SHA-256 del único script en línea, nunca `'unsafe-inline'` para scripts. `object-src 'none'` y `base-uri 'self'`. Los estilos sí permiten `'unsafe-inline'` porque Framer Motion anima atributos `style`. |
 | Clickjacking | `X-Frame-Options: DENY` y `frame-ancestors 'none'`. |
-| Spam y bots | Campo honeypot invisible (`website`): si se completa, se responde `200` pero no se guarda nada. Además, límite de 5 envíos cada 10 minutos por IP con `429` y `Retry-After`. |
+| Spam y bots | Campo honeypot invisible (`website`): si se completa, se responde `200` pero no se guarda nada. Además, límite de 5 envíos cada 10 minutos por IP (IPv6 agrupada por /64), cupo global de 100 por hora con `429` y `Retry-After`, y tope de 50 MB para el archivo de mensajes. |
 | Evadir el límite falsificando la IP | La IP se toma del último salto no confiable de `X-Forwarded-For`, y Caddy sobrescribe esa cabecera. Una cabecera de CDN solo se acepta si se configura explícitamente. |
 | Cuerpos enormes (agotar memoria) | Sin `Content-Length` se responde `411`, y sobre 16 KB se responde `413`, antes de leer el cuerpo. |
 | Texto engañoso o corrupto | Se eliminan los caracteres de control y de dirección bidi. El emoji y los saltos de línea se conservan. |
 | Exposición de datos personales | El archivo se crea con permisos `0600`, el log nunca incluye el contenido del mensaje y la API responde con `Cache-Control: no-store`. |
 | Superficie expuesta | `/docs` y `/openapi.json` solo existen en desarrollo. CORS se limita al origen de Vite en desarrollo. Cualquier `/api/*` desconocido devuelve JSON `404`/`405`. Caddy quita la cabecera `Server`. |
 | Lectura de archivos fuera del build | Las rutas se resuelven con `resolve()` + `is_relative_to`, y solo se sirven extensiones permitidas. Caddy responde `404` a `*.md`, `*.br` y `*.gz`. |
-| Contenedor comprometido | La API corre como usuario sin privilegios (uid 10001), sin puertos publicados al host. Ambos contenedores usan sistema de archivos de solo lectura, `cap_drop: ALL`, `no-new-privileges` y límites de 1 CPU y 256 MB. |
+| Contenedor comprometido | La API (uid 10001) y Caddy (uid 10002) corren como usuarios sin privilegios; la API no publica puertos al host. Ambos contenedores usan sistema de archivos de solo lectura, `cap_drop: ALL`, `no-new-privileges` y límites de 1 CPU y 256 MB. |
 | Dependencias alteradas | Python se instala con `--require-hashes`. El CI ejecuta `pip-audit` y `npm audit`, y verifica que los lockfiles estén al día. |
-| Navegación sin cifrar | HSTS opcional (`ENABLE_HSTS=1`) y HTTPS automático de Caddy al configurar un dominio. |
+| Navegación sin cifrar | Caddy envía HSTS con arranque gradual (`max-age=300`) y obtiene HTTPS automático al configurar un dominio. |
+| Datos personales en mensajes | Aviso de uso bajo el formulario, borrado automático a los 12 meses y avisos por webhook sin datos personales. |
 
 ---
 
@@ -462,7 +477,7 @@ Abre **http://localhost:8000**: FastAPI sirve la API y el build compilado. Si qu
 
 ```bash
 # backend/
-python -m pytest     # 89 pruebas: 31 unitarias + 58 de integración HTTP
+python -m pytest     # 137 pruebas: 62 unitarias + 75 de integración HTTP
 ruff check .         # lint de Python (incluye reglas de seguridad tipo bandit)
 
 # frontend/
@@ -470,9 +485,9 @@ npm run lint         # oxlint con cero advertencias permitidas
 npm run build        # bundle + pre-render (verifica 18 viewports) + Brotli/gzip + CSP
 ```
 
-Las pruebas cubren las reglas del dominio (limpieza de texto y validación de email), los casos de uso con dobles de prueba, el rate limiter, el honeypot, los intentos de falsificar la IP, las cabeceras de seguridad, la CSP con hash, la entrega de archivos precomprimidos, ETag y `304`, el path traversal y los `404` honestos.
+Las pruebas cubren las reglas del dominio (limpieza de texto y validación de email), los casos de uso con dobles de prueba, el rate limiter (incluida la rotación de IPv6 y el cupo global), el honeypot, los intentos de falsificar la IP, la retención y el webhook de avisos, las cabeceras de seguridad, la CSP con hash, la entrega de archivos precomprimidos, ETag y `304`, el path traversal y los `404` honestos.
 
-El CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) ejecuta todo esto en Linux, macOS y Windows en cada push a `main` y en cada pull request. Después construye el stack Docker y hace un smoke test a través de Caddy.
+El CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) ejecuta todo esto en Linux, macOS y Windows en cada push a `main` y en cada pull request, con las Actions y las imágenes base fijadas por SHA y digest. Audita ambos lockfiles de Python. Después construye el stack Docker y hace un smoke test a través de Caddy (incluye el PDF del CV, HSTS, logs de acceso y que Caddy no corra como root). Dependabot propone actualizaciones semanales.
 
 ---
 

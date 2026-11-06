@@ -13,3 +13,7 @@ class RateLimitExceeded(DomainError):
 
 class ContactStorageError(DomainError):
     """The message could not be persisted (disk full, read-only volume, permissions…)."""
+
+
+class ContactStorageFull(ContactStorageError):
+    """The contact log reached its size cap (CONTACT_LOG_MAX_MB): refuse new messages instead of filling the disk."""

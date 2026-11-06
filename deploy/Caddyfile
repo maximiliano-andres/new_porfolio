@@ -5,16 +5,32 @@
 #   3. SITE_ADDRESS=tudominio.cl caddy run --config deploy/Caddyfile   (run from the project root)
 # Behind Cloudflare or another CDN the same rules apply; the CDN caches /assets/* for a year.
 # SITE_ROOT: the compiled frontend (Docker sets /srv/dist).
+# Security headers (CSP, nosniff, HSTS…) come from security-headers.caddy, generated from config/security-headers.json.
+# HSTS starts at max-age=300 (gradual): raise "hsts" there to max-age=31536000 after a week of stable HTTPS.
 
 {$SITE_ADDRESS::8080} {
 	root * {$SITE_ROOT:frontend/dist}
 	import security-headers.caddy
 
+	# access log: one JSON line per request on stdout (docker compose logs web; rotated by the json-file driver).
+	# Caddy redacts Cookie/Authorization by default; client IPs are personal data — keep log retention short.
+	log {
+		output stdout
+		format json
+	}
+
 	# API → FastAPI (rate limits, validation and contact storage live there); "/api" too, so it never gets the SPA
 	@api path /api /api/*
 	handle @api {
 		encode zstd gzip
-		reverse_proxy {$API_UPSTREAM:127.0.0.1:8000}
+		reverse_proxy {$API_UPSTREAM:127.0.0.1:8000} {
+			# BE-3: Caddy is the edge, so a client-sent CF-Connecting-IP is fake by definition — strip it, so the
+			# backend can never trust it even if CLIENT_IP_HEADER=cf-connecting-ip is set by mistake.
+			# Behind Cloudflare: delete this line, add `trusted_proxies cloudflare` (caddy-cloudflare-ip module) or the
+			# Cloudflare ranges to the global `servers` options, firewall the origin to Cloudflare only, and set
+			# CLIENT_IP_HEADER=cf-connecting-ip in the backend.
+			header_up -Cf-Connecting-Ip
+		}
 	}
 
 	# never publish stray docs or the precompressed files directly.
@@ -25,17 +41,20 @@
 		respond 404
 	}
 
-	# same cache policy as the backend (static_files.py): hashed assets 1 year, fonts 30 days, images 1 hour
+	# same cache policy as the backend (static_files.py cache_policy): hashed assets 1 year, fonts 30 days,
+	# images 1 hour, the CV always revalidated (its file name carries no version)
 	@assets path /assets/*
 	header @assets Cache-Control "public, max-age=31536000, immutable"
 	@fonts path /fonts/*
 	header @fonts Cache-Control "public, max-age=2592000"
 	@img path /img/*
 	header @img Cache-Control "public, max-age=3600"
+	@cv path /cv/*
+	header @cv Cache-Control "no-cache"
 
-	# static files: a missing one is a real 404, never the HTML shell
-	# (before: an old chunk name got index.html with the 1-year immutable header above)
-	@static path /assets/* /fonts/* /img/*
+	# static files: a missing one is a real 404 (handled by handle_errors below), never the HTML shell
+	# (before: an old chunk name got index.html with the 1-year immutable header above, /cv/viejo.pdf got the app)
+	@static path /assets/* /fonts/* /img/* /cv/*
 	handle @static {
 		file_server {
 			precompressed br gzip
@@ -59,5 +78,29 @@
 			precompressed br gzip
 			status 404
 		}
+	}
+
+	# Caddy's own errors (missing static file, 502/504 with the API down…): same security headers as every other
+	# response, never cached, plain text (never the HTML shell)
+	handle_errors {
+		import security-headers.caddy
+		header Cache-Control "no-store"
+		respond "{err.status_code} {err.status_text}"
+	}
+}
+
+# Internal health endpoint for the Docker HEALTHCHECK: loopback only, never published. Serves robots.txt from the
+# same build, so an empty or missing dist/ turns the container unhealthy whatever SITE_ADDRESS is (with a domain, the
+# main site only answers that host name over HTTPS, which a loopback probe can't use).
+http://127.0.0.1:2080 {
+	bind 127.0.0.1
+	root * {$SITE_ROOT:frontend/dist}
+	log_skip
+	@probe path /robots.txt
+	handle @probe {
+		file_server
+	}
+	handle {
+		respond 404
 	}
 }

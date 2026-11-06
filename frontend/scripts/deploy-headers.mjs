@@ -1,5 +1,8 @@
 /* Post-build step: writes deploy/security-headers.caddy from config/security-headers.json (the same policy the
    backend applies), adding the SHA-256 of each inline script in dist/index.html to script-src.
+   "Inline" = every <script> without a src attribute, whatever its other attributes (type=module, JSON-LD…): the
+   same rule as backend/app/adapters/inbound/http/security.py, so a new inline script can never be blocked by the
+   CSP in one server and allowed in the other.
    Paths are resolved from this file, so the step works from any working directory (local, CI, Docker). */
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -12,9 +15,9 @@ const OUT_DIR = fromHere("../../deploy/");
 
 const policy = JSON.parse(readFileSync(POLICY_FILE, "utf8"));
 const html = readFileSync(INDEX_FILE, "utf8");
-const hashes = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(
-  ([, body]) => `'sha256-${createHash("sha256").update(body, "utf8").digest("base64")}'`
-);
+const hashes = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)]
+  .filter(([, attrs]) => !/\ssrc\s*=/i.test(attrs))
+  .map(([, , body]) => `'sha256-${createHash("sha256").update(body, "utf8").digest("base64")}'`);
 const csp = { ...policy.csp, "script-src": [policy.csp["script-src"], ...hashes].join(" ") };
 const cspValue = Object.entries(csp).map(([k, v]) => `${k} ${v}`).join("; ");
 const lines = [
@@ -22,6 +25,9 @@ const lines = [
   "header {",
   `\tContent-Security-Policy "${cspValue}"`,
   ...Object.entries(policy.headers).map(([k, v]) => `\t${k} "${v}"`),
+  // HSTS: browsers ignore it over plain HTTP (RFC 6797 §8.1), so it is safe on the local ":80" stack too.
+  // Gradual rollout: raise "hsts" in config/security-headers.json once HTTPS has been stable for a week.
+  ...(policy.hsts ? [`\tStrict-Transport-Security "${policy.hsts}"`] : []),
   "\t-Server",
   "}",
   "",

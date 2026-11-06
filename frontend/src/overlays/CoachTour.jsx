@@ -1,7 +1,7 @@
 /* Coach-mark tour that spotlights real UI elements. */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { m } from "framer-motion";
-import { useFocusTrap } from "../lib/useFocusTrap.js";
+import { isTopTrap, useFocusTrap } from "../lib/useFocusTrap.js";
 import { CORE } from "../styles/theme.js";
 
 const COACH_STEPS = [
@@ -25,6 +25,8 @@ export function CoachTour({ open, onClose, onFinish }) {
   useFocusTrap(cardRef, Boolean(open && step && rect), { focusFirst: true, restore: true, focusKey: i });
 
   useEffect(() => { if (open) setI(0); }, [open]);
+  // nothing to point at (every target hidden): close instead of leaving an invisible tour that blocks shortcuts
+  useEffect(() => { if (open && steps.length === 0) onClose(); }, [open, steps.length, onClose]);
 
   useEffect(() => {
     if (!open || !step) return;
@@ -42,6 +44,7 @@ export function CoachTour({ open, onClose, onFinish }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => {
+      if (cardRef.current && !isTopTrap(cardRef)) return; // another modal (palette) is on top: its keys
       if (e.key === "Escape") onClose();
       if (e.key === "ArrowRight") setI((n) => Math.min(n + 1, steps.length - 1));
       if (e.key === "ArrowLeft") setI((n) => Math.max(n - 1, 0));
@@ -67,7 +70,7 @@ export function CoachTour({ open, onClose, onFinish }) {
       />
       <m.div
         ref={cardRef}
-        key={i}
+        // no key per step: remounting the card sent the focus back to "Saltar tour" after each "Siguiente"
         initial={{ opacity: 0, y: below ? -6 : 6 }}
         animate={{ opacity: 1, y: 0 }}
         className="fixed rounded-xl border p-4 shadow-2xl"
@@ -85,18 +88,19 @@ export function CoachTour({ open, onClose, onFinish }) {
         <div className="text-[14px] font-semibold text-white mb-1" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>{step.title}</div>
         <p className="text-[12.5px] text-white/70 leading-5">{step.text}</p>
         <div className="flex items-center justify-between gap-2 mt-4">
-          <button onClick={onClose} className="text-[11.5px] text-white/45 hover:text-white px-1 py-1.5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden rounded-sm">
+          <button onClick={onClose} className="text-[11.5px] text-white/65 hover:text-white px-1 py-1.5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden rounded-sm">
             Saltar tour
           </button>
           <div className="flex gap-2">
             <button
               onClick={() => setI((n) => n - 1)}
               disabled={i === 0}
-              className="rounded-md border border-white/15 px-3 py-1.5 text-[12px] text-white/70 disabled:opacity-30 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
+              className="rounded-md border border-white/15 px-3 py-1.5 text-[12px] text-white/75 disabled:opacity-40 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
             >
               Atrás
             </button>
             <button
+              data-autofocus
               onClick={() => (last ? onFinish() : setI((n) => n + 1))}
               className="rounded-md px-3 py-1.5 text-[12px] font-medium focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-hidden"
               style={{ background: CORE, color: "#05070b" }}

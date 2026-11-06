@@ -5,9 +5,9 @@
    - the cursor glow is a fixed-size circle moved with `transform` (compositor only, no repaint);
    - everything pauses when hidden behind windows or when the visitor prefers reduced motion. */
 import { memo, useEffect, useRef } from "react";
-import { CIRCUIT_PATHS } from "../data/content.js";
+import { CIRCUIT_PATHS } from "../data/shell.js";
 import { useCircuit } from "../lib/circuitStore.js";
-import { hasFinePointer, prefersReducedMotion } from "../lib/env.js";
+import { hasFinePointer, usePrefersReducedMotion } from "../lib/env.js";
 import { CORE } from "../styles/theme.js";
 
 const SVG_PROPS = { viewBox: "0 0 1440 900", preserveAspectRatio: "xMidYMid slice", fill: "none" };
@@ -20,25 +20,28 @@ export const CircuitBackground = memo(function CircuitBackground({ energized, pa
   const { highlighted, pulses } = useCircuit();
   const glowRef = useRef(null);
   const animatedRef = useRef(null);
-  const reduced = prefersReducedMotion();
+  const reduced = usePrefersReducedMotion(); // live: turning "reduce motion" on mid-session pauses the SMIL dots too
   const still = paused || reduced;
 
   // cursor-following glow — mouse only, never with reduced motion; moved on the compositor, no React re-renders
   useEffect(() => {
-    if (!hasFinePointer() || prefersReducedMotion()) return;
+    const glow = glowRef.current;
+    if (!glow || !hasFinePointer() || reduced) return;
     let frame = 0;
     const onMove = (e) => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        const el = glowRef.current;
-        if (!el) return;
-        el.style.opacity = "1";
-        el.style.transform = `translate3d(${e.clientX - GLOW_SIZE / 2}px, ${e.clientY - GLOW_SIZE / 2}px, 0)`;
+        glow.style.opacity = "1";
+        glow.style.transform = `translate3d(${e.clientX - GLOW_SIZE / 2}px, ${e.clientY - GLOW_SIZE / 2}px, 0)`;
       });
     };
     window.addEventListener("pointermove", onMove);
-    return () => { cancelAnimationFrame(frame); window.removeEventListener("pointermove", onMove); };
-  }, []);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("pointermove", onMove);
+      glow.style.opacity = "0";
+    };
+  }, [reduced]);
 
   // CSS animations stop via `animation-play-state`; the moving dots are SMIL, which CSS can't pause
   useEffect(() => {

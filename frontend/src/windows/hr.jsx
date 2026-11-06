@@ -1,8 +1,8 @@
 /* Window contents for the RRHH view, including the dedicated recruiter summary. */
 import { useEffect, useRef, useState } from "react";
-import { Award, Briefcase, Calendar, Check, CheckCircle2, ChevronRight, Copy, Linkedin, MapPin, Target, TrendingUp } from "lucide-react";
+import { Award, Briefcase, Calendar, Check, CheckCircle2, ChevronRight, Copy, FileText, Linkedin, MapPin, Target, TrendingUp } from "lucide-react";
 import { BeforeAfter, Chip, CountUp, SectionTitle, SimulatorBanner, Tilt } from "../components/ui.jsx";
-import { CERTS, EXPERIENCE, PROJECTS } from "../data/content.js";
+import { CERTS, EXPERIENCE, PROJECT_HISTORY, PROJECTS } from "../data/content.js";
 import { ATS_KEYWORDS, HR_CERT_NOTES, HR_COMPETENCIES, HR_EXPERIENCE, HR_FACTS, HR_GLOSSARY, HR_KPIS, HR_PROJECTS, HR_ROLES, HR_VALUE } from "../data/hr.js";
 import { HR_ACCENT, LANG, SOCIAL_LINKS } from "../styles/theme.js";
 
@@ -18,7 +18,7 @@ function KpiGrid() {
           <div className="min-w-0">
             <div className="text-[12px] font-medium text-white/90 leading-4 @md:mt-1.5">{k.label}</div>
             <div className="text-[11px] text-white/55 mt-1 leading-4">{k.detail}</div>
-            <div className="text-[10px] text-white/40 mt-1.5" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{k.client}</div>
+            <div className="text-[10px] text-white/60 mt-1.5" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{k.client}</div>
           </div>
         </div>
         </Tilt>
@@ -48,7 +48,7 @@ export function HRSummaryContent({ onOpen }) {
           <img src="/img/max_andres_head_256.webp" width={256} height={234} decoding="async" alt="" className="w-14 h-14 rounded-lg object-cover border border-white/10 shrink-0 bg-black/40" />
           <div className="min-w-0">
             <div className="text-[15px] font-semibold text-white leading-5 text-balance" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
-              Maximiliano Andrés Caniullan Lefiñir
+              Maximiliano Andrés Caniullán Lefiñir
             </div>
             <div className="text-[12px] text-white/55 mt-0.5">Backend Developer · Especialista en optimización</div>
           </div>
@@ -56,7 +56,7 @@ export function HRSummaryContent({ onOpen }) {
         <dl className="grid grid-cols-2 @lg:grid-cols-4 gap-2.5">
           {HR_FACTS.map(({ Icon, label, value }) => (
             <div key={label} className="rounded-lg bg-black/25 border border-white/[0.06] px-3 py-2.5">
-              <dt className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/40" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
+              <dt className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
                 <Icon size={11} style={{ color: HR_ACCENT }} /> {label}
               </dt>
               <dd className="text-[12.5px] text-white/90 mt-1 font-medium">{value}</dd>
@@ -135,6 +135,12 @@ export function HRSummaryContent({ onOpen }) {
         >
           <Linkedin size={14} /> Ver perfil en LinkedIn
         </a>
+        <button
+          onClick={() => onOpen("cv")}
+          className="flex-1 min-w-[180px] inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 py-2.5 text-[12.5px] font-medium text-white/80 hover:bg-white/5 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
+        >
+          <FileText size={14} /> Ver CV
+        </button>
       </div>
     </div>
   );
@@ -144,10 +150,10 @@ export function AboutHRContent() {
   return (
     <div className="w-full space-y-5">
       <div className="flex items-center gap-3.5">
-        <img src="/img/max_andres_head_256.webp" width={256} height={234} decoding="async" alt="Maximiliano Caniullan" className="w-16 h-16 rounded-xl object-cover border border-white/10 shrink-0 bg-black/40" />
+        <img src="/img/max_andres_head_256.webp" width={256} height={234} decoding="async" alt="Maximiliano Caniullán" className="w-16 h-16 rounded-xl object-cover border border-white/10 shrink-0 bg-black/40" />
         <div className="min-w-0">
           <h3 className="text-white text-[15px] font-semibold text-balance" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
-            Maximiliano Andrés Caniullan Lefiñir
+            Maximiliano Andrés Caniullán Lefiñir
           </h3>
           <p className="text-white/50 text-[12px]">Desarrollador de sistemas · Especialista en eficiencia</p>
         </div>
@@ -158,8 +164,8 @@ export function AboutHRContent() {
         <p className="text-[13px] leading-6 text-white/75">
           Construyo y mejoro la parte invisible de las aplicaciones: la que procesa la información cada vez que un usuario
           presiona un botón. Mi sello es la <strong className="text-white/90">eficiencia</strong>: hago que los sistemas respondan
-          más rápido y cuesten menos de operar. Llevo <strong className="text-white/90">2 años</strong> resolviendo este tipo de
-          desafíos para empresas.
+          más rápido y cuesten menos de operar. Llevo <strong className="text-white/90">más de 2 años</strong> resolviendo este tipo de
+          desafíos en empresas como Push HR y BiceVida.
         </p>
       </section>
 
@@ -183,13 +189,18 @@ export function AboutHRContent() {
       <section className="pt-4 border-t border-white/10">
         <SectionTitle>Lo que busco</SectionTitle>
         <p className="text-[12.5px] leading-6 text-white/65">
-          Integrarme como Backend Developer a equipos de tecnología y startups que desarrollen productos de alto impacto,
-          donde la calidad, la velocidad y la solidez de los sistemas sean una prioridad para el crecimiento del negocio.
+          Integrarme como Backend Developer a equipos de tecnología y startups que construyan productos escalables,
+          donde el rendimiento y la calidad sean prioridad. Me motivan los desafíos donde optimizar un sistema tiene un
+          impacto directo en el negocio.
         </p>
       </section>
     </div>
   );
 }
+
+/* projects of the history where a competency was applied (see HR_COMPETENCIES) */
+const competencyCount = (c) =>
+  c.projects ? c.projects.length : PROJECT_HISTORY.filter((p) => c.tech.some((t) => p.tech.includes(t))).length;
 
 export function SkillsHRContent() {
   return (
@@ -204,7 +215,7 @@ export function SkillsHRContent() {
             <div className="flex items-start justify-between gap-3 mb-1.5">
               <div className="text-[13px] font-medium text-white/90 leading-5" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>{c.area}</div>
               <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium whitespace-nowrap" style={{ color: c.color, background: `${c.color}17`, fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
-                {c.level}
+                En {competencyCount(c)} de {PROJECT_HISTORY.length} proyectos
               </span>
             </div>
             <p className="text-[12px] text-white/65 leading-5 mb-3">{c.plain}</p>
@@ -216,8 +227,8 @@ export function SkillsHRContent() {
           </div>
         ))}
       </div>
-      <p className="mt-4 text-[10.5px] text-white/40 leading-4">
-        Niveles basados en la autoevaluación técnica del perfil (vista TI). Donde no hay medición, se indica la evidencia práctica.
+      <p className="mt-4 text-[10.5px] text-white/60 leading-4">
+        Cantidad de proyectos de mi histórico 2023–2026 en que apliqué cada competencia. El detalle por tecnología está en la vista TI.
       </p>
     </div>
   );
@@ -227,7 +238,7 @@ export function ProjectsHRContent({ onOpenProject }) {
   return (
     <div className="w-full">
       <SimulatorBanner />
-      <p className="text-[12.5px] text-white/60 mb-3">Resultados concretos en empresas reales. Selecciona uno para ver el detalle.</p>
+      <p className="text-[12.5px] text-white/60 mb-3">Resultados concretos en empresas reales y herramientas que construí este año. Selecciona uno para ver el detalle.</p>
       <div className="grid grid-cols-1 @lg:grid-cols-2 gap-3">
         {PROJECTS.map((p) => {
           const hr = HR_PROJECTS[p.id];
@@ -240,6 +251,7 @@ export function ProjectsHRContent({ onOpenProject }) {
             >
               <BeforeAfter hr={hr} />
               <div className="text-[13px] font-medium text-white/90 mt-2 mb-1" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>{hr.title}</div>
+              <div className="text-[10.5px] text-white/60 mb-1">{p.org}</div>
               <p className="text-[11.5px] text-white/60 leading-5 mb-2">{hr.result}</p>
               <div className="mt-auto flex items-center gap-1 text-[10.5px]" style={{ color: HR_ACCENT }}>
                 Ver el caso <ChevronRight size={12} />
@@ -263,7 +275,7 @@ export function ProjectDetailHRContent({ project }) {
   return (
     <div className="w-full">
       <div className="rounded-lg border p-4 mb-4 flex flex-wrap items-center justify-between gap-3" style={{ borderColor: `${HR_ACCENT}33`, background: `${HR_ACCENT}0b` }}>
-        <div className="text-[10.5px] uppercase tracking-wider text-white/45" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>Impacto</div>
+        <div className="text-[10.5px] uppercase tracking-wider text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>Impacto</div>
         <BeforeAfter hr={hr} size="text-[18px] @md:text-[22px]" />
       </div>
       <ol className="space-y-3.5">
@@ -273,13 +285,13 @@ export function ProjectDetailHRContent({ project }) {
               <Icon size={14} />
             </span>
             <div className="min-w-0">
-              <div className="text-[11px] uppercase tracking-wider text-white/45" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{label}</div>
+              <div className="text-[11px] uppercase tracking-wider text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{label}</div>
               <p className="text-[12.5px] text-white/80 leading-5 mt-0.5">{text}</p>
             </div>
           </li>
         ))}
       </ol>
-      {project.id === "iacc-optimizer" && <SimulatorBanner compact />}
+      {project.id === "buk-migration" && <SimulatorBanner compact />}
     </div>
   );
 }
@@ -293,7 +305,7 @@ export function ExperienceHRContent() {
             <span className="absolute -left-[25px] top-1 w-2.5 h-2.5 rounded-full border-2" style={{ borderColor: HR_ACCENT, background: "#0d1117" }} />
             <div className="text-[13px] font-medium text-white/90" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>{HR_EXPERIENCE[i].plainRole}</div>
             <div className="text-[11.5px] mb-1" style={{ color: HR_ACCENT }}>{e.company}</div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] text-white/40 mb-2" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] text-white/60 mb-2" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
               <span className="inline-flex items-center gap-1"><Calendar size={11} /> {e.period}</span>
               <span className="inline-flex items-center gap-1"><MapPin size={11} /> {e.location}</span>
               <span className="inline-flex items-center gap-1"><Briefcase size={11} /> Cargo técnico: {e.role}</span>
@@ -320,7 +332,7 @@ export function CertificationsHRContent() {
           <Award size={16} style={{ color: HR_ACCENT }} className="shrink-0 mt-0.5" />
           <div className="min-w-0">
             <div className="text-[12px] font-medium text-white/90 leading-4">{c.name}</div>
-            <div className="text-[10.5px] text-white/45 mt-1">{c.org} &middot; {c.year}</div>
+            <div className="text-[10.5px] text-white/60 mt-1">{c.org} &middot; {c.year}</div>
             <p className="text-[11.5px] text-white/60 leading-5 mt-2">{HR_CERT_NOTES[c.name]}</p>
           </div>
         </div>

@@ -1,7 +1,7 @@
 /* Top bar: live-ish system metrics, exploration progress, search, sound and profile toggle. */
 import { useCallback, useEffect, useState } from "react";
 import { Cpu, Gauge, Github, Linkedin, MemoryStick, Search, ShieldCheck, Trophy, Volume2, VolumeX, Zap } from "lucide-react";
-import { AudienceToggle } from "./ui.jsx";
+import { AudienceToggle } from "./audience.jsx";
 import { CORE, HR_ACCENT, LANG, SOCIAL_LINKS } from "../styles/theme.js";
 
 /* metrics follow what the visitor does: every open window is a "process" that adds load */
@@ -26,11 +26,11 @@ export function TopBar({ scale = 1, openCount = 0, progress = 0, onPalette, onBa
   const item = (Icon, label, val, unit, color) => (
     <div className="flex items-center gap-1.5" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
       <Icon size={12} style={{ color }} />
-      <span className="text-[10.5px] text-white/50">{label}</span>
+      <span className="text-[10.5px] text-white/60">{label}</span>
       <span className="text-[10.5px] tabular-nums" style={{ color }}>{val}{unit}</span>
     </div>
   );
-  const iconBtn = "inline-flex items-center justify-center gap-1.5 h-7 min-w-[28px] rounded-full border border-white/10 bg-black/40 px-2 text-white/60 hover:text-white hover:border-white/25 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden";
+  const iconBtn = "inline-flex items-center justify-center gap-1.5 h-7 min-w-[28px] rounded-full border border-white/10 bg-black/40 px-2 text-white/70 hover:text-white hover:border-white/25 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden";
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
   return (
     <div
@@ -41,7 +41,7 @@ export function TopBar({ scale = 1, openCount = 0, progress = 0, onPalette, onBa
         <div className="flex items-center gap-1.5 min-w-0">
           <span className="w-2 h-2 rounded-full shrink-0" style={{ background: CORE, boxShadow: `0 0 8px ${CORE}` }} />
           <span className="text-[11px] tracking-wide text-white/70 truncate" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
-            polyglot_core <span className="text-white/30 hidden min-[380px]:inline">v1.0</span>
+            polyglot_core <span className="text-white/55 hidden min-[380px]:inline">v1.0</span>
           </span>
         </div>
       </div>
@@ -62,7 +62,7 @@ export function TopBar({ scale = 1, openCount = 0, progress = 0, onPalette, onBa
         </button>
         <button data-tour="palette" onClick={onPalette} className={iconBtn} aria-label="Buscar o ejecutar un comando" aria-keyshortcuts="Control+K Meta+K" title="Buscar (Ctrl+K)">
           <Search size={13} />
-          {!import.meta.env.SSR && <kbd className="hidden md:inline text-[9.5px] text-white/40" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{isMac ? "⌘K" : "Ctrl K"}</kbd>}
+          {!import.meta.env.SSR && <kbd className="hidden md:inline text-[9.5px] text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{isMac ? "⌘K" : "Ctrl K"}</kbd>}
         </button>
         <button data-live onClick={onToggleSound} className={iconBtn} aria-pressed={soundOn} aria-label={soundOn ? "Desactivar sonidos" : "Activar sonidos"} title={soundOn ? "Sonidos activados" : "Sonidos desactivados"}>
           {soundOn ? <Volume2 size={13} style={{ color: CORE }} /> : <VolumeX size={13} />}
@@ -75,7 +75,7 @@ export function TopBar({ scale = 1, openCount = 0, progress = 0, onPalette, onBa
             rel="noopener noreferrer"
             title="Ver GitHub"
             aria-label="Ver GitHub"
-            className="p-1.5 -m-1.5 text-white/50 hover:text-white transition-colors"
+            className="p-1.5 -m-1.5 text-white/65 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden rounded-sm"
           >
             <Github size={15} />
           </a>
@@ -85,12 +85,12 @@ export function TopBar({ scale = 1, openCount = 0, progress = 0, onPalette, onBa
             rel="noopener noreferrer"
             title="Ver LinkedIn"
             aria-label="Ver LinkedIn"
-            className="p-1.5 -m-1.5 text-white/50 hover:text-white transition-colors"
+            className="p-1.5 -m-1.5 text-white/65 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden rounded-sm"
           >
             <Linkedin size={15} />
           </a>
         </div>
-        <div data-live className="hidden sm:block text-[10.5px] text-white/45" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
+        <div data-live className="hidden sm:block text-[10.5px] text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
           {time.toLocaleTimeString("es-CL", { hour: "2-digit", minute: "2-digit" })}
         </div>
       </div>
