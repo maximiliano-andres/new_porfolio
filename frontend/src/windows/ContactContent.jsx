@@ -1,150 +1,25 @@
-/* Contact form (POST /api/contact) — shared by both views. */
-import { useEffect, useRef, useState } from "react";
-import { AlertCircle, CheckCircle2, Github, Linkedin, Loader2, Mail, Send } from "lucide-react";
+/* Contact window: plain mailto: links, so the visitor's own mail app opens with the address and subject
+   already filled in. No form, no request to the server. The address stays visible to copy by hand
+   (e.g. when the device has no mail app configured). */
+import { useState } from "react";
+import { ArrowUpRight, Github, Linkedin, Mail } from "lucide-react";
 import { useAudience, useSystem } from "../app/context.js";
-import { CONTACT_LIMITS as LIMITS, sendContactMessage } from "../services/contactApi.js";
-import { CORE, LANG, SOCIAL_LINKS } from "../styles/theme.js";
+import { CONTACT_EMAIL, CORE, LANG, SOCIAL_LINKS } from "../styles/theme.js";
 
-const REQUEST_TIMEOUT_MS = 12000;
-const EMPTY_FORM = { name: "", email: "", message: "", website: "" };
-const PRIVACY_ID = "c-privacy";
-
-/* maps the API's answer to a message the visitor can act on */
-function submitErrorFor(res) {
-  if (res.status === 429) {
-    const minutes = Math.ceil(Number(res.headers.get("Retry-After") || 600) / 60);
-    return `Enviaste varios mensajes seguidos. Podrás volver a escribir en unos ${minutes} min.`;
-  }
-  if (res.status === 413) return "El mensaje es demasiado largo.";
-  if (res.status === 422) return "Revisa los datos del formulario.";
-  if (res.status >= 500) return "El servidor no pudo procesar el mensaje. Intenta de nuevo en unos minutos.";
-  return "No se pudo enviar el mensaje. Intenta de nuevo en unos minutos.";
-}
+const MAIL_HINT_ID = "c-mail-hint";
+const ring = "focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-hidden";
 
 export function ContactContent() {
   const { audience } = useAudience();
   const { unlock } = useSystem();
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [status, setStatus] = useState("idle"); // idle | loading | success | error
-  const [errors, setErrors] = useState({});
   const [imgError, setImgError] = useState(false);
-  const inFlight = useRef(null);
-  const mounted = useRef(true);
-  const formRef = useRef(null);
-  const againRef = useRef(null);
-
-  // after a failed validation the focus goes to the first invalid field (it carries the error text)
-  const focusFirstInvalid = () =>
-    requestAnimationFrame(() => formRef.current?.querySelector('[aria-invalid="true"]')?.focus());
-  // on success the form unmounts: keep the focus on the next useful control instead of <body>
-  useEffect(() => {
-    if (status === "success") againRef.current?.focus({ preventScroll: true });
-  }, [status]);
-
-  // closing the window mid-request aborts it instead of updating an unmounted form
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-      inFlight.current?.abort();
-    };
-  }, []);
-
-  const validate = () => {
-    const errs = {};
-    const name = form.name.trim();
-    const email = form.email.trim();
-    const message = form.message.trim();
-    if (!name) errs.name = "Requerido";
-    else if (name.length > LIMITS.name) errs.name = `Máximo ${LIMITS.name} caracteres`;
-    if (!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email) || email.length > LIMITS.email) errs.email = "Email inválido";
-    if (!message) errs.message = "Requerido";
-    else if (message.length > LIMITS.message) errs.message = `Máximo ${LIMITS.message} caracteres`;
-    return errs;
-  };
-
-  const submit = async (e) => {
-    e.preventDefault();
-    if (status === "loading") return;
-    const errs = validate();
-    setErrors(errs);
-    if (Object.keys(errs).length) {
-      setStatus("error");
-      focusFirstInvalid();
-      return;
-    }
-    setStatus("loading");
-    const controller = new AbortController();
-    inFlight.current = controller;
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-    try {
-      const res = await sendContactMessage(form, { signal: controller.signal });
-      if (!mounted.current) return;
-      if (!res.ok) {
-        const fieldErrs = {};
-        if (res.status === 422) {
-          const body = await res.json().catch(() => ({}));
-          for (const f of body.fields || []) if (f in LIMITS) fieldErrs[f] = "Revisa este campo";
-        }
-        setErrors({ ...fieldErrs, submit: submitErrorFor(res) });
-        setStatus("error");
-        if (Object.keys(fieldErrs).length) focusFirstInvalid();
-        return;
-      }
-      setStatus("success");
-      unlock("contact");
-    } catch (err) {
-      if (!mounted.current) return;
-      setErrors({
-        submit: err.name === "AbortError"
-          ? "El servidor tardó demasiado en responder. Intenta de nuevo."
-          : "Sin conexión con el servidor. Revisa tu internet e intenta de nuevo.",
-      });
-      setStatus("error");
-    } finally {
-      clearTimeout(timer);
-      if (inFlight.current === controller) inFlight.current = null;
-    }
-  };
-
-  const field = (key) => ({
-    disabled: status === "loading",
-    maxLength: LIMITS[key],
-    value: form[key],
-    onChange: (e) => setForm({ ...form, [key]: e.target.value }),
-    "aria-invalid": Boolean(errors[key]),
-    "aria-describedby": errors[key] ? `c-${key}-error` : undefined,
-    style: { borderColor: errors[key] ? "#f87171" : "rgba(255,255,255,0.1)" },
-  });
-
-  // 16px on phones: iOS Safari auto-zooms the page when focusing inputs smaller than that
-  const inputCls =
-    "w-full rounded-md bg-black/30 border px-3 py-2.5 sm:py-2 text-[16px] sm:text-[12.5px] text-white/90 placeholder:text-white/50 outline-hidden transition-colors focus:border-[#22D3EE] disabled:opacity-50";
-
-  if (status === "success") {
-    return (
-      <div className="w-full flex flex-col items-center text-center py-6">
-        <CheckCircle2 size={30} style={{ color: LANG.node.c2 }} className="mb-3" aria-hidden="true" />
-        <div role="status" className="flex flex-col items-center">
-          <div className="text-[13.5px] font-medium text-white/90 mb-1" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
-            Mensaje enviado
-          </div>
-          <p className="text-[12px] text-white/65 mb-4">Responderé dentro de 24&ndash;48 horas hábiles.</p>
-        </div>
-        <button
-          ref={againRef}
-          onClick={() => { setStatus("idle"); setForm(EMPTY_FORM); }}
-          className="text-[11.5px] px-3 py-1.5 rounded-lg border border-white/15 text-white/75 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
-        >
-          Enviar otro mensaje
-        </button>
-      </div>
-    );
-  }
+  const hr = audience === "rrhh";
+  // the only script here: the "Conexión" badge, unlocked when the visitor heads to their mail app
+  const onMail = () => unlock("contact");
 
   return (
     <div className="w-full">
-      <div className="flex items-center gap-3 mb-4 p-2 rounded-lg border border-white/5 bg-white/[0.01] select-none">
+      <div className="flex items-center gap-3 mb-5 p-2 rounded-lg border border-white/5 bg-white/[0.01] select-none">
         <div className="w-9 h-9 rounded-full overflow-hidden bg-black/40 shrink-0 border border-cyan-500/20 flex items-center justify-center">
           {!imgError ? (
             <img
@@ -159,61 +34,52 @@ export function ContactContent() {
         </div>
         <div className="min-w-0">
           <div className="text-[12px] font-medium text-white/90">
-            {audience === "rrhh" ? "¿Tienes un proceso de selección abierto?" : "¿Trabajamos juntos?"}
+            {hr ? "¿Tienes un proceso de selección abierto?" : "¿Trabajamos juntos?"}
           </div>
-          <div className="text-[10px] text-white/60">
-            {audience === "rrhh" ? "Coordinemos una entrevista; respondo en 24–48 horas hábiles" : "Hablemos sobre tu próximo sistema backend"}
+          <div className="text-[10.5px] text-white/65">
+            {hr ? "Coordinemos una entrevista; respondo en 24–48 horas hábiles" : "Hablemos sobre tu próximo sistema backend"}
           </div>
         </div>
       </div>
-      <form ref={formRef} onSubmit={submit} noValidate className="relative" aria-describedby={PRIVACY_ID}>
-        <div className="mb-3">
-          <label htmlFor="c-name" className="block text-[11px] text-white/65 mb-1">Nombre</label>
-          <input id="c-name" autoComplete="name" className={inputCls} placeholder="Tu nombre" {...field("name")} />
-          {errors.name && <p id="c-name-error" className="text-[10.5px] text-red-400 mt-1 flex items-center gap-1"><AlertCircle size={11} />{errors.name}</p>}
+
+      {/* the address itself: visible, a link, and selectable in one tap/click to copy it manually */}
+      <div className="rounded-lg border p-4 text-center" style={{ borderColor: `${CORE}2e`, background: `${CORE}08` }}>
+        <div className="text-[10.5px] uppercase tracking-wider text-white/65 mb-1.5" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
+          Correo
         </div>
-        <div className="mb-3">
-          <label htmlFor="c-email" className="block text-[11px] text-white/65 mb-1">Email</label>
-          <input id="c-email" type="email" autoComplete="email" inputMode="email" className={inputCls} placeholder="tu@correo.com" {...field("email")} />
-          {errors.email && <p id="c-email-error" className="text-[10.5px] text-red-400 mt-1 flex items-center gap-1"><AlertCircle size={11} />{errors.email}</p>}
-        </div>
-        <div className="mb-4">
-          <label htmlFor="c-msg" className="block text-[11px] text-white/65 mb-1">Mensaje</label>
-          <textarea id="c-msg" rows={3} className={inputCls + " resize-none"} placeholder="Cuéntame sobre tu proyecto..." {...field("message")} />
-          {form.message.length > LIMITS.message * 0.8 && (
-            <p className="text-[10px] text-white/60 mt-1 text-right tabular-nums">{form.message.length} / {LIMITS.message}</p>
-          )}
-          {errors.message && <p id="c-message-error" className="text-[10.5px] text-red-400 mt-1 flex items-center gap-1"><AlertCircle size={11} />{errors.message}</p>}
-        </div>
-        {/* honeypot: hidden from people and assistive tech; bots that fill it are silently discarded */}
-        <div aria-hidden="true" className="absolute left-0 top-0 w-px h-px overflow-hidden opacity-0 pointer-events-none">
-          <label htmlFor="c-website">No completar</label>
-          <input id="c-website" className="w-px h-px" tabIndex={-1} autoComplete="off" value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} />
-        </div>
-        {status === "error" && errors.submit && (
-          <p role="alert" className="text-[11px] text-red-400 mb-3 flex items-start gap-1"><AlertCircle size={12} className="shrink-0 mt-0.5" />{errors.submit}</p>
-        )}
-        <button
-          type="submit" disabled={status === "loading"}
-          className="w-full flex items-center justify-center gap-2 rounded-lg py-2.5 sm:py-2 text-[13px] sm:text-[12.5px] font-medium transition-all disabled:opacity-70 focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-hidden hover:brightness-110 active:scale-[0.98]"
+        <a
+          href={SOCIAL_LINKS.email}
+          onClick={onMail}
+          aria-describedby={MAIL_HINT_ID}
+          className={`inline-block max-w-full break-all select-all text-[15px] sm:text-[16px] font-medium text-white hover:underline underline-offset-4 decoration-white/40 rounded-sm ${ring}`}
+          style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}
+        >
+          {CONTACT_EMAIL}
+        </a>
+
+        <a
+          href={SOCIAL_LINKS.email}
+          onClick={onMail}
+          aria-describedby={MAIL_HINT_ID}
+          className={`mt-4 w-full flex items-center justify-center gap-2 rounded-lg py-3 sm:py-2.5 text-[13.5px] sm:text-[13px] font-medium transition-all hover:brightness-110 active:scale-[0.98] ${ring}`}
           style={{ background: `linear-gradient(90deg, ${CORE}, ${LANG.node.c1})`, color: "#05070b" }}
         >
-          {status === "loading" ? (<><Loader2 size={14} className="animate-spin" /> Enviando...</>) : (<><Send size={13} /> Enviar mensaje</>)}
-        </button>
-        {/* privacy notice (Ley 21.719): purpose, retention and how to ask for deletion; the backend purges after 365 days */}
-        <p id={PRIVACY_ID} className="mt-2 text-[10.5px] leading-4 text-white/65">
-          Usaré tus datos solo para responderte. Los mensajes se eliminan a los 12 meses; puedes pedir su eliminación antes escribiendo a{" "}
-          <a href={SOCIAL_LINKS.email} className="underline decoration-white/30 underline-offset-2 hover:text-white focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden rounded-sm">max.andres1995@outlook.com</a>.
+          <Mail size={15} aria-hidden="true" /> {hr ? "Escribir para coordinar una entrevista" : "Enviar un correo"}
+          <ArrowUpRight size={14} aria-hidden="true" className="opacity-70" />
+        </a>
+        <p id={MAIL_HINT_ID} className="mt-2 text-[11px] leading-4 text-white/65">
+          Se abrirá tu aplicación de correo con el destinatario y el asunto listos. Si no se abre, copia la dirección de arriba.
         </p>
-      </form>
+      </div>
+
       <div className="flex items-center justify-center gap-4 mt-5 pt-4 border-t border-white/[0.08]">
-        <a href={SOCIAL_LINKS.github} target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="GitHub" className="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/70 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">
+        <a href={SOCIAL_LINKS.github} target="_blank" rel="noopener noreferrer" title="GitHub" aria-label="GitHub" className={`w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/70 hover:text-white hover:border-white/30 transition-colors ${ring}`}>
           <Github size={18} />
         </a>
-        <a href={SOCIAL_LINKS.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" aria-label="LinkedIn" className="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/70 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">
+        <a href={SOCIAL_LINKS.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" aria-label="LinkedIn" className={`w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/70 hover:text-white hover:border-white/30 transition-colors ${ring}`}>
           <Linkedin size={18} />
         </a>
-        <a href={SOCIAL_LINKS.email} title="Email" aria-label="Email" className="w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/70 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">
+        <a href={SOCIAL_LINKS.email} onClick={onMail} title={`Correo: ${CONTACT_EMAIL}`} aria-label={`Enviar un correo a ${CONTACT_EMAIL}`} className={`w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/70 hover:text-white hover:border-white/30 transition-colors ${ring}`}>
           <Mail size={18} />
         </a>
       </div>

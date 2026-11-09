@@ -15,7 +15,7 @@ export const ACHIEVEMENTS = [
   { id: "curious", title: "Curioso", desc: "Encontraste un easter egg en la terminal.", Icon: Egg },
   { id: "shortcut", title: "Atajos", desc: "Usaste un atajo de teclado.", Icon: Keyboard },
   { id: "tourist", title: "Bien guiado", desc: "Completaste el tour o el recorrido de 60 s.", Icon: Route },
-  { id: "contact", title: "Conexión", desc: "Enviaste un mensaje de contacto.", Icon: Send },
+  { id: "contact", title: "Conexión", desc: "Abriste tu correo para escribirme.", Icon: Send },
 ];
 
 /* each window energizes one trace of the circuit background (index into CIRCUIT_PATHS) */

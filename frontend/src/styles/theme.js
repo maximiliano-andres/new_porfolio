@@ -22,10 +22,15 @@ export const LANG = {
 
 export const CORE = "#22D3EE";
 
+/* contact goes through the visitor's own mail app (RFC 6068 mailto:); the site sends nothing itself */
+export const CONTACT_EMAIL = "max.andres1995@outlook.com";
+export const CONTACT_SUBJECT = "Contacto profesional desde tu portafolio";
+
 export const SOCIAL_LINKS = {
   github: "https://github.com/maximiliano-andres",
   linkedin: "https://www.linkedin.com/in/maximiliano-andres",
-  email: "mailto:max.andres1995@outlook.com",
+  // encodeURIComponent → spaces as %20 and accents as UTF-8 percent-escapes, which every mail client decodes
+  email: `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(CONTACT_SUBJECT)}`,
 };
 
 /* gold accent for everything in the recruiter-facing (RRHH) view */

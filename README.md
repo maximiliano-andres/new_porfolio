@@ -35,11 +35,11 @@ El visitante abre ventanas, usa una terminal, prueba un simulador y gana insigni
 | **El problema** | Un CV en PDF no muestra cómo trabaja un desarrollador. A un reclutador le cuesta entender los términos técnicos, y a un líder técnico le faltan detalles. |
 | **La solución** | Un sitio web interactivo que presenta el mismo perfil de dos formas: **Perfil TI** (tecnologías, arquitectura y métricas) y **Perfil RRHH** (lenguaje de negocio, sin tecnicismos). Se cambia con un clic. |
 | **Para quién** | Reclutadores, equipos de RRHH y líderes técnicos que evalúan al candidato. También sirve como referencia para desarrolladores que buscan un ejemplo de arquitectura limpia. |
-| **Seguridad** | No pide cuentas ni contraseñas. El único dato que recibe es el formulario de contacto, que se valida, se limita contra el spam y se guarda en un archivo privado del servidor. |
-| **Alcance** | 11 ventanas de contenido, terminal con comandos, simulador, 13 insignias, tour guiado y formulario de contacto. La API tiene 2 endpoints: estado y contacto. |
+| **Seguridad** | No pide cuentas ni contraseñas, y el sitio no recibe datos del visitante: el contacto se hace por correo, desde la aplicación de correo de cada persona. |
+| **Alcance** | 12 ventanas de contenido, terminal con comandos, simulador, 13 insignias, tour guiado, visor del CV y contacto por correo. La API tiene 2 endpoints: estado y contacto. |
 
 > [!IMPORTANT]
-> **Es un sitio público de solo lectura, sin cuentas de usuario.** Cualquier persona puede visitarlo sin registrarse. Las preferencias del visitante (perfil elegido, insignias, sonido) se guardan en su propio navegador y no viajan al servidor. Los mensajes de contacto quedan en un archivo del servidor, y solo puede leerlos quien administra ese servidor. No hay un panel web para verlos.
+> **Es un sitio público de solo lectura, sin cuentas de usuario.** Cualquier persona puede visitarlo sin registrarse. Las preferencias del visitante (perfil elegido, insignias, sonido) se guardan en su propio navegador y no viajan al servidor. El contacto se hace por correo electrónico, así que el sitio no guarda mensajes.
 
 ---
 
@@ -56,7 +56,7 @@ El visitante abre ventanas, usa una terminal, prueba un simulador y gana insigni
   </tr>
   <tr>
     <td><img src="docs/screenshots/05-paleta-comandos.png" alt="Paleta de comandos" /><br/><b>Paleta de comandos</b>: búsqueda rápida con <kbd>Ctrl</kbd> + <kbd>K</kbd>.</td>
-    <td><img src="docs/screenshots/06-contacto.png" alt="Formulario de contacto" /><br/><b>Contacto</b>: formulario con validación y protección anti-spam.</td>
+    <td><img src="docs/screenshots/06-contacto.png" alt="Contacto por correo" /><br/><b>Contacto</b>: un clic abre la aplicación de correo con destinatario y asunto listos.</td>
   </tr>
   <tr>
     <td><img src="docs/screenshots/07-skills.png" alt="Gráfico de Skills" /><br/><b>Skills</b>: en cuántos proyectos del histórico se usó cada tecnología.</td>
@@ -64,7 +64,7 @@ El visitante abre ventanas, usa una terminal, prueba un simulador y gana insigni
   </tr>
 </table>
 
-<sub>Capturas generadas con Playwright sobre el build de producción (1440×900). El formulario de contacto tiene datos ficticios y no se envió.</sub>
+<sub>Capturas generadas con Playwright sobre el build de producción (1440×900).</sub>
 
 ---
 
@@ -82,7 +82,7 @@ El visitante abre ventanas, usa una terminal, prueba un simulador y gana insigni
 | ⚡ | **Simulador** | Probar cómo un proceso de unos 62 minutos baja de tiempo al ajustar hilos, caché e índices. Es un modelo ilustrativo inspirado en un caso real. |
 | 🏆 | **Insignias y progreso** | Ver qué secciones faltan por revisar. Hay 13 insignias, como «Reclutador» o «Explorador». |
 | 📄 | **Mi CV** | Ver el CV completo (2 páginas) en cualquier navegador o celular, descargarlo en PDF o abrirlo en otra pestaña. Se abre desde **Ver CV** en la portada, la ficha RRHH, `Ctrl/⌘ + K` o el comando `cv` de la terminal. |
-| ✉️ | **Contacto** | Enviar un mensaje al autor sin salir del sitio y recibir confirmación inmediata. Bajo el botón se informa para qué se usan los datos y cuánto tiempo se guardan. |
+| ✉️ | **Contacto** | Pulsar **Enviar un correo** (o la dirección) abre la aplicación de correo del visitante con el destinatario y el asunto ya completos. La dirección queda visible para copiarla si el equipo no tiene correo configurado. |
 
 ### Para el perfil técnico
 
@@ -185,55 +185,30 @@ flowchart TD
     M --> K
 ```
 
-### 3. Envío de un mensaje de contacto (con casos de error)
+### 3. Contacto por correo (`mailto:`)
+
+El sitio no envía correos ni recibe mensajes: la ventana **Contacto** usa enlaces `mailto:` estándar (RFC 6068), así que el envío lo hace el cliente de correo del visitante.
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor V as Visitante
-    participant F as Formulario
-    participant C as Caddy
-    participant M as Middleware
-    participant A as API
-    participant UC as SubmitContact
-    participant R as Archivo JSONL
+    participant W as Ventana Contacto
+    participant N as Navegador / sistema operativo
+    participant M as Cliente de correo del visitante
 
-    V->>F: Enviar mensaje
-    F->>F: Valida nombre, email y largo
-    opt Datos incompletos
-        F-->>V: «Requerido» / «Email inválido»
-    end
-    F->>C: POST /api/contact (espera máx. 12 s)
-    C->>M: Reemplaza X-Forwarded-For con la IP real
-    M->>M: Content-Length ≤ 16 KB
-    opt Falta o es mayor
-        M-->>F: 411 / 413
-        F-->>V: «El mensaje es demasiado largo.»
-    end
-    M->>A: Agrega cabeceras de seguridad
-    A->>A: Pydantic con reglas del dominio
-    opt Datos inválidos
-        A-->>F: 422 + campos
-        F-->>V: «Revisa los datos del formulario.»
-    end
-    A->>UC: Mensaje + IP del cliente
-    UC->>UC: Rate limiter (5 envíos / 10 min)
-    alt Supera el límite
-        UC-->>F: 429 + Retry-After
-        F-->>V: «Enviaste varios mensajes seguidos…»
-    else Bot (honeypot completado)
-        UC-->>F: 200 sin guardar
-    else Mensaje válido
-        UC->>R: Guarda una línea
-        alt Disco lleno o sin permisos
-            R-->>F: 500
-            F-->>V: «El servidor no pudo procesar el mensaje…»
-        else Guardado
-            R-->>F: 200
-            F-->>V: «Mensaje enviado»
-        end
+    V->>W: Clic en la dirección o en «Enviar un correo»
+    W->>N: mailto:max.andres1995@outlook.com?subject=Contacto%20profesional%20desde%20tu%20portafolio
+    alt Hay una aplicación de correo configurada
+        N->>M: Abre un borrador con destinatario y asunto
+        M-->>V: El visitante escribe y envía desde su propia cuenta
+    else No hay aplicación de correo
+        N-->>V: No se abre nada
+        V->>W: Copia la dirección visible (se selecciona con un clic o toque)
     end
 ```
+
+> La API conserva `POST /api/contact`, pero el sitio ya no la llama.
 
 ### 4. Una sola política de seguridad para dos servidores
 
@@ -434,17 +409,10 @@ Abre **http://localhost:8000**: FastAPI sirve la API y el build compilado. Si qu
 
 **Paso 6 · Probar el simulador.** Abre **Simulador** desde la paleta o el núcleo **CORE**. Mueve **Hilos en paralelo (threads)**, activa **Caché de consultas** e **Índices en base de datos**, y pulsa **Ejecutar batch**. El reto es bajar el proceso a 10 minutos o menos.
 
-**Paso 7 · Escribir al autor.** En **Contacto**, completa **Nombre**, **Email** y **Mensaje**, y pulsa **Enviar mensaje**. Si todo sale bien verás *«Mensaje enviado»*, y con **Enviar otro mensaje** puedes escribir de nuevo.
+**Paso 7 · Escribir al autor.** En **Contacto**, pulsa **Enviar un correo** o la dirección: se abre tu aplicación de correo con el destinatario y el asunto listos. Si no se abre (equipo sin correo configurado), haz clic o toca la dirección para seleccionarla y cópiala.
 
 | Si ves este mensaje… | Qué hacer |
 |---|---|
-| «Requerido» o «Email inválido» | Completa el campo marcado en rojo o corrige el email (ejemplo: `nombre@empresa.com`). |
-| «Revisa los datos del formulario.» | El servidor rechazó algún campo. Revisa los que aparecen marcados con «Revisa este campo». |
-| «El mensaje es demasiado largo.» | Acórtalo. El máximo es de 5000 caracteres; el contador aparece al acercarte al límite. |
-| «Enviaste varios mensajes seguidos. Podrás volver a escribir en unos N min.» | Espera los minutos indicados. Hay un límite de 5 mensajes cada 10 minutos. |
-| «El servidor tardó demasiado en responder. Intenta de nuevo.» | La respuesta tardó más de 12 segundos. Reintenta en un momento. |
-| «Sin conexión con el servidor. Revisa tu internet e intenta de nuevo.» | Verifica tu conexión y vuelve a pulsar **Enviar mensaje**. |
-| «El servidor no pudo procesar el mensaje. Intenta de nuevo en unos minutos.» | Es un problema del servidor. Si se repite, escribe por LinkedIn o email (íconos al pie del formulario). |
 | «Esta sección no se pudo mostrar.» | Pulsa **Reintentar**. Si dice «Revisa tu conexión», es un problema de red. |
 | «Algo salió mal cargando el portafolio.» | Pulsa **Recargar página**. |
 
@@ -469,7 +437,7 @@ Abre **http://localhost:8000**: FastAPI sirve la API y el build compilado. Si qu
 | Contenedor comprometido | La API (uid 10001) y Caddy (uid 10002) corren como usuarios sin privilegios; la API no publica puertos al host. Ambos contenedores usan sistema de archivos de solo lectura, `cap_drop: ALL`, `no-new-privileges` y límites de 1 CPU y 256 MB. |
 | Dependencias alteradas | Python se instala con `--require-hashes`. El CI ejecuta `pip-audit` y `npm audit`, y verifica que los lockfiles estén al día. |
 | Navegación sin cifrar | Caddy envía HSTS con arranque gradual (`max-age=300`) y obtiene HTTPS automático al configurar un dominio. |
-| Datos personales en mensajes | Aviso de uso bajo el formulario, borrado automático a los 12 meses y avisos por webhook sin datos personales. |
+| Datos personales en mensajes | El sitio no recoge datos: el contacto es por `mailto:`. La API heredada `POST /api/contact` (sin uso desde el sitio) borra lo guardado a los 12 meses y avisa por webhook sin datos personales. |
 
 ---
 
@@ -509,7 +477,6 @@ El CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) ejecuta todo esto
 │   │   ├── components/      Barra superior, dock, ventana flotante, portada y fondo
 │   │   ├── windows/         Contenido de cada ventana (carga bajo demanda)
 │   │   ├── overlays/        Paleta de comandos, tours, menú CORE e insignias
-│   │   ├── services/        Cliente HTTP de la API de contacto
 │   │   ├── data/            Textos del portafolio (perfil TI y RRHH)
 │   │   ├── lib/             Utilidades: almacenamiento, sonido, focus trap
 │   │   └── styles/          Tema, fuentes y colores
@@ -532,7 +499,7 @@ El CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) ejecuta todo esto
 <details>
 <summary><b>¿El sitio guarda o modifica mis datos?</b></summary>
 
-Solo guarda lo que escribes en el formulario de contacto (nombre, email, mensaje y fecha), en un archivo privado del servidor. Tus preferencias e insignias quedan en tu propio navegador (`localStorage`) y no se envían. El sitio no usa cookies ni servicios de analítica de terceros.
+No. El sitio no tiene formularios: el contacto se hace por correo desde tu propia aplicación. Tus preferencias e insignias quedan en tu propio navegador (`localStorage`) y no se envían. El sitio no usa cookies ni servicios de analítica de terceros.
 
 </details>
 
