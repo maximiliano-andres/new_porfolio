@@ -28,7 +28,7 @@ RUN npm run build
 # uv (Rust) installs the exact, hash-verified versions from backend/requirements.lock: a tampered or re-published
 # wheel fails the build, and every build gets the same starlette/pydantic the tests ran against
 FROM ghcr.io/astral-sh/uv:0.13.7@sha256:96f40d3904aad8d0bd010539001d36c8e2188b981e1334471a90c4a1d93bb490 AS uv
-FROM python:3.14-slim@sha256:af8a5aa14780025dbfbcfbc81bd8a91ebd87711dd5b0f48ed71090949dd7cb1d AS api-deps
+FROM python:3.15-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS api-deps
 COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
 RUN uv venv /opt/venv --python /usr/local/bin/python3
@@ -37,7 +37,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install --python /opt/venv/bin/python --require-hashes -r requirements.lock
 
 # ---------- 3. api: runtime image ----------
-FROM python:3.14-slim@sha256:af8a5aa14780025dbfbcfbc81bd8a91ebd87711dd5b0f48ed71090949dd7cb1d AS api
+FROM python:3.15-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS api
 ENV PATH=/opt/venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
