@@ -4,4 +4,4 @@
 granian[reload]==2.8.7   # `APP_ENV=development python -m app` auto-reloads (watchfiles, Rust)
 pytest==9.1.0             # ≥ 9.0.3: PYSEC-2026-1845 / CVE-2025-71176 (/tmp/pytest-of-* DoS/escalation)
 httpx==0.28.1
-ruff==0.17.3             # Python linter (Rust)
+ruff==0.17.4             # Python linter (Rust)
