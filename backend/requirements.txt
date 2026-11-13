@@ -1,5 +1,5 @@
 # Direct dependencies. Installs use the hashed, cross-platform lock generated from this file:
 #   uv pip compile --universal --python-version 3.13 --generate-hashes requirements.txt -o requirements.lock
-fastapi==0.141.1
+fastapi==0.162.3
 # ASGI server written in Rust (hyper + tokio); [uvloop] is skipped on Windows by its own marker
 granian[uvloop]==2.8.7
