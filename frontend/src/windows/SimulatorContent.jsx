@@ -1,7 +1,7 @@
 /* "Optimize this process" simulator inspired by the BUK migration case (illustrative model). */
 import { useEffect, useState } from "react";
 import { Play } from "lucide-react";
-import { useAudience, useSystem } from "../app/context.js";
+import { useAudience, useSystem, useT } from "../app/context.js";
 import { prefersReducedMotion } from "../lib/env.js";
 import { sound } from "../lib/sound.js";
 import { CORE, HR_ACCENT, LANG } from "../styles/theme.js";
@@ -23,10 +23,14 @@ function simulateMinutes({ threads, cache, index }) {
 }
 
 const fmtMin = (m) => (m >= 60 ? `${Math.floor(m / 60)} h ${Math.round(m % 60)} min` : `${m.toFixed(1)} min`);
+const fmtMinFor = (en) => (m) => (en ? fmtMin(m) : fmtMin(m).replace(".", ","));
 
 export function SimulatorContent() {
   const { audience } = useAudience();
   const { unlock } = useSystem();
+  const t = useT();
+  const en = t(false, true);
+  const fmt = fmtMinFor(en);
   const hr = audience === "rrhh";
   const [cfg, setCfg] = useState({ threads: 1, cache: false, index: false });
   const [run, setRun] = useState(null); // { minutes, started } while/after running
@@ -56,21 +60,21 @@ export function SimulatorContent() {
 
   const done = run && progress >= 1;
   const verdict = !done ? null : run.minutes <= 10
-    ? { text: hr ? "¡Objetivo logrado! Así se redujo en Push HR la migración masiva de documentos a BUK: de más de 1 hora a 5–10 minutos." : "¡Optimizado! Mismo orden de mejora que el caso real de la migración masiva de documentos a BUK en Push HR (>1 h → 5–10 min).", color: LANG.node.c2 }
+    ? { text: hr ? t("¡Objetivo logrado! Así se redujo en Push HR la migración masiva de documentos a BUK: de más de 1 hora a 5–10 minutos.", "Goal reached! That's how the bulk document migration to BUK was cut at Push HR: from over 1 hour to 5–10 minutes.") : t("¡Optimizado! Mismo orden de mejora que el caso real de la migración masiva de documentos a BUK en Push HR (>1 h → 5–10 min).", "Optimized! The same order of improvement as the real BUK document migration at Push HR (>1 h → 5–10 min)."), color: LANG.node.c2 }
     : run.minutes <= 30
-      ? { text: hr ? "Mucho mejor, pero aún se puede más. Prueba combinando las opciones." : "Mejor, pero queda margen: combina paralelismo con caché e índices.", color: HR_ACCENT }
-      : { text: hr ? "Sigue lento. Prueba repartir el trabajo entre más trabajadores." : "Cuello de botella: el proceso sigue siendo casi secuencial.", color: "#f87171" };
+      ? { text: hr ? t("Mucho mejor, pero aún se puede más. Prueba combinando las opciones.", "Much better, but there's more to gain. Try combining the options.") : t("Mejor, pero queda margen: combina paralelismo con caché e índices.", "Better, but there's room left: combine parallelism with caching and indexes."), color: HR_ACCENT }
+      : { text: hr ? t("Sigue lento. Prueba repartir el trabajo entre más trabajadores.", "Still slow. Try splitting the work across more workers.") : t("Cuello de botella: el proceso sigue siendo casi secuencial.", "Bottleneck: the process is still almost sequential."), color: "#f87171" };
 
   const L = hr
-    ? { threads: "Trabajadores en paralelo", cache: "Memoria rápida (caché)", index: "Datos ordenados para búsqueda (índices)", cores: "capacidad del servidor" }
-    : { threads: "Hilos en paralelo (threads)", cache: "Caché de consultas", index: "Índices en base de datos", cores: "núcleos de CPU" };
+    ? { threads: t("Trabajadores en paralelo", "Parallel workers"), cache: t("Memoria rápida (caché)", "Fast memory (cache)"), index: t("Datos ordenados para búsqueda (índices)", "Data sorted for lookups (indexes)"), cores: t("capacidad del servidor", "server capacity") }
+    : { threads: t("Hilos en paralelo (threads)", "Parallel threads"), cache: t("Caché de consultas", "Query cache"), index: t("Índices en base de datos", "Database indexes"), cores: t("núcleos de CPU", "CPU cores") };
 
   return (
     <div className="w-full">
       <p className="text-[12.5px] text-white/65 leading-5 mb-4">
         {hr
-          ? "Tu misión: un proceso de datos tarda más de 1 hora. Ajusta las opciones y ejecútalo hasta dejarlo en 10 minutos o menos."
-          : "Reto: un batch de datos tarda ~62 min en ejecución secuencial. Ajusta la configuración y bájalo a ≤ 10 min."}
+          ? t("Tu misión: un proceso de datos tarda más de 1 hora. Ajusta las opciones y ejecútalo hasta dejarlo en 10 minutos o menos.", "Your mission: a data process takes over 1 hour. Tune the options and run it until it takes 10 minutes or less.")
+          : t("Reto: un batch de datos tarda ~62 min en ejecución secuencial. Ajusta la configuración y bájalo a ≤ 10 min.", "Challenge: a data batch takes ~62 min when run sequentially. Tune the settings and bring it down to ≤ 10 min.")}
       </p>
 
       <div className="space-y-4 rounded-lg border border-white/10 bg-black/25 p-4">
@@ -86,7 +90,7 @@ export function SimulatorContent() {
             aria-describedby="sim-cores"
           />
           <span id="sim-cores" className="block text-[10.5px] text-white/60 mt-0.5">
-            {SIM_CORES} {L.cores}{cfg.threads > SIM_CORES && <span className="text-[#f87171]"> · más {hr ? "trabajadores" : "hilos"} que {hr ? "capacidad" : "núcleos"}: se pierde tiempo coordinándolos</span>}
+            {SIM_CORES} {L.cores}{cfg.threads > SIM_CORES && <span className="text-[#f87171]"> · {hr ? t("más trabajadores que capacidad", "more workers than capacity") : t("más hilos que núcleos", "more threads than cores")}: {t("se pierde tiempo coordinándolos", "time is lost coordinating them")}</span>}
           </span>
         </label>
         {[["cache", L.cache], ["index", L.index]].map(([k, label]) => (
@@ -107,11 +111,11 @@ export function SimulatorContent() {
 
       <div className="grid grid-cols-2 gap-3 my-4">
         <div className="rounded-lg border border-white/10 p-3">
-          <div className="text-[10px] uppercase tracking-wider text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>Tiempo estimado</div>
-          <div className="text-[22px] font-semibold tabular-nums mt-1" style={{ color: minutes <= 10 ? LANG.node.c2 : minutes <= 30 ? HR_ACCENT : "#f87171", fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>{fmtMin(minutes)}</div>
+          <div className="text-[10px] uppercase tracking-wider text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{t("Tiempo estimado", "Estimated time")}</div>
+          <div className="text-[22px] font-semibold tabular-nums mt-1" style={{ color: minutes <= 10 ? LANG.node.c2 : minutes <= 30 ? HR_ACCENT : "#f87171", fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>{fmt(minutes)}</div>
         </div>
         <div className="rounded-lg border border-white/10 p-3">
-          <div className="text-[10px] uppercase tracking-wider text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{hr ? "Mejora" : "Speed-up"}</div>
+          <div className="text-[10px] uppercase tracking-wider text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{hr ? t("Mejora", "Improvement") : "Speed-up"}</div>
           <div className="text-[22px] font-semibold tabular-nums mt-1 text-white/90" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
             {hr ? `−${Math.max(0, Math.round((1 - minutes / SIM_BASE_MIN) * 100))}%` : `×${(SIM_BASE_MIN / minutes).toFixed(1)}`}
           </div>
@@ -124,11 +128,11 @@ export function SimulatorContent() {
         className="w-full flex items-center justify-center gap-2 rounded-lg py-2.5 text-[13px] font-medium disabled:opacity-60 hover:brightness-110 active:scale-[0.98] transition-all focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-hidden"
         style={{ background: `linear-gradient(90deg, ${CORE}, ${LANG.node.c1})`, color: "#05070b" }}
       >
-        <Play size={14} /> {run && !done ? (hr ? "Procesando…" : "Ejecutando…") : hr ? "Ejecutar proceso" : "Ejecutar batch"}
+        <Play size={14} /> {run && !done ? (hr ? t("Procesando…", "Processing…") : t("Ejecutando…", "Running…")) : hr ? t("Ejecutar proceso", "Run process") : t("Ejecutar batch", "Run batch")}
       </button>
 
       {/* screen readers hear only the verdict: the progress below changes every frame and would flood them */}
-      <div className="sr-only" role="status" aria-live="polite">{verdict ? verdict.text : run ? (hr ? "Procesando…" : "Ejecutando…") : ""}</div>
+      <div className="sr-only" role="status" aria-live="polite">{verdict ? verdict.text : run ? (hr ? t("Procesando…", "Processing…") : t("Ejecutando…", "Running…")) : ""}</div>
       {run && (
         <div className="mt-4">
           <div className="space-y-1.5" aria-hidden="true">
@@ -139,8 +143,8 @@ export function SimulatorContent() {
             ))}
           </div>
           <div aria-hidden="true" className="flex justify-between mt-1.5 text-[10.5px] text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
-            <span>{run.lanes} {hr ? (run.lanes === 1 ? "trabajador" : "trabajadores") : run.lanes === 1 ? "hilo" : "hilos"}</span>
-            <span>{fmtMin(run.minutes * progress)} / {fmtMin(run.minutes)}</span>
+            <span>{run.lanes} {hr ? (run.lanes === 1 ? t("trabajador", "worker") : t("trabajadores", "workers")) : run.lanes === 1 ? t("hilo", "thread") : t("hilos", "threads")}</span>
+            <span>{fmt(run.minutes * progress)} / {fmt(run.minutes)}</span>
           </div>
           {verdict && (
             <p className="mt-3 rounded-lg border px-3 py-2.5 text-[12px] leading-5" style={{ borderColor: `${verdict.color}55`, color: verdict.color, background: `${verdict.color}0d` }}>
@@ -151,7 +155,7 @@ export function SimulatorContent() {
       )}
 
       <p className="mt-4 text-[10.5px] text-white/60 leading-4">
-        Simulación ilustrativa inspirada en el caso real de la migración masiva de documentos a BUK (Push HR): de más de 1 hora a 5–10 minutos. Los valores son aproximados.
+        {t("Simulación ilustrativa inspirada en el caso real de la migración masiva de documentos a BUK (Push HR): de más de 1 hora a 5–10 minutos. Los valores son aproximados.", "Illustrative simulation inspired by the real bulk document migration to BUK (Push HR): from over 1 hour to 5–10 minutes. Values are approximate.")}
       </p>
     </div>
   );

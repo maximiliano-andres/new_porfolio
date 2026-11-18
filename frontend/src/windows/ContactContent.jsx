@@ -3,7 +3,7 @@
    (e.g. when the device has no mail app configured). */
 import { useState } from "react";
 import { ArrowUpRight, Github, Linkedin, Mail } from "lucide-react";
-import { useAudience, useSystem } from "../app/context.js";
+import { useAudience, useSystem, useT } from "../app/context.js";
 import { CONTACT_EMAIL, CORE, LANG, SOCIAL_LINKS } from "../styles/theme.js";
 
 const MAIL_HINT_ID = "c-mail-hint";
@@ -13,6 +13,7 @@ export function ContactContent() {
   const { audience } = useAudience();
   const { unlock } = useSystem();
   const [imgError, setImgError] = useState(false);
+  const t = useT();
   const hr = audience === "rrhh";
   // the only script here: the "Conexión" badge, unlocked when the visitor heads to their mail app
   const onMail = () => unlock("contact");
@@ -34,10 +35,10 @@ export function ContactContent() {
         </div>
         <div className="min-w-0">
           <div className="text-[12px] font-medium text-white/90">
-            {hr ? "¿Tienes un proceso de selección abierto?" : "¿Trabajamos juntos?"}
+            {hr ? t("¿Tienes un proceso de selección abierto?", "Do you have an open hiring process?") : t("¿Trabajamos juntos?", "Shall we work together?")}
           </div>
           <div className="text-[10.5px] text-white/65">
-            {hr ? "Coordinemos una entrevista; respondo en 24–48 horas hábiles" : "Hablemos sobre tu próximo sistema backend"}
+            {hr ? t("Coordinemos una entrevista; respondo en 24–48 horas hábiles · disponibilidad inmediata", "Let's schedule an interview; I reply within 24–48 business hours · available now") : t("Hablemos sobre tu próximo sistema backend", "Let's talk about your next backend system")}
           </div>
         </div>
       </div>
@@ -45,7 +46,7 @@ export function ContactContent() {
       {/* the address itself: visible, a link, and selectable in one tap/click to copy it manually */}
       <div className="rounded-lg border p-4 text-center" style={{ borderColor: `${CORE}2e`, background: `${CORE}08` }}>
         <div className="text-[10.5px] uppercase tracking-wider text-white/65 mb-1.5" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
-          Correo
+          {t("Correo", "Email")}
         </div>
         <a
           href={SOCIAL_LINKS.email}
@@ -64,11 +65,11 @@ export function ContactContent() {
           className={`mt-4 w-full flex items-center justify-center gap-2 rounded-lg py-3 sm:py-2.5 text-[13.5px] sm:text-[13px] font-medium transition-all hover:brightness-110 active:scale-[0.98] ${ring}`}
           style={{ background: `linear-gradient(90deg, ${CORE}, ${LANG.node.c1})`, color: "#05070b" }}
         >
-          <Mail size={15} aria-hidden="true" /> {hr ? "Escribir para coordinar una entrevista" : "Enviar un correo"}
+          <Mail size={15} aria-hidden="true" /> {hr ? t("Escribir para coordinar una entrevista", "Write to schedule an interview") : t("Enviar un correo", "Send an email")}
           <ArrowUpRight size={14} aria-hidden="true" className="opacity-70" />
         </a>
         <p id={MAIL_HINT_ID} className="mt-2 text-[11px] leading-4 text-white/65">
-          Se abrirá tu aplicación de correo con el destinatario y el asunto listos. Si no se abre, copia la dirección de arriba.
+          {t("Se abrirá tu aplicación de correo con el destinatario y el asunto listos. Si no se abre, copia la dirección de arriba.", "Your email app will open with the address and subject filled in. If it doesn't, copy the address above.")}
         </p>
       </div>
 
@@ -79,7 +80,7 @@ export function ContactContent() {
         <a href={SOCIAL_LINKS.linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn" aria-label="LinkedIn" className={`w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/70 hover:text-white hover:border-white/30 transition-colors ${ring}`}>
           <Linkedin size={18} />
         </a>
-        <a href={SOCIAL_LINKS.email} onClick={onMail} title={`Correo: ${CONTACT_EMAIL}`} aria-label={`Enviar un correo a ${CONTACT_EMAIL}`} className={`w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/70 hover:text-white hover:border-white/30 transition-colors ${ring}`}>
+        <a href={SOCIAL_LINKS.email} onClick={onMail} title={`${t("Correo", "Email")}: ${CONTACT_EMAIL}`} aria-label={`${t("Enviar un correo a", "Send an email to")} ${CONTACT_EMAIL}`} className={`w-10 h-10 flex items-center justify-center rounded-full border border-white/10 text-white/70 hover:text-white hover:border-white/30 transition-colors ${ring}`}>
           <Mail size={18} />
         </a>
       </div>

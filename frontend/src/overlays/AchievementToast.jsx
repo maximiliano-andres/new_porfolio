@@ -1,11 +1,13 @@
 /* "Badge unlocked" toast. */
 import { useEffect } from "react";
 import { m } from "framer-motion";
-import { ACHIEVEMENTS } from "../data/system.js";
+import { ACHIEVEMENTS, loc } from "../data/system.js";
+import { useLang } from "../app/context.js";
 import { HR_ACCENT } from "../styles/theme.js";
 
 export function AchievementToast({ id, onDone }) {
   const a = ACHIEVEMENTS.find((x) => x.id === id);
+  const { lang } = useLang();
   useEffect(() => {
     const t = setTimeout(onDone, 3600);
     return () => clearTimeout(t);
@@ -27,9 +29,9 @@ export function AchievementToast({ id, onDone }) {
         <a.Icon size={17} />
       </span>
       <div className="min-w-0">
-        <div className="text-[10px] uppercase tracking-wider" style={{ color: HR_ACCENT, fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>Insignia desbloqueada</div>
-        <div className="text-[13px] font-semibold text-white truncate" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>{a.title}</div>
-        <div className="text-[11px] text-white/65 truncate">{a.desc}</div>
+        <div className="text-[10px] uppercase tracking-wider" style={{ color: HR_ACCENT, fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{lang === "en" ? "Badge unlocked" : "Insignia desbloqueada"}</div>
+        <div className="text-[13px] font-semibold text-white truncate" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>{loc(a, "title", lang)}</div>
+        <div className="text-[11px] text-white/65 truncate">{loc(a, "desc", lang)}</div>
       </div>
     </m.div>
     </div>

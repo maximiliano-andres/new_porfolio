@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { m } from "framer-motion";
 import { FileText, FolderGit2, Github, Linkedin, Play, Sparkles, User, Users } from "lucide-react";
 import { AudienceToggle } from "./audience.jsx";
+import { useT } from "../app/context.js";
 import { CORE, HR_ACCENT, LANG, SOCIAL_LINKS } from "../styles/theme.js";
 
 const heroBtn =
@@ -15,6 +16,7 @@ export function Hero({ hr, insets, animateIn = true, onPrimary, onAbout, onCv, o
   // the text is click-through so the CORE hexagon behind it stays clickable — but when the content is taller
   // than the screen (320×568, 700×560…) the hero must take the pointer, or wheel/touch could never scroll it
   // and the last buttons would stay behind the dock
+  const t = useT();
   const scrollRef = useRef(null);
   const [overflows, setOverflows] = useState(false);
   useEffect(() => {
@@ -47,7 +49,7 @@ export function Hero({ hr, insets, animateIn = true, onPrimary, onAbout, onCv, o
           className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] 2xl:text-[12px] mb-4 2xl:mb-6 low:mb-3 short:mb-2"
           style={{ borderColor: `${CORE}44`, color: CORE, fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}
         >
-          <Sparkles size={11} /> Disponible para nuevos proyectos
+          <Sparkles size={11} /> {t("Disponible para nuevos proyectos · inicio inmediato", "Open to new roles · available now")}
         </span>
         <h1
           className="text-[28px] min-[380px]:text-[32px] sm:text-[44px] lg:text-[52px] 2xl:text-[64px] short:text-[26px] font-semibold text-white mb-3 2xl:mb-5 low:mb-2 short:mb-2 leading-[1.1] max-w-4xl text-balance"
@@ -56,15 +58,17 @@ export function Hero({ hr, insets, animateIn = true, onPrimary, onAbout, onCv, o
           Maximiliano Andrés Caniullán Lefiñir
         </h1>
         <p className="text-[14px] sm:text-[16px] 2xl:text-[19px] leading-relaxed text-white/65 max-w-md sm:max-w-xl 2xl:max-w-2xl mb-6 2xl:mb-8 low:mb-4 short:mb-4 short:text-[13.5px] text-pretty">
-          {hr ? (
-            <>Construyo la parte invisible de las aplicaciones —la que procesa cada solicitud de los usuarios— y me especializo en que <span className="text-white/85">funcione más rápido y cueste menos operar</span>. Resultados medidos en Push HR, BiceVida y proyectos para PUMA, GyG e IACC.</>
-          ) : (
-            <>Backend Developer enfocado en crear sistemas rápidos y eficientes usando <span style={{ color: LANG.java.c1 }}>Java / Spring Boot</span>, <span style={{ color: LANG.python.c2 }}>Python</span> y <span style={{ color: LANG.node.c2 }}>Node.js</span>. Transformo procesos lentos y pesados en sistemas rápidos, estables y con menor consumo de recursos.</>
+          {hr ? t(
+            <>Construyo la parte invisible de las aplicaciones —la que procesa cada solicitud de los usuarios— y me especializo en que <span className="text-white/85">funcione más rápido y cueste menos operar</span>. Resultados medidos en Push HR, BiceVida y proyectos para PUMA, GyG e IACC.</>,
+            <>I build the invisible part of applications —the part that handles every user request— and I specialize in making it <span className="text-white/85">run faster and cost less to operate</span>. Measured results at Push HR, BiceVida and projects for PUMA, GyG and IACC.</>
+          ) : t(
+            <>Backend Developer enfocado en crear sistemas rápidos y eficientes usando <span style={{ color: LANG.java.c1 }}>Java / Spring Boot</span>, <span style={{ color: LANG.python.c2 }}>Python</span> y <span style={{ color: LANG.node.c2 }}>Node.js</span>. Transformo procesos lentos y pesados en sistemas rápidos, estables y con menor consumo de recursos.</>,
+            <>Backend Developer focused on building fast, efficient systems with <span style={{ color: LANG.java.c1 }}>Java / Spring Boot</span>, <span style={{ color: LANG.python.c2 }}>Python</span> and <span style={{ color: LANG.node.c2 }}>Node.js</span>. I turn slow, heavy processes into fast, stable systems that use fewer resources.</>
           )}
         </p>
         <div className="flex flex-col items-center gap-2 mb-6 low:mb-4 short:mb-4 pointer-events-auto">
           <span className="text-[10.5px] uppercase tracking-wider text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
-            Ver el portafolio como
+            {t("Ver el portafolio como", "View the portfolio as")}
           </span>
           <AudienceToggle variant="long" />
         </div>
@@ -77,7 +81,7 @@ export function Hero({ hr, insets, animateIn = true, onPrimary, onAbout, onCv, o
               className={`${heroBtn} hover:brightness-110 focus-visible:ring-2 focus-visible:ring-white/60`}
               style={{ background: `linear-gradient(90deg, ${HR_ACCENT}, ${LANG.java.c1})`, color: "#05070b" }}
             >
-              <Users size={14} /> Ficha para RRHH
+              <Users size={14} /> {t("Ficha para RRHH", "Recruiter summary")}
             </button>
           ) : (
             <button
@@ -86,7 +90,7 @@ export function Hero({ hr, insets, animateIn = true, onPrimary, onAbout, onCv, o
               className={`${heroBtn} hover:brightness-110 focus-visible:ring-2 focus-visible:ring-white/60`}
               style={{ background: `linear-gradient(90deg, ${CORE}, ${LANG.node.c1})`, color: "#05070b" }}
             >
-              <FolderGit2 size={14} /> Ver proyectos
+              <FolderGit2 size={14} /> {t("Ver proyectos", "View projects")}
             </button>
           )}
           <button
@@ -94,14 +98,14 @@ export function Hero({ hr, insets, animateIn = true, onPrimary, onAbout, onCv, o
             onClick={onAbout}
             className={`${heroBtn} border border-white/15 text-white/80 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50`}
           >
-            <User size={14} /> Sobre mí
+            <User size={14} /> {t("Sobre mí", "About me")}
           </button>
           <button
             data-hero-action="cv"
             onClick={onCv}
             className={`${heroBtn} border border-white/15 text-white/80 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50`}
           >
-            <FileText size={14} /> Ver CV
+            <FileText size={14} /> {t("Ver CV", "View CV")}
           </button>
           <a
             href={SOCIAL_LINKS.linkedin}
@@ -126,12 +130,12 @@ export function Hero({ hr, insets, animateIn = true, onPrimary, onAbout, onCv, o
             className={`${heroBtn} border hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50`}
             style={{ borderColor: `${HR_ACCENT}66`, color: HR_ACCENT }}
           >
-            <Play size={14} /> Recorrido de 60 s
+            <Play size={14} /> {t("Recorrido de 60 s", "60-second tour")}
           </button>
         </div>
         <p className="mt-6 sm:mt-8 low:mt-4 short:mt-4 text-[10.5px] 2xl:text-[12px] text-white/60 max-w-[300px] sm:max-w-none" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
-          explora desde el dock inferior o toca el núcleo <span style={{ color: CORE }}>CORE</span>
-          <span className="hidden sm:inline"> · pulsa <kbd className="text-white/75">Ctrl K</kbd> para buscar</span>
+          {t("explora desde el dock inferior o toca el núcleo", "explore from the bottom dock or tap the")} <span style={{ color: CORE }}>CORE</span>{t("", " hub")}
+          <span className="hidden sm:inline"> · {t("pulsa", "press")} <kbd className="text-white/75">Ctrl K</kbd> {t("para buscar", "to search")}</span>
         </p>
       </div>
     </m.div>

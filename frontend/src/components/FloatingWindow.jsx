@@ -4,6 +4,7 @@ import { m, useMotionValue } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { SectionBoundary, WindowSkeleton } from "./SectionBoundary.jsx";
 import { AudienceToggle } from "./audience.jsx";
+import { useT } from "../app/context.js";
 
 export function FloatingWindow({
   id, title, IconCmp, accent, pos, scale = 1,
@@ -11,6 +12,7 @@ export function FloatingWindow({
   onClose, onMinimize, onMaximize, onFocus, children,
   switcher = null, onSwitch,
 }) {
+  const t = useT();
   const collapsedHeight = 44;
 
   // vector from the window to its dock icon: windows grow out of the dock and shrink back into it.
@@ -93,9 +95,9 @@ export function FloatingWindow({
         style={{ borderColor: "rgba(255,255,255,0.06)", cursor: isMobile || isMaximized ? "default" : "grab", zoom: scale, touchAction: isMobile ? "pan-y" : undefined }}
       >
         <div className="flex items-center gap-2.5 sm:gap-1.5 mr-1" onPointerDown={(e) => e.stopPropagation()}>
-          <button aria-label={`Cerrar ${title}`} onClick={() => onClose(id)} className={`${dotCls} bg-[#ff5f56]`} />
-          <button aria-label={`Minimizar ${title}`} onClick={() => onMinimize(id)} className={`${dotCls} bg-[#ffbd2e]`} />
-          <button aria-label={`Maximizar ${title}`} onClick={() => onMaximize(id)} className={`${dotCls} bg-[#27c93f]`} />
+          <button aria-label={`${t("Cerrar", "Close")} ${title}`} onClick={() => onClose(id)} className={`${dotCls} bg-[#ff5f56]`} />
+          <button aria-label={`${t("Minimizar", "Minimize")} ${title}`} onClick={() => onMinimize(id)} className={`${dotCls} bg-[#ffbd2e]`} />
+          <button aria-label={`${t("Maximizar", "Maximize")} ${title}`} onClick={() => onMaximize(id)} className={`${dotCls} bg-[#27c93f]`} />
         </div>
         <IconCmp size={13} style={{ color: accent }} />
         <span
@@ -110,11 +112,11 @@ export function FloatingWindow({
       </m.div>
       {isMobile && switcher && !isMinimized && (
         <div className="flex items-center justify-between gap-2 px-2 py-1 border-b border-white/[0.06] shrink-0 text-[10.5px]" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
-          <button onClick={() => onSwitch(switcher.prev.id)} className="inline-flex items-center gap-1 min-w-0 rounded-md px-1.5 py-1.5 text-white/65 active:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden" aria-label={`Ir a ${switcher.prev.label}`}>
+          <button onClick={() => onSwitch(switcher.prev.id)} className="inline-flex items-center gap-1 min-w-0 rounded-md px-1.5 py-1.5 text-white/65 active:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden" aria-label={`${t("Ir a", "Go to")} ${switcher.prev.label}`}>
             <ChevronLeft size={13} className="shrink-0" /><span className="truncate">{switcher.prev.label}</span>
           </button>
-          <span className="shrink-0 text-white/60">{switcher.index + 1} / {switcher.total} · desliza</span>
-          <button onClick={() => onSwitch(switcher.next.id)} className="inline-flex items-center gap-1 min-w-0 rounded-md px-1.5 py-1.5 text-white/65 active:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden" aria-label={`Ir a ${switcher.next.label}`}>
+          <span className="shrink-0 text-white/60">{switcher.index + 1} / {switcher.total} · {t("desliza", "swipe")}</span>
+          <button onClick={() => onSwitch(switcher.next.id)} className="inline-flex items-center gap-1 min-w-0 rounded-md px-1.5 py-1.5 text-white/65 active:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden" aria-label={`${t("Ir a", "Go to")} ${switcher.next.label}`}>
             <span className="truncate">{switcher.next.label}</span><ChevronRight size={13} className="shrink-0" />
           </button>
         </div>

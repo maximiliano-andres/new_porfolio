@@ -4,6 +4,7 @@ import { m } from "framer-motion";
 import { Hexagon } from "lucide-react";
 import { isTopTrap, useFocusTrap } from "../lib/useFocusTrap.js";
 import { CORE } from "../styles/theme.js";
+import { useT } from "../app/context.js";
 
 const BTN = 48; // module diameter
 const MIN_GAP = 56; // closest two module centres may get (48 px + a little air)
@@ -79,6 +80,7 @@ function coreLayout(n, area, topReserve) {
 }
 
 export function CoreMenu({ open, onClose, origin, area, items, onPick }) {
+  const t = useT();
   const [hover, setHover] = useState(null);
   const dialogRef = useRef(null);
   useFocusTrap(dialogRef, open, { focusFirst: true, restore: true });
@@ -112,7 +114,7 @@ export function CoreMenu({ open, onClose, origin, area, items, onPick }) {
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Centro de control CORE"
+      aria-label={t("Centro de control CORE", "CORE control center")}
     >
       <svg className="absolute inset-0 w-full h-full pointer-events-none" aria-hidden="true">
         {items.map((it, i) => (
@@ -134,7 +136,7 @@ export function CoreMenu({ open, onClose, origin, area, items, onPick }) {
           className={`mt-1 text-[10.5px] text-white/80 max-w-[130px] leading-4 ${compactCenter && showLabels ? "sr-only" : ""}`}
           style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}
         >
-          {label || "CORE · elige un módulo"}
+          {label || t("CORE · elige un módulo", "CORE · pick a module")}
         </span>
       </div>
       {items.map((it, i) => (

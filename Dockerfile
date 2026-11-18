@@ -21,6 +21,9 @@ COPY frontend/index.html frontend/vite.config.js ./
 COPY frontend/public ./public
 COPY frontend/scripts ./scripts
 COPY frontend/src ./src
+# SITE_URL (optional, e.g. https://tudominio.cl): absolute link-preview image, canonical URL and hreflang in index.html
+ARG SITE_URL=""
+ENV SITE_URL=${SITE_URL}
 # frontend/scripts/deploy-headers.mjs writes /build/deploy/security-headers.caddy (CSP with the inline-script hash of THIS build)
 RUN npm run build
 

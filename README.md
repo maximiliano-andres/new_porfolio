@@ -20,7 +20,7 @@ El visitante abre ventanas, usa una terminal, prueba un simulador y gana insigni
 ![Caddy](https://img.shields.io/badge/Caddy-2.11-1F88C0?style=flat-square&logo=caddy&logoColor=white)
 ![Pydantic](https://img.shields.io/badge/Pydantic-2.14-E92063?style=flat-square&logo=pydantic&logoColor=white)
 ![Framer Motion](https://img.shields.io/badge/Framer_Motion-11-0055FF?style=flat-square&logo=framer&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-89_pasando-2EA44F?style=flat-square&logo=pytest&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-137_pasando-2EA44F?style=flat-square&logo=pytest&logoColor=white)
 
 [En 30 segundos](#-el-proyecto-en-30-segundos) · [Capturas](#-capturas) · [Funcionalidades](#-funcionalidades) · [Tecnología](#-tecnología) · [Diagramas](#️-mapas-del-sistema) · [Instalación](#-instalación) · [Manual de uso](#-manual-de-uso) · [Seguridad](#-seguridad) · [FAQ](#-preguntas-frecuentes)
 
@@ -36,7 +36,7 @@ El visitante abre ventanas, usa una terminal, prueba un simulador y gana insigni
 | **La solución** | Un sitio web interactivo que presenta el mismo perfil de dos formas: **Perfil TI** (tecnologías, arquitectura y métricas) y **Perfil RRHH** (lenguaje de negocio, sin tecnicismos). Se cambia con un clic. |
 | **Para quién** | Reclutadores, equipos de RRHH y líderes técnicos que evalúan al candidato. También sirve como referencia para desarrolladores que buscan un ejemplo de arquitectura limpia. |
 | **Seguridad** | No pide cuentas ni contraseñas, y el sitio no recibe datos del visitante: el contacto se hace por correo, desde la aplicación de correo de cada persona. |
-| **Alcance** | 12 ventanas de contenido, terminal con comandos, simulador, 13 insignias, tour guiado, visor del CV y contacto por correo. La API tiene 2 endpoints: estado y contacto. |
+| **Alcance** | 14 ventanas de contenido (incluye Hobbies, Notas técnicas y «Cómo está hecho»), casos de estudio por proyecto, terminal con comandos, simulador, 15 insignias, tour guiado, visor del CV, contacto por correo y todo el sitio en español e inglés. La API tiene 2 endpoints: estado y contacto. |
 
 > [!IMPORTANT]
 > **Es un sitio público de solo lectura, sin cuentas de usuario.** Cualquier persona puede visitarlo sin registrarse. Las preferencias del visitante (perfil elegido, insignias, sonido) se guardan en su propio navegador y no viajan al servidor. El contacto se hace por correo electrónico, así que el sitio no guarda mensajes.
@@ -75,12 +75,17 @@ El visitante abre ventanas, usa una terminal, prueba un simulador y gana insigni
 | | Funcionalidad | Qué permite hacer |
 |---|---|---|
 | 👥 | **Dos perfiles de lectura** | Ver el mismo contenido explicado para TI o para RRHH. Por ejemplo, en RRHH «Skills» pasa a llamarse «Competencias» y «Proyectos» pasa a «Logros». |
-| 🔗 | **Enlace directo para reclutadores** | Compartir un enlace que abre el perfil RRHH de inmediato, añadiendo `?vista=rrhh` a la dirección. |
-| 📊 | **Ficha para RRHH** | Ver en una pantalla la experiencia, la ubicación, la modalidad, los resultados medibles (por ejemplo, «un proceso de más de 1 hora reducido a 5–10 minutos») y los cargos donde encaja. |
+| 🌎 | **Español e inglés** | Todo el sitio, en ambos perfiles, con un selector **ES / EN** en la barra superior y en la pantalla de inicio. Se elige solo según el idioma del navegador, y `?lang=en` fuerza el inglés. |
+| 🔗 | **Enlaces directos** | `?vista=rrhh` abre el perfil RRHH, `?ventana=hobbies` abre una ventana y `?proyecto=buk-migration` abre un caso de estudio. Un enlace directo salta la pantalla de inicio y el tour. Cada proyecto tiene un botón **Copiar enlace**. |
+| 🧰 | **Kit para el reclutador** | En la ficha RRHH: **Copiar resumen** (texto listo para pegar en un ATS o en un correo), **Descargar contacto (vCard)** sin teléfono, y **Copiar enlace a esta ficha**. |
+| 📊 | **Ficha para RRHH** | Ver en una pantalla la experiencia, la ubicación, la modalidad, el nivel de inglés, la disponibilidad, los resultados medibles (por ejemplo, «un proceso de más de 1 hora reducido a 5–10 minutos»), qué busca, el dominio de negocio de RRHH y nómina, cómo trabaja (cada punto con su evidencia) y los cargos donde encaja. |
 | ▶️ | **Recorrido de 60 segundos** | Ver un resumen narrado que abre las ventanas clave por sí solo, sin tener que explorar. |
 | 🧭 | **Tour por la interfaz** | Recibir una guía de 5 pasos la primera vez que se entra al sitio. |
 | ⚡ | **Simulador** | Probar cómo un proceso de unos 62 minutos baja de tiempo al ajustar hilos, caché e índices. Es un modelo ilustrativo inspirado en un caso real. |
-| 🏆 | **Insignias y progreso** | Ver qué secciones faltan por revisar. Hay 13 insignias, como «Reclutador» o «Explorador». |
+| 🏊 | **Hobbies** | Natación, mountain bike y estudio constante, cada uno con un mini-juego (nadar largos, pedalear cerro arriba, recorrer los temas que estudia) y una galería de fotos con visor. |
+| 🎓 | **Formación** | Estudios, certificaciones y **Aprendiendo ahora** en una sola ventana. |
+| 📅 | **Línea de tiempo** | Trabajos y estudios sobre un mismo eje de años, en la ventana Experiencia. |
+| 🏆 | **Insignias y progreso** | Ver qué secciones faltan por revisar. Hay 15 insignias, como «Reclutador», «Explorador» o «Más allá del código». |
 | 📄 | **Mi CV** | Ver el CV completo (2 páginas) en cualquier navegador o celular, descargarlo en PDF o abrirlo en otra pestaña. Se abre desde **Ver CV** en la portada, la ficha RRHH, `Ctrl/⌘ + K` o el comando `cv` de la terminal. |
 | ✉️ | **Contacto** | Pulsar **Enviar un correo** (o la dirección) abre la aplicación de correo del visitante con el destinatario y el asunto ya completos. La dirección queda visible para copiarla si el equipo no tiene correo configurado. |
 
@@ -88,12 +93,16 @@ El visitante abre ventanas, usa una terminal, prueba un simulador y gana insigni
 
 | | Funcionalidad | Detalle técnico |
 |---|---|---|
+| 🧪 | **Casos de estudio** | Cada proyecto muestra contexto, enfoque técnico, resultado y, cuando aplica, cómo se midió, más un fragmento de código (marcado como ilustrativo cuando no es el código del cliente). |
+| 📚 | **Notas técnicas** | Vitrina de la guía propia de concurrencia y acceso a datos (43 problemas, ejemplos en Java, Python y Node.js), con enlace al texto completo. |
+| 🔬 | **Cómo está hecho** | Las cifras del propio sitio (pruebas, peso con Brotli, viewports verificados, CI) y sus capas: frontend, backend, seguridad y entrega. |
+| 🔎 | **SEO y vista previa** | Imagen para compartir en LinkedIn o WhatsApp (`public/img/og-cover.png`, 1200×630), datos estructurados `schema.org/Person` y enlaces `hreflang` ES/EN. Con `SITE_URL` definido, las URLs son absolutas. |
 | 📈 | **Skills basado en evidencia** | En lugar de porcentajes autoevaluados, un gráfico cuenta en cuántos proyectos del histórico (2023–2026) se usó cada tecnología. Los conteos se calculan desde `PROJECT_HISTORY`, y se navega con flechas (radiogroup accesible). |
 | 🪟 | **Gestor de ventanas** | Ventanas arrastrables, minimizables y maximizables, con orden z, motor de layout responsivo y atajos `1`–`9` y `Esc`. |
 | ⌨️ | **Paleta de comandos y terminal** | Búsqueda sin distinguir acentos (`Ctrl/⌘ + K`) y una terminal con `help`, `ls`, `open <sección>`, `neofetch` y otros comandos. |
 | 🧩 | **Code-splitting por ventana** | Cada grupo de ventanas es un chunk `lazy()` que se precarga al pasar el cursor por el dock o cuando el navegador queda inactivo. |
 | 🚀 | **Portada pre-renderizada** | El build hace SSR de la portada dentro de `index.html` y verifica el layout en 18 viewports, así que el primer pintado no espera a JavaScript. |
-| 📦 | **Assets precomprimidos** | Archivos Brotli (calidad 11) y gzip (nivel 9) generados en el build (≈560 KB → ≈150 KB en Brotli); no se escribe la variante si no es más chica que el original. FastAPI y Caddy los sirven según `Accept-Encoding`. |
+| 📦 | **Assets precomprimidos** | Archivos Brotli (calidad 11) y gzip (nivel 9) generados en el build (≈730 KB → ≈180 KB en Brotli); no se escribe la variante si no es más chica que el original. FastAPI y Caddy los sirven según `Accept-Encoding`. |
 | 📴 | **Service Worker** | Usa cache-first para assets con hash, fuentes e imágenes, y network-first (con timeout de 3 s y navigation preload) para las páginas. Solo guarda la portada HTML: abrir el PDF del CV nunca reemplaza la copia offline. El build estampa un hash en `sw.js`, así que cada deploy renueva las cachés. No intercepta `/api/*`. |
 | 🏛️ | **API hexagonal** | Dominio y casos de uso en Python puro. Los adaptadores HTTP, de archivo JSONL y de rate limiter implementan puertos `Protocol`. |
 | 🩺 | **Readiness probe** | `GET /api/status` devuelve `503` si no se puede escribir el archivo de mensajes, si queda poco disco (`MIN_FREE_DISK_MB`) o si falta el build en producción. Lo usan los healthchecks de Docker. |
@@ -299,6 +308,7 @@ Ninguna variable es obligatoria: sin `.env`, el stack arranca en `http://localho
 | Variable | Obligatoria | Descripción | Por defecto |
 |---|:---:|---|---|
 | `SITE_ADDRESS` | — | Dirección que atiende Caddy. Con un dominio (`tudominio.cl`), Caddy obtiene HTTPS automáticamente. | `:80` |
+| `SITE_URL` | — | URL pública con `https://` y sin barra final (`https://tudominio.cl`). Se usa al compilar: imagen de vista previa absoluta (LinkedIn y WhatsApp la exigen), URL canónica y enlaces `hreflang` ES/EN. Vacía: la imagen queda relativa y se omiten canónica y `hreflang`. | vacía |
 | `HTTP_PORT` | — | Puerto HTTP del host. Cámbialo si el 80 está ocupado. | `80` |
 | `HTTPS_PORT` | — | Puerto HTTPS del host (TCP y UDP para HTTP/3). | `443` |
 | `ENABLE_HSTS` | — | `1` si el sitio se sirve solo por HTTPS. Caddy ya envía HSTS con `max-age=300` (ver `config/security-headers.json`); súbelo cuando HTTPS sea estable. | `0` |
@@ -397,11 +407,11 @@ Abre **http://localhost:8000**: FastAPI sirve la API y el build compilado. Si qu
 
 ## 📖 Manual de uso
 
-**Paso 1 · Ingresar.** Abre el sitio. La primera vez aparece una pantalla de arranque que pregunta *«¿Cómo quieres explorar este portafolio?»*. Elige **Perfil TI** si buscas detalle técnico o **Perfil RRHH** si prefieres lenguaje de negocio. Puedes cambiarlo después desde la barra superior.
+**Paso 1 · Ingresar.** Abre el sitio. La primera vez aparece una pantalla de arranque que pregunta *«¿Cómo quieres explorar este portafolio?»*. Elige **Perfil TI** si buscas detalle técnico o **Perfil RRHH** si prefieres lenguaje de negocio. El selector **ES / EN** de la esquina cambia el idioma. Ambos se pueden cambiar después desde la barra superior.
 
-**Paso 2 · Seguir el tour.** Un tour de 5 pasos muestra las partes del escritorio. Avanza con **Siguiente**, vuelve con **Atrás**, cierra con **Saltar tour** o termina con **¡Listo!**. Para repetirlo, pulsa la tecla `?`.
+**Paso 2 · Seguir el tour.** Un tour de 6 pasos muestra las partes del escritorio. Avanza con **Siguiente**, vuelve con **Atrás**, cierra con **Saltar tour** o termina con **¡Listo!**. Para repetirlo, pulsa la tecla `?`.
 
-**Paso 3 · Explorar las secciones.** Cada ícono del dock inferior abre una ventana: **Sobre mí**, **Para RRHH**, **Skills**, **Proyectos**, **Experiencia**, **Educación**, **Certificaciones**, **Contacto** y **Terminal.exe**. También puedes usar las teclas `1` a `9` (se pueden desactivar desde `Ctrl` + `K` → «Desactivar atajos de una tecla»). El CV, el simulador y las insignias se abren desde el núcleo **CORE**, la paleta o la terminal. Las ventanas se arrastran, se minimizan, se maximizan y se cierran con los botones de su barra o con `Esc`.
+**Paso 3 · Explorar las secciones.** Cada ícono del dock inferior abre una ventana: **Sobre mí**, **Para RRHH**, **Skills**, **Proyectos**, **Experiencia**, **Formación**, **Hobbies**, **Contacto** y **Terminal.exe**. También puedes usar las teclas `1` a `9` (se pueden desactivar desde `Ctrl` + `K` → «Desactivar atajos de una tecla»). El CV, el simulador, las notas técnicas, «Cómo está hecho» y las insignias se abren desde el núcleo **CORE**, la paleta o la terminal. Las ventanas se arrastran, se minimizan, se maximizan y se cierran con los botones de su barra o con `Esc`.
 
 **Paso 4 · Ver el resumen rápido.** En la portada, pulsa **Recorrido de 60 s** para un resumen automático. Con **Ficha para RRHH** (perfil RRHH) o **Ver proyectos** (perfil TI) vas directo a lo principal, y con **Ver CV** abres el currículum para leerlo o descargarlo.
 
@@ -417,7 +427,7 @@ Abre **http://localhost:8000**: FastAPI sirve la API y el build compilado. Si qu
 | «Algo salió mal cargando el portafolio.» | Pulsa **Recargar página**. |
 
 > [!TIP]
-> En la **Terminal.exe**, escribe `help` para ver todos los comandos. Prueba `open proyectos`, `rrhh` o `recorrido`. Tu avance aparece en el trofeo de la barra superior; desde **Insignias** puedes empezar de cero con **Reiniciar progreso**.
+> En la **Terminal.exe**, escribe `help` para ver todos los comandos. Prueba `open proyectos`, `hobbies`, `lang en`, `rrhh` o `recorrido`. Tu avance aparece en el trofeo de la barra superior; desde **Insignias** puedes empezar de cero con **Reiniciar progreso**.
 
 ---
 
@@ -438,6 +448,15 @@ Abre **http://localhost:8000**: FastAPI sirve la API y el build compilado. Si qu
 | Dependencias alteradas | Python se instala con `--require-hashes`. El CI ejecuta `pip-audit` y `npm audit`, y verifica que los lockfiles estén al día. |
 | Navegación sin cifrar | Caddy envía HSTS con arranque gradual (`max-age=300`) y obtiene HTTPS automático al configurar un dominio. |
 | Datos personales en mensajes | El sitio no recoge datos: el contacto es por `mailto:`. La API heredada `POST /api/contact` (sin uso desde el sitio) borra lo guardado a los 12 meses y avisa por webhook sin datos personales. |
+
+### Agregar tus fotos a Hobbies
+
+1. Copia las imágenes a `frontend/public/img/hobbies/` (WebP o JPG, unos 1200 px de lado mayor y menos de 300 KB). Por ejemplo: `cwebp -q 82 -resize 1200 0 foto.jpg -o natacion-1.webp`.
+2. Agrégalas a la lista `photos` del hobby en [`frontend/src/data/hobbies.js`](frontend/src/data/hobbies.js), con su texto alternativo en español e inglés y su tamaño real:
+   ```js
+   photos: [{ src: "/img/hobbies/natacion-1.webp", alt: "Nadando en la piscina", altEn: "Swimming laps", w: 1200, h: 900 }],
+   ```
+3. Ejecuta `npm run build`. Mientras un hobby no tenga fotos, muestra solo su ilustración animada; en desarrollo (`npm run dev`) aparece un aviso de dónde agregarlas.
 
 ---
 
@@ -540,8 +559,7 @@ Alcanzaste el límite de 5 mensajes en 10 minutos. El propio mensaje indica cuá
 | El rate limiter vive en memoria: obliga a 1 worker y se reinicia con la API. | Un adaptador `RateLimiter` sobre Redis para escalar horizontalmente sin tocar el dominio. |
 | Los mensajes se guardan en un archivo JSONL y se leen por consola. No hay aviso al recibirlos. | Un adaptador que además notifique por email, o un repositorio sobre PostgreSQL con un panel de lectura protegido. |
 | El frontend se valida con lint y build (incluida la verificación de layout), pero no hay pruebas E2E automáticas en el CI. | Incorporar al CI el script de Playwright que ya existe en `docs/auditoria/e2e.mjs`. |
-| Los textos del portafolio están en el código (`frontend/src/data/`): cambiarlos requiere un nuevo build. | Moverlos a archivos de contenido (JSON o Markdown) editables sin tocar componentes. |
-| La interfaz está solo en español. | Una capa i18n reutilizando la separación actual entre perfiles TI y RRHH. |
+| Los textos del portafolio están en el código (`frontend/src/data/`), en dos archivos por idioma (`content.js` / `content.en.js`, `hr.js` / `hr.en.js`): un cambio debe hacerse en ambos y requiere un nuevo build. | Moverlos a archivos de contenido (JSON o Markdown) editables sin tocar componentes. |
 | El contenedor `web` (Caddy) usa el usuario por defecto de la imagen oficial. | Definir un usuario sin privilegios también para Caddy, manteniendo `NET_BIND_SERVICE`. |
 | El repositorio no declara una licencia. | Agregar un archivo `LICENSE` que indique cómo puede reutilizarse el código. |
 

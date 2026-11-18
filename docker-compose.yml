@@ -14,6 +14,8 @@ services:
     build:
       context: .
       target: api
+      args:
+        SITE_URL: ${SITE_URL:-}   # same value as "web": both targets share one frontend build
     image: portfolio-api:latest
     restart: unless-stopped
     environment:
@@ -48,6 +50,8 @@ services:
     build:
       context: .
       target: web
+      args:
+        SITE_URL: ${SITE_URL:-}
     image: portfolio-web:latest
     restart: unless-stopped
     depends_on:

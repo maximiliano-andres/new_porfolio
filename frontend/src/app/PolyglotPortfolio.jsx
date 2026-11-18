@@ -2,7 +2,7 @@
    and composes the components, windows and overlays from the modules below. */
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, LazyMotion, m, MotionConfig } from "framer-motion";
-import { Code2, Compass, FileText, FolderGit2, Github, Hexagon, Keyboard, Linkedin, Mail, Route, Trophy, Users, Volume2, VolumeX, Zap } from "lucide-react";
+import { BookOpen, Code2, Compass, Cpu, FileText, FolderGit2, Github, Hexagon, Keyboard, Languages, Link2, Linkedin, Mail, Route, Trophy, Users, Volume2, VolumeX, Zap } from "lucide-react";
 import { BootScreen } from "../components/BootScreen.jsx";
 import { CircuitBackground } from "../components/CircuitBackground.jsx";
 import { Dock } from "../components/Dock.jsx";
@@ -11,9 +11,9 @@ import { Hero } from "../components/Hero.jsx";
 import { SectionBoundary } from "../components/SectionBoundary.jsx";
 import { TopBar } from "../components/TopBar.jsx";
 import { AudienceSwap } from "../components/audience.jsx";
-import { AudienceContext, SystemContext } from "./context.js";
+import { AudienceContext, LangContext, SystemContext } from "./context.js";
 import { AUDIENCES, NOTIFICATION_MESSAGES, PROFILE_NOTIFICATION } from "../data/shell.js";
-import { ACHIEVEMENTS, ALL_ITEMS, AUTO_TOUR, DOCK_ITEMS, EXTRA_ITEMS, PROJECT_WIN_WIDTH, WINDOW_CIRCUIT } from "../data/system.js";
+import { ACHIEVEMENTS, ALL_ITEMS, AUTO_TOUR, DOCK_ITEMS, EXTRA_ITEMS, PROJECT_WIN_WIDTH, WINDOW_ALIASES, WINDOW_CIRCUIT, itemLabel, loc } from "../data/system.js";
 import { centeredPos, corePosition, deskArea, dockSpaceFor, isCompactViewport, makeInitialWindows, maximizedPos, tileWindows, uiScaleFor } from "./layout.js";
 import { circuit } from "../lib/circuitStore.js";
 import { sound } from "../lib/sound.js";
@@ -24,9 +24,9 @@ import { AchievementToast } from "../overlays/AchievementToast.jsx";
 import { AutoTourBar } from "../overlays/AutoTourBar.jsx";
 import { CORE, HR_ACCENT, SOCIAL_LINKS } from "../styles/theme.js";
 import {
-  AboutContent, AboutHRContent, BadgesContent, CvContent, CertificationsContent, CertificationsHRContent, ContactContent,
-  EducationContent, ExperienceContent, ExperienceHRContent, HRSummaryContent, ProjectDetailContent,
-  ProjectDetailHRContent, ProjectsContent, ProjectsHRContent, SimulatorContent, SkillsContent, SkillsHRContent,
+  AboutContent, AboutHRContent, BadgesContent, CvContent, ContactContent, EducationContent, EducationHRContent,
+  ExperienceContent, ExperienceHRContent, HobbiesContent, HRSummaryContent, NotesContent, ProjectDetailContent,
+  ProjectDetailHRContent, ProjectsContent, ProjectsHRContent, SimulatorContent, SiteContent, SkillsContent, SkillsHRContent,
   TerminalContent, prefetchWindow,
 } from "../windows/lazy.js";
 
@@ -71,9 +71,35 @@ const topWindowEl = (exceptId) =>
     .reduce((best, el) => (!best || Number(el.style.zIndex) > Number(best.style.zIndex) ? el : best), null);
 const afterPaint = (fn) => requestAnimationFrame(() => requestAnimationFrame(fn));
 
+/* shareable links: ?ventana=<window id> opens a window, ?proyecto=<project id> a project's detail, ?lang=en|es
+   picks the language. A deep link skips the boot screen: whoever follows it wants that content right away. */
+const query = () => (typeof window === "undefined" ? new URLSearchParams() : new URLSearchParams(window.location.search));
+const ID_RE = /^[a-z0-9-]{1,40}$/;
+function readDeepLink() {
+  const q = query();
+  const rawWin = (q.get("ventana") || q.get("window") || "").toLowerCase();
+  const rawProject = (q.get("proyecto") || q.get("project") || "").toLowerCase();
+  const win = ID_RE.test(rawWin) ? (Object.hasOwn(WINDOW_ALIASES, rawWin) ? WINDOW_ALIASES[rawWin] : rawWin) : null;
+  return {
+    window: win && ALL_ITEMS.some((it) => it.id === win) ? win : null,
+    project: ID_RE.test(rawProject) ? rawProject : null,
+  };
+}
+/* ?lang > last choice > browser language (Spanish for any "es-*", English otherwise) */
+function initialLang() {
+  const fromUrl = query().get("lang");
+  if (fromUrl === "es" || fromUrl === "en") return fromUrl;
+  const saved = storage.get("lang");
+  if (saved === "es" || saved === "en") return saved;
+  const nav = typeof navigator !== "undefined" ? navigator.language || "" : "";
+  return /^es\b/i.test(nav) || !nav ? "es" : "en";
+}
+
 export default function PolyglotPortfolio() {
-  // returning visitors skip the boot sequence entirely (no black frame before the landing screen)
-  const [booted, setBooted] = useState(() => Boolean(storage.get("boot_seen")));
+  const deepLink = useRef(null);
+  if (deepLink.current === null) deepLink.current = readDeepLink();
+  // returning visitors (and deep links) skip the boot sequence entirely (no black frame before the landing screen)
+  const [booted, setBooted] = useState(() => Boolean(storage.get("boot_seen") || deepLink.current.window || deepLink.current.project));
   const finishBoot = useCallback(() => setBooted(true), []); // stable: BootScreen effects depend on it
   // the hero skips its fade-in only when taking over the prerendered shell, not when it reappears later
   const heroFromShell = useRef(PRERENDERED);
@@ -183,6 +209,28 @@ export default function PolyglotPortfolio() {
     window.history.replaceState(null, "", url);
   }, []);
   const audienceCtx = useMemo(() => ({ audience, setAudience }), [audience, setAudience]);
+
+  // language: ES / EN (see initialLang). Kept in the URL only when it is English, like ?vista=rrhh
+  const [lang, setLangState] = useState(initialLang);
+  const langRef = useRef(lang);
+  const setLang = useCallback((next) => {
+    if (next !== "es" && next !== "en") return;
+    langRef.current = next;
+    setLangState(next);
+    storage.set("lang", next);
+    const url = new URL(window.location.href);
+    if (next === "en") url.searchParams.set("lang", "en");
+    else url.searchParams.delete("lang");
+    window.history.replaceState(null, "", url);
+  }, []);
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.documentElement.dataset.lang = lang;
+    document.title = lang === "en" ? "Maximiliano Caniullán — Backend Developer Portfolio" : "Maximiliano Caniullán — Portafolio Backend Developer";
+  }, [lang]);
+  const langCtx = useMemo(() => ({ lang, setLang }), [lang, setLang]);
+  const en = lang === "en";
+  const t = useCallback((es, enText) => (en ? enText : es), [en]);
   const unlockRef = useRef(unlock);
 
   useEffect(() => {
@@ -191,6 +239,8 @@ export default function PolyglotPortfolio() {
     let msgIndex = 0;
     const firstVisit = !storage.get("tour_seen");
     const firstTimeout = setTimeout(() => {
+      // a deep link already shows its content: no tour or toast on top of it (the tour stays pending for later)
+      if (deepLink.current.window || deepLink.current.project) return;
       if (firstVisit) {
         if (!autoTourRef.current) setCoachOpen(true); // the 60 s tour already started: don't stack the coach on it
         return;
@@ -516,21 +566,23 @@ export default function PolyglotPortfolio() {
       case "skills": return swap(<SkillsContent />, <SkillsHRContent />);
       case "projects": return swap(<ProjectsContent onOpenProject={openProject} />, <ProjectsHRContent onOpenProject={openProject} />);
       case "experience": return swap(<ExperienceContent />, <ExperienceHRContent />);
-      case "education": return <EducationContent />;
-      case "certifications": return swap(<CertificationsContent />, <CertificationsHRContent />);
+      case "education": return swap(<EducationContent />, <EducationHRContent />);
+      case "hobbies": return <HobbiesContent />;
+      case "notes": return <NotesContent />;
+      case "site": return <SiteContent />;
       case "contact": return <ContactContent />;
-      case "terminal": return <TerminalContent onTriggerNotification={triggerNotification} onOpenHR={() => openWindow("hr")} />;
+      case "terminal": return <TerminalContent key={lang} onTriggerNotification={triggerNotification} onOpenHR={() => openWindow("hr")} />;
       case "simulator": return <SimulatorContent />;
       case "cv": return <CvContent />;
       case "badges": return <BadgesContent unlocked={unlocked} progress={progress} visitedCount={visited.size} totalSections={DOCK_ITEMS.length} onReset={resetProgress} />;
       default: return null;
     }
   };
-  const dockItems = useMemo(
-    () => DOCK_ITEMS.map((it) => ({ ...it, label: hr ? it.hrLabel || it.label : it.label })),
-    [hr]
+  const dockItems = useMemo(() => DOCK_ITEMS.map((it) => ({ ...it, label: itemLabel(it, hr, lang) })), [hr, lang]);
+  const allItems = useMemo(
+    () => [...dockItems, ...EXTRA_ITEMS.map((it) => ({ ...it, label: itemLabel(it, hr, lang) }))],
+    [dockItems, hr, lang]
   );
-  const allItems = useMemo(() => [...dockItems, ...EXTRA_ITEMS], [dockItems]);
 
   // phones: prev/next neighbours for the window switcher (only when 2+ windows are open)
   const openList = allItems.filter((it) => windows[it.id].open && !windows[it.id].minimized);
@@ -556,6 +608,20 @@ export default function PolyglotPortfolio() {
     (projectWin.open && !projectWin.minimized && projectWin.maximized) ||
     (isMobile && openCount > 0);
 
+  // deep links (?ventana=…, ?proyecto=…): opened once, right after mount; unknown project ids are ignored
+  const deepLinkDone = useRef(false);
+  useEffect(() => {
+    if (!booted || deepLinkDone.current) return;
+    deepLinkDone.current = true;
+    const dl = deepLink.current;
+    if (dl.window) openWindow(dl.window, { auto: true });
+    if (dl.project) {
+      loadProjectLookup()
+        .then((mod) => { if (mod.findProject(dl.project)) { setLookupReady(true); openProject(dl.project); } })
+        .catch(() => {});
+    }
+  }, [booted, openWindow, openProject]);
+
   // warm the code of the likely-first windows once the browser is idle after boot
   useEffect(() => {
     if (!booted) return;
@@ -568,50 +634,62 @@ export default function PolyglotPortfolio() {
     return () => cancel(handle);
   }, [booted]);
 
-  const commands = useMemo(() => [
+  const copyLink = useCallback(async (params) => {
+    const url = new URL(window.location.origin + window.location.pathname);
+    Object.entries(params).forEach(([k, v]) => v && url.searchParams.set(k, v));
+    try { await navigator.clipboard.writeText(url.toString()); return true; } catch { return false; }
+  }, []);
+  const commands = useMemo(() => {
+    const G = { sections: t("Secciones", "Sections"), experiences: t("Experiencias", "Experiences"), prefs: t("Preferencias", "Preferences"), links: t("Enlaces", "Links") };
+    return [
     ...dockItems.map((it, i) => ({
-      id: `open-${it.id}`, group: "Secciones", label: it.label, Icon: it.IconCmp, color: it.accent, hint: singleKeys ? String(i + 1) : undefined,
-      keywords: `${it.id} ${it.hrLabel || ""} abrir ver`, action: () => openWindow(it.id),
+      id: `open-${it.id}`, group: G.sections, label: it.label, Icon: it.IconCmp, color: it.accent, hint: singleKeys ? String(i + 1) : undefined,
+      keywords: `${it.id} ${it.hrLabel || ""} ${it.labelEn || ""} ${it.hrLabelEn || ""} abrir ver open`, action: () => openWindow(it.id),
     })),
-    { id: "cv", group: "Secciones", label: "Ver mi CV", Icon: FileText, color: CORE, keywords: "cv curriculum curriculo resume pdf descargar hoja de vida", action: () => openWindow("cv") },
-    { id: "simulator", group: "Experiencias", label: "Simulador de optimización", Icon: Zap, keywords: "juego optimizar proceso migracion buk simular", action: () => openWindow("simulator") },
-    { id: "badges", group: "Experiencias", label: "Insignias y progreso", Icon: Trophy, color: HR_ACCENT, keywords: "logros progreso achievements explorar", action: () => openWindow("badges") },
-    { id: "autotour", group: "Experiencias", label: "Recorrido guiado de 60 segundos", Icon: Route, color: HR_ACCENT, keywords: "tour presentacion resumen rapido", action: startAutoTour },
-    { id: "coach", group: "Experiencias", label: "Tour por la interfaz", Icon: Compass, hint: singleKeys ? "?" : undefined, keywords: "ayuda guia tutorial como funciona", action: startCoachTour },
-    { id: "core", group: "Experiencias", label: "Centro de control CORE", Icon: Hexagon, keywords: "nucleo menu modulos", action: openCore },
+    { id: "cv", group: G.sections, label: t("Ver mi CV", "View my CV"), Icon: FileText, color: CORE, keywords: "cv curriculum curriculo resume pdf descargar download hoja de vida", action: () => openWindow("cv") },
+    { id: "notes", group: G.sections, label: t("Notas técnicas", "Tech notes"), Icon: BookOpen, keywords: "guia guide concurrencia concurrency articulos blog notas", action: () => openWindow("notes") },
+    { id: "site", group: G.sections, label: t("Cómo está hecho este sitio", "How this site is built"), Icon: Cpu, color: CORE, keywords: "stack arquitectura architecture tests metricas metrics build", action: () => openWindow("site") },
+    { id: "simulator", group: G.experiences, label: t("Simulador de optimización", "Optimization simulator"), Icon: Zap, keywords: "juego game optimizar optimize proceso migracion buk simular", action: () => openWindow("simulator") },
+    { id: "badges", group: G.experiences, label: t("Insignias y progreso", "Badges and progress"), Icon: Trophy, color: HR_ACCENT, keywords: "logros progreso achievements explorar badges", action: () => openWindow("badges") },
+    { id: "autotour", group: G.experiences, label: t("Recorrido guiado de 60 segundos", "60-second guided walkthrough"), Icon: Route, color: HR_ACCENT, keywords: "tour presentacion resumen rapido walkthrough", action: startAutoTour },
+    { id: "coach", group: G.experiences, label: t("Tour por la interfaz", "Interface tour"), Icon: Compass, hint: singleKeys ? "?" : undefined, keywords: "ayuda help guia tutorial como funciona", action: startCoachTour },
+    { id: "core", group: G.experiences, label: t("Centro de control CORE", "CORE control center"), Icon: Hexagon, keywords: "nucleo menu modulos modules", action: openCore },
     {
-      id: "mode", group: "Preferencias", label: hr ? "Cambiar a perfil TI (técnico)" : "Cambiar a perfil RRHH (negocio)",
-      Icon: hr ? Code2 : Users, color: hr ? CORE : HR_ACCENT, keywords: "modo perfil lenguaje rrhh ti reclutador",
+      id: "mode", group: G.prefs, label: hr ? t("Cambiar a perfil TI (técnico)", "Switch to Tech profile") : t("Cambiar a perfil RRHH (negocio)", "Switch to HR profile (plain language)"),
+      Icon: hr ? Code2 : Users, color: hr ? CORE : HR_ACCENT, keywords: "modo perfil lenguaje rrhh ti reclutador recruiter hr tech profile",
       action: () => setAudience(hr ? "ti" : "rrhh"),
     },
-    { id: "sound", group: "Preferencias", label: soundOn ? "Desactivar sonidos" : "Activar sonidos", Icon: soundOn ? VolumeX : Volume2, keywords: "audio sonido silencio", action: () => setSoundOn(!soundOn) },
+    { id: "lang", group: G.prefs, label: en ? "Ver en español" : "View in English", Icon: Languages, keywords: "idioma language english ingles espanol spanish", action: () => setLang(en ? "es" : "en") },
+    { id: "sound", group: G.prefs, label: soundOn ? t("Desactivar sonidos", "Turn sounds off") : t("Activar sonidos", "Turn sounds on"), Icon: soundOn ? VolumeX : Volume2, keywords: "audio sonido sound silencio mute", action: () => setSoundOn(!soundOn) },
     {
-      id: "shortcuts", group: "Preferencias", label: singleKeys ? "Desactivar atajos de una tecla (1–9, ?)" : "Activar atajos de una tecla (1–9, ?)",
-      Icon: Keyboard, keywords: "teclado atajos numeros accesibilidad voz", action: () => setSingleKeys(!singleKeys),
+      id: "shortcuts", group: G.prefs, label: singleKeys ? t("Desactivar atajos de una tecla (1–9, ?)", "Turn off single-key shortcuts (1–9, ?)") : t("Activar atajos de una tecla (1–9, ?)", "Turn on single-key shortcuts (1–9, ?)"),
+      Icon: Keyboard, keywords: "teclado keyboard atajos shortcuts numeros accesibilidad voz", action: () => setSingleKeys(!singleKeys),
     },
-    { id: "linkedin", group: "Enlaces", label: "Abrir LinkedIn", Icon: Linkedin, color: "#0077b5", keywords: "perfil red", action: () => window.open(SOCIAL_LINKS.linkedin, "_blank", "noopener") },
-    { id: "github", group: "Enlaces", label: "Abrir GitHub", Icon: Github, keywords: "codigo repositorios", action: () => window.open(SOCIAL_LINKS.github, "_blank", "noopener") },
-    { id: "email", group: "Enlaces", label: "Enviar un email", Icon: Mail, keywords: "correo", action: () => { window.location.href = SOCIAL_LINKS.email; } },
-  ].map((c) => ({ ...c, action: () => { unlock("navigator"); c.action(); } })),
-  [dockItems, hr, soundOn, singleKeys, openWindow, startAutoTour, startCoachTour, openCore, setAudience, setSoundOn, setSingleKeys, unlock]);
+    { id: "share-hr", group: G.links, label: t("Copiar enlace para reclutadores (vista RRHH)", "Copy recruiter link (HR view)"), Icon: Link2, color: HR_ACCENT, keywords: "compartir share enlace link url rrhh reclutador", action: () => copyLink({ vista: "rrhh", lang: en ? "en" : null }) },
+    { id: "linkedin", group: G.links, label: t("Abrir LinkedIn", "Open LinkedIn"), Icon: Linkedin, color: "#0077b5", keywords: "perfil red profile", action: () => window.open(SOCIAL_LINKS.linkedin, "_blank", "noopener") },
+    { id: "github", group: G.links, label: t("Abrir GitHub", "Open GitHub"), Icon: Github, keywords: "codigo code repositorios repos", action: () => window.open(SOCIAL_LINKS.github, "_blank", "noopener") },
+    { id: "email", group: G.links, label: t("Enviar un email", "Send an email"), Icon: Mail, keywords: "correo email mail", action: () => { window.location.href = SOCIAL_LINKS.email; } },
+  ].map((c) => ({ ...c, action: () => { unlock("navigator"); c.action(); } }));
+  }, [dockItems, hr, en, t, soundOn, singleKeys, openWindow, startAutoTour, startCoachTour, openCore, setAudience, setLang, setSoundOn, setSingleKeys, copyLink, unlock]);
 
   const systemCtx = useMemo(() => ({
-    unlock, openWindow, openProject, startCoachTour, startAutoTour, closeWindow, soundOn, setSoundOn,
+    unlock, openWindow, openProject, startCoachTour, startAutoTour, closeWindow, soundOn, setSoundOn, copyLink,
     openPalette: () => setPaletteOpen(true),
-  }), [unlock, openWindow, openProject, startCoachTour, startAutoTour, closeWindow, soundOn, setSoundOn]);
+  }), [unlock, openWindow, openProject, startCoachTour, startAutoTour, closeWindow, soundOn, setSoundOn, copyLink]);
   const core = corePosition(windowSize);
 
-  const activeEntry = lookupReady && projectWin.id ? projectLookup.findProject(projectWin.id) : null;
+  const activeEntry = lookupReady && projectWin.id ? projectLookup.findProject(projectWin.id, lang) : null;
   const activeProject = activeEntry?.project;
   // screen readers: one persistent live region announces toasts (a region mounted with its text is often skipped)
   const achievement = achQueue[0] ? ACHIEVEMENTS.find((a) => a.id === achQueue[0]) : null;
   const liveText = achievement
-    ? `Insignia desbloqueada: ${achievement.title}. ${achievement.desc}`
-    : activeToast && !autoTour ? [activeToast.title, activeToast.text].filter(Boolean).join(". ") : "";
+    ? `${t("Insignia desbloqueada", "Badge unlocked")}: ${loc(achievement, "title", lang)}. ${loc(achievement, "desc", lang)}`
+    : activeToast && !autoTour ? [loc(activeToast, "title", lang), activeToast.text && loc(activeToast, "text", lang)].filter(Boolean).join(". ") : "";
 
   return (
     <LazyMotion features={loadMotionFeatures} strict>
     <MotionConfig reducedMotion="user">
+    <LangContext.Provider value={langCtx}>
     <AudienceContext.Provider value={audienceCtx}>
     <SystemContext.Provider value={systemCtx}>
     <div className="relative w-full h-dvh overflow-hidden" style={{ fontFamily: "'Inter', 'Inter Fallback', sans-serif" }}>
@@ -640,8 +718,8 @@ export default function PolyglotPortfolio() {
           <button
             data-tour="core"
             onClick={openCore}
-            aria-label="Abrir el centro de control CORE"
-            title="Centro de control CORE"
+            aria-label={t("Abrir el centro de control CORE", "Open the CORE control center")}
+            title={t("Centro de control CORE", "CORE control center")}
             className="absolute pointer-events-auto rounded-full group focus-visible:ring-2 focus-visible:ring-cyan-300/70 focus:outline-hidden short:hidden"
             style={{ left: core.x - core.r, top: core.y - core.r, width: core.r * 2, height: core.r * 2 }}
           >
@@ -804,11 +882,11 @@ export default function PolyglotPortfolio() {
             {/* Text area */}
             <div className="flex-1 min-w-0 pr-5 flex flex-col justify-center">
               <div className="text-[12.5px] font-semibold text-white/90 mb-1" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
-                {activeToast.title}
+                {loc(activeToast, "title", lang)}
               </div>
               {activeToast.text && (
                 <p className="text-[11.5px] text-white/70 leading-5">
-                  {activeToast.text}
+                  {loc(activeToast, "text", lang)}
                 </p>
               )}
               {activeToast.profiles && (
@@ -819,7 +897,7 @@ export default function PolyglotPortfolio() {
                       return (
                         <li key={pr.id} className="flex gap-2 text-[11.5px] leading-5 text-white/70">
                           <a.Icon size={13} className="shrink-0 mt-[3px]" style={{ color: a.color }} />
-                          <span><span className="font-medium" style={{ color: a.color }}>{pr.name}:</span> {pr.text}</span>
+                          <span><span className="font-medium" style={{ color: a.color }}>{loc(pr, "name", lang)}:</span> {loc(pr, "text", lang)}</span>
                         </li>
                       );
                     })}
@@ -837,13 +915,13 @@ export default function PolyglotPortfolio() {
                             ? { background: a.color, color: "#05070b" }
                             : { border: `1px solid ${a.color}55`, color: a.color }}
                         >
-                          <a.Icon size={12} /> Ver como {a.label}{current && " ✓"}
+                          <a.Icon size={12} /> {t("Ver como", "View as")} {loc(a, "label", lang)}{current && " ✓"}
                         </button>
                       );
                     })}
                   </div>
                   <p className="text-[10px] text-white/60 mt-2 short:hidden" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
-                    Puedes cambiarlo cuando quieras desde la barra superior.
+                    {t("Puedes cambiarlo cuando quieras desde la barra superior.", "You can change it anytime from the top bar.")}
                   </p>
                 </>
               )}
@@ -861,7 +939,7 @@ export default function PolyglotPortfolio() {
             <button
               onClick={() => setActiveToast(null)}
               className="absolute top-1.5 right-1.5 w-7 h-7 flex items-center justify-center rounded-md text-white/60 hover:text-white transition-colors text-[18px] leading-none focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
-              aria-label="Cerrar notificación"
+              aria-label={t("Cerrar notificación", "Close notification")}
             >
               &times;
             </button>
@@ -871,6 +949,7 @@ export default function PolyglotPortfolio() {
     </div>
     </SystemContext.Provider>
     </AudienceContext.Provider>
+    </LangContext.Provider>
     </MotionConfig>
     </LazyMotion>
   );

@@ -1,21 +1,24 @@
 /* Achievements and exploration progress window. */
 import { useState } from "react";
 import { Lock, RotateCcw } from "lucide-react";
-import { ACHIEVEMENTS } from "../data/system.js";
+import { ACHIEVEMENTS, loc } from "../data/system.js";
+import { useLang, useT } from "../app/context.js";
 import { HR_ACCENT, LANG } from "../styles/theme.js";
 
 export function BadgesContent({ unlocked, progress, visitedCount, totalSections, onReset }) {
   const [confirm, setConfirm] = useState(false);
+  const t = useT();
+  const { lang } = useLang();
   return (
     <div className="w-full">
       <div className="rounded-lg border p-4 mb-4" style={{ borderColor: `${HR_ACCENT}33`, background: `${HR_ACCENT}0b` }}>
         <div className="flex items-end justify-between gap-3 mb-2">
           <div>
-            <div className="text-[10.5px] uppercase tracking-wider text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>Sistema explorado</div>
+            <div className="text-[10.5px] uppercase tracking-wider text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{t("Sistema explorado", "System explored")}</div>
             <div className="text-[28px] leading-none font-semibold mt-1" style={{ color: HR_ACCENT, fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>{progress}%</div>
           </div>
           <div className="text-right text-[11.5px] text-white/65">
-            {visitedCount} de {totalSections} secciones<br />{unlocked.size} de {ACHIEVEMENTS.length} insignias
+            {t(`${visitedCount} de ${totalSections} secciones`, `${visitedCount} of ${totalSections} sections`)}<br />{t(`${unlocked.size} de ${ACHIEVEMENTS.length} insignias`, `${unlocked.size} of ${ACHIEVEMENTS.length} badges`)}
           </div>
         </div>
         <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
@@ -31,8 +34,8 @@ export function BadgesContent({ unlocked, progress, visitedCount, totalSections,
                 {got ? <a.Icon size={15} /> : <Lock size={13} />}
               </span>
               <div className="min-w-0">
-                <div className={`text-[12.5px] font-medium ${got ? "text-white/90" : "text-white/65"}`}>{a.title}</div>
-                <div className="text-[11px] text-white/60 leading-4">{a.desc}</div>
+                <div className={`text-[12.5px] font-medium ${got ? "text-white/90" : "text-white/65"}`}>{loc(a, "title", lang)}</div>
+                <div className="text-[11px] text-white/60 leading-4">{loc(a, "desc", lang)}</div>
               </div>
             </li>
           );
@@ -41,13 +44,13 @@ export function BadgesContent({ unlocked, progress, visitedCount, totalSections,
       <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-end gap-2 text-[11px]">
         {confirm ? (
           <>
-            <span className="text-white/65">¿Borrar todo el progreso?</span>
-            <button onClick={() => setConfirm(false)} className="rounded-md border border-white/15 px-2.5 py-1.5 text-white/70 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">Cancelar</button>
-            <button onClick={() => { onReset(); setConfirm(false); }} className="rounded-md px-2.5 py-1.5 bg-red-500/80 text-white focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">Borrar</button>
+            <span className="text-white/65">{t("¿Borrar todo el progreso?", "Erase all progress?")}</span>
+            <button onClick={() => setConfirm(false)} className="rounded-md border border-white/15 px-2.5 py-1.5 text-white/70 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">{t("Cancelar", "Cancel")}</button>
+            <button onClick={() => { onReset(); setConfirm(false); }} className="rounded-md px-2.5 py-1.5 bg-red-500/80 text-white focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">{t("Borrar", "Erase")}</button>
           </>
         ) : (
           <button onClick={() => setConfirm(true)} className="inline-flex items-center gap-1.5 text-white/60 hover:text-white/80 px-1 py-1.5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden rounded-sm">
-            <RotateCcw size={12} /> Reiniciar progreso
+            <RotateCcw size={12} /> {t("Reiniciar progreso", "Reset progress")}
           </button>
         )}
       </div>

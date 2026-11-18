@@ -148,7 +148,7 @@ export const PROJECTS = [
     org: "Proyecto personal",
     langs: ["python", "node"],
     summary:
-      "Portafolio con forma de escritorio. API en FastAPI servida por Granian (Rust), middleware ASGI puro, portada pre-renderizada, carga diferida por ventana y assets precomprimidos con Brotli: ≈540 KB → ≈140 KB (−74%).",
+      "Portafolio con forma de escritorio. API en FastAPI servida por Granian (Rust), middleware ASGI puro, portada pre-renderizada, carga diferida por ventana y assets precomprimidos con Brotli: ≈730 KB → ≈180 KB (−75%).",
     stack: ["FastAPI", "Granian", "Arquitectura hexagonal", "React", "Vite", "Brotli", "Docker", "GitHub Actions"],
     diagram: "webperf",
   },
@@ -208,6 +208,166 @@ export const CERTS = [
   { name: "Capacitación Oracle Backend", org: "Oracle Next Education", year: "2023" },
   { name: "Curso Python Native Avances", org: "Universidad Mayor", year: "2023" },
 ];
+
+/* topics being studied right now (shown in Formación and in the "Estudio constante" hobby) */
+export const LEARNING = [
+  { id: "english", name: "Inglés", detail: "Nivel actual: intermedio (B1–B2)." },
+  { id: "architecture", name: "Arquitectura de software", detail: "Ya aplicada: arquitectura hexagonal en la Plataforma BPO de RRHH y en este portafolio." },
+  { id: "cloud", name: "Cloud / AWS", detail: "Base práctica: migración de infraestructura a AWS con Terraform en BiceVida." },
+];
+
+/* case studies for the TI project detail, keyed by project id. Only facts from the CV, LinkedIn or the project
+   itself. `snippet.illustrative`: true when the code shows the pattern, not the client's code (always labelled). */
+export const CASES = {
+  "buk-migration": {
+    context: "Los archivos y documentos de los clientes debían trasladarse en forma masiva a la plataforma de RRHH BUK. El proceso original tardaba más de 1 hora.",
+    approach: [
+      "Rediseño del flujo con procesamiento concurrente: varios documentos en curso a la vez, con un límite controlado.",
+      "Llamadas asincrónicas a la API de BUK, sin bloquear el resto del proceso mientras se espera cada respuesta.",
+      "Reporte trazable de cada documento: qué se migró y qué no.",
+    ],
+    result: "De más de 1 hora a 5–10 minutos por migración: al menos un 83 % menos de tiempo.",
+    snippet: {
+      illustrative: true,
+      lang: "pseudocódigo",
+      code: `# Antes: un documento a la vez
+para cada doc en documentos:
+    subir_a_buk(doc)          # espera a que termine
+    registrar(doc)
+
+# Después: varios en curso, con un límite
+limite = semaforo(N)
+tareas = [procesar(doc, limite) para doc en documentos]
+resultados = esperar_todas(tareas)
+reporte(resultados)           # migrados y no migrados`,
+    },
+  },
+  "finance-platforms": {
+    context: "Aplicaciones internas de gestión de finanzas que debían adaptarse a cada cliente y a distintos formatos financieros, con un consumo de recursos acotado.",
+    approach: [
+      "Servicios en Python (FastAPI) y Java (Spring Boot) sobre PostgreSQL.",
+      "Consultas SQL aceleradas con SQLAlchemy Core en lugar de cargar objetos por registro.",
+      "Librerías basadas en Rust (Polars, Pydantic v2, orjson) y procesamiento asincrónico.",
+      "Configuración por cliente y formato financiero, con reportes automáticos y trazables.",
+    ],
+    result: "−30–40 % de uso de CPU y −15–30 % de consumo de memoria RAM en plataformas internas.",
+    snippet: {
+      illustrative: true,
+      lang: "python",
+      code: `# SQLAlchemy Core: SQL explícito y filas livianas,
+# sin crear un objeto ORM por cada registro
+stmt = (
+    select(mov.c.cliente_id, func.sum(mov.c.monto))
+    .where(mov.c.periodo == periodo)
+    .group_by(mov.c.cliente_id)
+)
+with engine.connect() as conn:
+    totales = conn.execute(stmt).all()`,
+    },
+  },
+  "graalvm-microservices": {
+    context: "Microservicios Java con Spring Boot que tardaban entre 3 y 4 segundos en responder.",
+    approach: [
+      "Optimización de los microservicios Spring Boot.",
+      "Migración de 4 servicios a GraalVM Native Image: arranque más rápido y menor consumo de memoria.",
+      "Indexación y rediseño de la base de datos MySQL.",
+      "Participación en la migración de infraestructura a AWS con Terraform.",
+    ],
+    result: "Tiempos de respuesta de 3–4 segundos a milisegundos y consultas SQL ≈20 % más rápidas.",
+  },
+  "document-migrations": {
+    context: "Empresas como PUMA, GyG e IACC necesitaban migrar grandes volúmenes de documentos cuyos datos venían desordenados.",
+    approach: [
+      "Normalización, limpieza y estructuración de los datos antes de cada migración.",
+      "Motor de búsqueda y validación que cruza nombre, RUT y documento.",
+      "Reportes de lo migrado y lo no migrado para facilitar la auditoría.",
+    ],
+    result: "98 % de coincidencia automática y reportes 100 % exactos.",
+  },
+  "hr-bpo-platform": {
+    context: "Un servicio de outsourcing de RRHH necesitaba operar las novedades de nómina de muchas empresas cliente en un solo lugar.",
+    approach: [
+      "Java 21 y Spring Boot con arquitectura hexagonal; SPA en React; PostgreSQL.",
+      "Ciclo completo de novedades de nómina con plantillas BUK e integración segura con la API de BUK.",
+      "Seguridad: JWT con doble factor (2FA) y cifrado AES-256-GCM.",
+      "OCR de documentos y calendario corporativo.",
+    ],
+    result: "Todo el ciclo de novedades en una sola herramienta, respaldada por ~1.100 pruebas automatizadas.",
+  },
+  "multi-db-workbook": {
+    context: "RRHH y Finanzas dependían de TI para obtener reportes, y los datos llegaban llenos de códigos.",
+    approach: [
+      "Interfaz tipo planilla en React sobre una API Java 21 / Spring Boot.",
+      "Traducción de códigos a nombres reales y cruce de tablas sin escribir SQL.",
+      "Acceso en modo solo lectura a 6 motores: SQL Server, PostgreSQL, MySQL, Oracle, MariaDB y SQLite.",
+    ],
+    result: "Equipos no técnicos exportan a Excel por su cuenta, con 258 pruebas automatizadas.",
+  },
+  "payroll-history": {
+    context: "El historial de remuneraciones 2024–2026 estaba repartido en 9 planillas Excel demasiado grandes para abrir y cruzar con fluidez.",
+    approach: [
+      "Lectura en streaming, fila a fila, sin cargar cada archivo completo en memoria.",
+      "Inserción por lotes de 10.000 registros.",
+      "Índices para consultar por trabajador, fecha de pago y centro de costo.",
+    ],
+    result: "3,55 millones de registros de 2.006 trabajadores en una sola base consultable.",
+    evidence: "Cifras medidas sobre la base de datos resultante.",
+    snippet: {
+      illustrative: true,
+      lang: "python",
+      code: `LOTE = 10_000
+wb = load_workbook(ruta, read_only=True)    # streaming
+lote = []
+for fila in wb.active.iter_rows(min_row=2, values_only=True):
+    lote.append(fila)
+    if len(lote) == LOTE:
+        conn.executemany(INSERT_SQL, lote)
+        lote.clear()
+if lote:
+    conn.executemany(INSERT_SQL, lote)`,
+    },
+  },
+  "excel-consolidator": {
+    context: "Consolidar a mano muchas planillas de liquidaciones, haberes y descuentos tomaba tiempo y se prestaba a errores.",
+    approach: [
+      "Aplicación de escritorio (PyInstaller) con el procesamiento en segundo plano.",
+      "Concatenación con Polars y liberación de memoria entre archivos.",
+      "Reporte de auditoría por archivo y por hoja.",
+    ],
+    result: "Un consolidado único por tipo de planilla, con control de cuántas filas aportó cada archivo.",
+    snippet: {
+      illustrative: true,
+      lang: "python",
+      code: `partes, auditoria = [], []
+for archivo in archivos:
+    df = pl.read_excel(archivo)
+    auditoria.append((archivo.name, df.height))  # filas por archivo
+    partes.append(df)
+consolidado = pl.concat(partes, how="diagonal")`,
+    },
+  },
+  "portfolio": {
+    context: "Un sitio con forma de escritorio, muchas ventanas y animaciones corre el riesgo de ser pesado y lento.",
+    approach: [
+      "Portada pre-renderizada en el build: se ve antes de que cargue JavaScript.",
+      "Cada ventana se descarga solo cuando se abre (carga diferida).",
+      "Archivos precomprimidos con Brotli y gzip; API en FastAPI con arquitectura hexagonal servida por Granian.",
+    ],
+    result: "Los archivos del sitio pesan ≈75 % menos al enviarse.",
+    evidence: "Medido en el build de producción (npm run build).",
+    snippet: {
+      illustrative: false,
+      lang: "javascript",
+      code: `// frontend/scripts/compress.mjs (código real de este sitio)
+const [b, g] = await Promise.all([
+  brotliAsync(data, { params: { [constants.BROTLI_PARAM_QUALITY]: 11 } }),
+  gzipAsync(data, { level: 9 }),
+]);
+if (b.length < data.length) writes.push(writeFile(\`\${path}.br\`, b));
+if (g.length < data.length) writes.push(writeFile(\`\${path}.gz\`, g));`,
+    },
+  },
+};
 
 /* CV shown in the "Mi CV" window. Source: docs/cv/. When the CV changes: copy the PDF to public/cv/ and
    re-render the pages under a NEW version prefix (the service worker caches /img/* forever):

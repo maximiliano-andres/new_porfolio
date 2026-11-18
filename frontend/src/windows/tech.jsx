@@ -1,11 +1,19 @@
-/* Window contents for the technical (TI) view. */
-import { useRef, useState } from "react";
-import { Award, Calendar, ChevronRight, MapPin } from "lucide-react";
-import { LangBadge, ProjectDiagram, SimulatorBanner, Tilt } from "../components/ui.jsx";
-import { CERTS, EDUCATION, EXPERIENCE, PROJECT_HISTORY, PROJECTS, TECH_GROUPS, TECH_KNOWN, projectsUsing } from "../data/content.js";
-import { CORE, LANG } from "../styles/theme.js";
+/* Window contents for the technical (TI) view, plus the Education window shared by both views. */
+import { useMemo, useRef, useState } from "react";
+import { ArrowRight, Award, BookOpen, Calendar, ChevronRight, Cpu, GraduationCap, Lightbulb, MapPin, Target } from "lucide-react";
+import { CareerTimeline, CodeBlock, CopyLinkButton, LangBadge, ProjectDiagram, SectionTitle, SimulatorBanner, Tilt } from "../components/ui.jsx";
+import { useCareerRows } from "../lib/career.js";
+import { useSystem, useT } from "../app/context.js";
+import { useContent } from "../data/useContent.js";
+import { useHR } from "../data/useHR.js";
+import { CORE, HR_ACCENT, LANG } from "../styles/theme.js";
+
+const MONO = { fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" };
+const DISPLAY = { fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" };
 
 export function AboutContent() {
+  const t = useT();
+  const { HR_SEEKING, HR_DOMAIN } = useHR();
   const [imgError, setImgError] = useState(false);
   return (
     <div className="w-full">
@@ -22,7 +30,7 @@ export function AboutContent() {
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
               ) : (
-                <span className="text-white/20 font-bold text-lg select-none" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>MC</span>
+                <span className="text-white/20 font-bold text-lg select-none" style={DISPLAY}>MC</span>
               )}
               {/* Scanline overlay */}
               <div className="absolute inset-0 bg-linear-to-b from-transparent via-cyan-500/10 to-transparent pointer-events-none opacity-40 group-hover:opacity-75 transition-opacity duration-300" style={{ animation: "dashflow 8s linear infinite" }} />
@@ -35,81 +43,96 @@ export function AboutContent() {
         <div className="flex-1 min-w-0 w-full">
           <div className="flex items-center gap-3 mb-3 text-center @md:text-left">
             <div className="w-full">
-              <h3 className="text-white text-[15px] font-semibold text-balance" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
+              <h3 className="text-white text-[15px] font-semibold text-balance" style={DISPLAY}>
                 Maximiliano Andrés Caniullán Lefiñir
               </h3>
-              <p className="text-white/50 text-[12px]">Backend Developer &middot; Especialista en Optimización</p>
+              <p className="text-white/50 text-[12px]">Backend Developer &middot; {t("Especialista en Optimización", "Performance Optimization Specialist")}</p>
             </div>
           </div>
 
           <div className="space-y-4 text-[13px] leading-6 text-white/75">
-            <p>
-              Soy <strong className="text-white/90">Backend Developer</strong> con <strong className="text-white/90">más de 2 años</strong> de experiencia en Java (Spring Boot), Python (FastAPI) y Node.js, sobre PostgreSQL, MySQL y MongoDB.
-            </p>
-            <p>
-              Mi especialidad es la <strong className="text-white/90">optimización</strong>: transformo procesos lentos y pesados en sistemas rápidos, estables y con menor consumo de recursos.
-            </p>
-            <p>
-              Un ejemplo: rediseñé una migración masiva de documentos hacia BUK que tardaba <strong className="text-white/90">más de 1 hora</strong> y hoy se ejecuta en <strong className="text-white/90">5–10 minutos</strong>.
-            </p>
+            {t(
+              <>
+                <p>Soy <strong className="text-white/90">Backend Developer</strong> con <strong className="text-white/90">más de 2 años</strong> de experiencia en Java (Spring Boot), Python (FastAPI) y Node.js, sobre PostgreSQL, MySQL y MongoDB.</p>
+                <p>Mi especialidad es la <strong className="text-white/90">optimización</strong>: transformo procesos lentos y pesados en sistemas rápidos, estables y con menor consumo de recursos.</p>
+                <p>Un ejemplo: rediseñé una migración masiva de documentos hacia BUK que tardaba <strong className="text-white/90">más de 1 hora</strong> y hoy se ejecuta en <strong className="text-white/90">5–10 minutos</strong>.</p>
+              </>,
+              <>
+                <p>I'm a <strong className="text-white/90">Backend Developer</strong> with <strong className="text-white/90">over 2 years</strong> of experience in Java (Spring Boot), Python (FastAPI) and Node.js, on PostgreSQL, MySQL and MongoDB.</p>
+                <p>My specialty is <strong className="text-white/90">optimization</strong>: I turn slow, heavy processes into fast, stable systems that use fewer resources.</p>
+                <p>One example: I redesigned a bulk document migration to BUK that took <strong className="text-white/90">over 1 hour</strong>; it now runs in <strong className="text-white/90">5–10 minutes</strong>.</p>
+              </>
+            )}
           </div>
         </div>
       </div>
 
       <div className="mt-5 pt-4 border-t border-white/10">
-        <h4 className="text-xs uppercase tracking-wider text-cyan-400 font-semibold mb-3" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
-          Lo que hago mejor (Y cómo ayudo a tu equipo):
+        <h4 className="text-xs uppercase tracking-wider text-cyan-400 font-semibold mb-3" style={MONO}>
+          {t("Lo que hago mejor (y cómo ayudo a tu equipo)", "What I do best (and how I help your team)")}
         </h4>
         <ul className="space-y-3 text-[12.5px] text-white/70">
-          <li className="flex gap-2.5">
-            <span className="text-cyan-400">⚡</span>
-            <div>
-              <strong>Optimización de rendimiento:</strong> Reduzco tiempos de respuesta y consumo de CPU y memoria, para que los sistemas hagan más con menos recursos.
-            </div>
-          </li>
-          <li className="flex gap-2.5">
-            <span className="text-cyan-400">⚡</span>
-            <div>
-              <strong>Desarrollo Backend y APIs REST:</strong> Construyo APIs REST, microservicios y aplicaciones empresariales mantenibles sobre PostgreSQL, MySQL y MongoDB, configurables según los requerimientos de cada cliente.
-            </div>
-          </li>
-          <li className="flex gap-2.5">
-            <span className="text-cyan-400">⚡</span>
-            <div>
-              <strong>Automatización y procesamiento masivo de datos:</strong> Automatizo migraciones, validaciones y reportes sobre grandes volúmenes de información, con trazabilidad completa y foco en la calidad de los datos.
-            </div>
-          </li>
+          {[
+            [t("Optimización de rendimiento:", "Performance optimization:"), t("Reduzco tiempos de respuesta y consumo de CPU y memoria, para que los sistemas hagan más con menos recursos.", "I cut response times and CPU and memory usage, so systems do more with fewer resources.")],
+            [t("Desarrollo Backend y APIs REST:", "Backend development and REST APIs:"), t("Construyo APIs REST, microservicios y aplicaciones empresariales mantenibles sobre PostgreSQL, MySQL y MongoDB, configurables según los requerimientos de cada cliente.", "I build maintainable REST APIs, microservices and enterprise applications on PostgreSQL, MySQL and MongoDB, configurable to each client's requirements.")],
+            [t("Automatización y procesamiento masivo de datos:", "Automation and bulk data processing:"), t("Automatizo migraciones, validaciones y reportes sobre grandes volúmenes de información, con trazabilidad completa y foco en la calidad de los datos.", "I automate migrations, validations and reports over large volumes of data, fully traceable and focused on data quality.")],
+          ].map(([title, text]) => (
+            <li key={title} className="flex gap-2.5">
+              <span className="text-cyan-400">⚡</span>
+              <div><strong>{title}</strong> {text}</div>
+            </li>
+          ))}
         </ul>
       </div>
 
       <div className="mt-5 pt-4 border-t border-white/10">
-        <h4 className="text-xs uppercase tracking-wider text-cyan-400 font-semibold mb-2" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
-          Objetivo Profesional
+        <h4 className="text-xs uppercase tracking-wider text-cyan-400 font-semibold mb-2" style={MONO}>
+          {t("Dominio de negocio: RRHH y nómina", "Business domain: HR and payroll")}
         </h4>
-        <p className="text-[12px] leading-5 text-white/60">
-          Integrarme como Backend Developer a equipos de tecnología y startups que construyan productos escalables, donde el rendimiento, la calidad del código y la arquitectura sean prioridad. Me motivan los desafíos donde optimizar un sistema tiene un impacto directo en el negocio.
+        <p className="text-[12px] leading-5 text-white/60 mb-2.5">{HR_DOMAIN.intro}</p>
+        <div className="flex flex-wrap gap-1.5">
+          {HR_DOMAIN.items.map((d) => (
+            <span key={d.term} title={d.evidence} className="rounded-full border px-2.5 py-1 text-[11px] text-white/75" style={{ borderColor: `${CORE}33`, background: `${CORE}0a` }}>{d.term}</span>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5 pt-4 border-t border-white/10">
+        <h4 className="text-xs uppercase tracking-wider text-cyan-400 font-semibold mb-2" style={MONO}>
+          {t("Qué busco", "What I'm looking for")}
+        </h4>
+        <p className="text-[12px] leading-5 text-white/60 mb-2.5">{HR_SEEKING.text}</p>
+        <ul className="grid grid-cols-1 @md:grid-cols-2 gap-1.5">
+          {HR_SEEKING.roles.map((r) => (
+            <li key={r} className="flex gap-2 text-[12px] text-white/75 leading-5"><Target size={13} className="mt-[3px] shrink-0" style={{ color: CORE }} />{r}</li>
+          ))}
+        </ul>
+        <p className="mt-2.5 text-[11px] text-white/55" style={MONO}>
+          {t("Disponibilidad inmediata · remoto o presencial · inglés intermedio (B1–B2)", "Available now · remote or on-site · intermediate English (B1–B2)")}
         </p>
       </div>
     </div>
   );
 }
 
-const MONO = { fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" };
-const TOTAL = PROJECT_HISTORY.length;
-const PERIOD = "2023–2026";
 /* rows per group, most used first (ties keep the group's declared order) */
-const USAGE = TECH_GROUPS.map((g) => ({
-  ...g,
-  rows: g.items
-    .map((tech) => ({ tech, projects: projectsUsing(tech) }))
-    .filter((r) => r.projects.length > 0)
-    .sort((x, y) => y.projects.length - x.projects.length),
-})).filter((g) => g.rows.length > 0);
-const ALL_ROWS = USAGE.flatMap((g) => g.rows);
-const TOP = ALL_ROWS.reduce((best, r) => (r.projects.length > best.projects.length ? r : best));
+function usageFor({ TECH_GROUPS, projectsUsing }) {
+  const usage = TECH_GROUPS.map((g) => ({
+    ...g,
+    rows: g.items
+      .map((tech) => ({ tech, projects: projectsUsing(tech) }))
+      .filter((r) => r.projects.length > 0)
+      .sort((x, y) => y.projects.length - x.projects.length),
+  })).filter((g) => g.rows.length > 0);
+  const allRows = usage.flatMap((g) => g.rows);
+  const top = allRows.reduce((best, r) => (r.projects.length > best.projects.length ? r : best));
+  return { usage, allRows, top };
+}
+const PERIOD = "2023–2026";
 
 /* one radio per technology (single selection); arrow keys move across the whole chart (roving tabindex) */
-function UsageRow({ row, active, onSelect }) {
+function UsageRow({ row, active, total, onSelect }) {
+  const t = useT();
   const n = row.projects.length;
   return (
     <button
@@ -119,8 +142,8 @@ function UsageRow({ row, active, onSelect }) {
       tabIndex={active ? 0 : -1}
       data-tech={row.tech}
       onClick={() => onSelect(row.tech)}
-      title={`${row.tech} · ${n}/${TOTAL}: ${row.projects.map((p) => p.name).join(", ")}`}
-      aria-label={`${row.tech}: usado en ${n} de ${TOTAL} proyectos`}
+      title={`${row.tech} · ${n}/${total}: ${row.projects.map((p) => p.name).join(", ")}`}
+      aria-label={t(`${row.tech}: usado en ${n} de ${total} proyectos`, `${row.tech}: used in ${n} of ${total} projects`)}
       className="w-full grid grid-cols-[minmax(0,1fr)_2.75rem] @md:grid-cols-[minmax(0,9rem)_minmax(4rem,1fr)_2.75rem] items-center gap-x-2.5 gap-y-1 rounded-md px-1.5 py-[5px] text-left transition-colors hover:bg-white/[0.04] focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
       style={active ? { background: "rgba(255,255,255,0.05)" } : undefined}
     >
@@ -128,17 +151,21 @@ function UsageRow({ row, active, onSelect }) {
       <span className="h-2 rounded-r-[4px] bg-white/[0.06] overflow-hidden col-span-2 row-start-2 @md:col-span-1 @md:row-start-1 @md:col-start-2" aria-hidden="true">
         <span
           className="block h-full rounded-r-[4px] transition-[width,opacity] duration-500 ease-out"
-          style={{ width: `${(n / TOTAL) * 100}%`, background: CORE, opacity: active ? 1 : 0.7 }}
+          style={{ width: `${(n / total) * 100}%`, background: CORE, opacity: active ? 1 : 0.7 }}
         />
       </span>
-      <span className="text-[11px] text-right text-white/65 tabular-nums col-start-2 row-start-1 @md:col-start-3" style={MONO}>{n}/{TOTAL}</span>
+      <span className="text-[11px] text-right text-white/65 tabular-nums col-start-2 row-start-1 @md:col-start-3" style={MONO}>{n}/{total}</span>
     </button>
   );
 }
 
 export function SkillsContent() {
-  const [selected, setSelected] = useState(TOP.tech);
-  const sel = ALL_ROWS.find((r) => r.tech === selected) ?? TOP;
+  const t = useT();
+  const C = useContent();
+  const { usage, allRows, top } = useMemo(() => usageFor(C), [C]);
+  const total = C.PROJECT_HISTORY.length;
+  const [selected, setSelected] = useState(null);
+  const sel = allRows.find((r) => r.tech === selected) ?? top;
   const detailRef = useRef(null);
   const chartRef = useRef(null);
   /* arrow keys / Home / End walk every technology of the chart in display order */
@@ -146,9 +173,9 @@ export function SkillsContent() {
     const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
     if (step === undefined && e.key !== "Home" && e.key !== "End") return;
     e.preventDefault();
-    const i = ALL_ROWS.findIndex((r) => r.tech === sel.tech);
-    const next = e.key === "Home" ? 0 : e.key === "End" ? ALL_ROWS.length - 1 : (i + step + ALL_ROWS.length) % ALL_ROWS.length;
-    const tech = ALL_ROWS[next].tech;
+    const i = allRows.findIndex((r) => r.tech === sel.tech);
+    const next = e.key === "Home" ? 0 : e.key === "End" ? allRows.length - 1 : (i + step + allRows.length) % allRows.length;
+    const tech = allRows[next].tech;
     setSelected(tech);
     requestAnimationFrame(() => chartRef.current?.querySelector(`[data-tech="${CSS.escape(tech)}"]`)?.focus());
   };
@@ -158,23 +185,23 @@ export function SkillsContent() {
     detailRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   };
   const stats = [
-    { value: TOTAL, label: `Proyectos analizados · ${PERIOD}` },
-    { value: ALL_ROWS.length, label: "Tecnologías aplicadas" },
-    { value: `${TOP.projects.length}/${TOTAL}`, label: `Más usada: ${TOP.tech}` },
+    { value: total, label: t(`Proyectos analizados · ${PERIOD}`, `Projects analyzed · ${PERIOD}`) },
+    { value: allRows.length, label: t("Tecnologías aplicadas", "Technologies applied") },
+    { value: `${top.projects.length}/${total}`, label: t(`Más usada: ${top.tech}`, `Most used: ${top.tech}`) },
   ];
   return (
     <div className="w-full">
       <p className="text-[12px] text-white/60 mb-4 leading-5">
-        En cuántos de mis proyectos apliqué cada tecnología, según el histórico de trabajo {PERIOD}. Haz clic o toca
-        una barra para ver en qué proyectos se usó.
+        {t(
+          `En cuántos de mis proyectos apliqué cada tecnología, según el histórico de trabajo ${PERIOD}. Haz clic o toca una barra para ver en qué proyectos se usó.`,
+          `How many of my projects used each technology, based on my ${PERIOD} work history. Click or tap a bar to see which projects.`
+        )}
       </p>
 
       <div className="grid grid-cols-3 gap-2.5 mb-4">
         {stats.map((st) => (
           <div key={st.label} className="rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 min-w-0">
-            <div className="text-[20px] leading-none font-semibold text-white" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
-              {st.value}
-            </div>
+            <div className="text-[20px] leading-none font-semibold text-white" style={DISPLAY}>{st.value}</div>
             <div className="text-[10.5px] text-white/50 mt-1.5 leading-4">{st.label}</div>
           </div>
         ))}
@@ -185,7 +212,7 @@ export function SkillsContent() {
         <div className="flex items-baseline justify-between gap-2 mb-2">
           <span className="text-[13px] font-medium text-white">{sel.tech}</span>
           <span className="text-[10.5px] text-white/55" style={MONO}>
-            {sel.projects.length} de {TOTAL} proyectos
+            {t(`${sel.projects.length} de ${total} proyectos`, `${sel.projects.length} of ${total} projects`)}
           </span>
         </div>
         <ul className="grid grid-cols-1 @md:grid-cols-2 gap-x-4 gap-y-1">
@@ -200,12 +227,12 @@ export function SkillsContent() {
         </ul>
       </div>
 
-      <div ref={chartRef} role="radiogroup" aria-label="Tecnologías por cantidad de proyectos" onKeyDown={onChartKey} className="grid grid-cols-1 @2xl:grid-cols-2 gap-x-6 gap-y-4">
-        {USAGE.map((g) => (
+      <div ref={chartRef} role="radiogroup" aria-label={t("Tecnologías por cantidad de proyectos", "Technologies by number of projects")} onKeyDown={onChartKey} className="grid grid-cols-1 @2xl:grid-cols-2 gap-x-6 gap-y-4">
+        {usage.map((g) => (
           <section key={g.id} className="min-w-0">
             <h4 className="text-[10.5px] uppercase tracking-wider text-white/60 mb-1 px-1.5" style={MONO}>{g.label}</h4>
             {g.rows.map((row) => (
-              <UsageRow key={row.tech} row={row} active={row.tech === sel.tech} onSelect={setSelected} />
+              <UsageRow key={row.tech} row={row} total={total} active={row.tech === sel.tech} onSelect={setSelected} />
             ))}
           </section>
         ))}
@@ -213,11 +240,11 @@ export function SkillsContent() {
 
       <div className="mt-5 pt-4 border-t border-white/[0.08]">
         <div className="text-[10.5px] uppercase tracking-wider mb-2 text-white/60" style={MONO}>
-          También en mi CV (sin proyecto listado aquí)
+          {t("También en mi CV (sin proyecto listado aquí)", "Also on my CV (no project listed here)")}
         </div>
         <div className="flex flex-wrap gap-2">
-          {TECH_KNOWN.map((t) => (
-            <span key={t} className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-white/65">{t}</span>
+          {C.TECH_KNOWN.map((k) => (
+            <span key={k} className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-white/65">{k}</span>
           ))}
         </div>
       </div>
@@ -225,23 +252,23 @@ export function SkillsContent() {
       {/* table view of the same data */}
       <details className="mt-4 group">
         <summary className="cursor-pointer text-[11.5px] text-white/60 hover:text-white/85 select-none" style={MONO}>
-          Ver histórico de proyectos ({TOTAL})
+          {t(`Ver histórico de proyectos (${total})`, `View project history (${total})`)}
         </summary>
         <ul className="mt-3 space-y-2.5">
-          {PROJECT_HISTORY.map((p) => (
+          {C.PROJECT_HISTORY.map((p) => (
             <li key={p.id} className="rounded-lg border border-white/[0.08] p-2.5">
               <div className="flex flex-wrap items-baseline justify-between gap-x-2">
                 <span className="text-[12px] text-white/85">{p.name}</span>
                 <span className="text-[10.5px] text-white/60" style={MONO}>{p.org} · {p.period}</span>
               </div>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
-                {p.tech.map((t) => (
+                {p.tech.map((tech) => (
                   <button
-                    key={t} type="button" onClick={() => pickFromHistory(t)}
+                    key={tech} type="button" onClick={() => pickFromHistory(tech)}
                     className="rounded-sm border border-white/10 px-1.5 py-0.5 text-[10.5px] text-white/65 hover:text-white hover:border-white/30 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
                     style={MONO}
                   >
-                    {t}
+                    {tech}
                   </button>
                 ))}
               </div>
@@ -254,11 +281,13 @@ export function SkillsContent() {
 }
 
 export function ProjectsContent({ onOpenProject }) {
+  const t = useT();
+  const { PROJECTS } = useContent();
   return (
     <div className="w-full">
       <SimulatorBanner />
       <p className="text-[12px] text-white/60 mb-3">
-        Selecciona un proyecto para abrir su infografía de arquitectura en una nueva ventana.
+        {t("Selecciona un proyecto para ver su caso de estudio: contexto, enfoque, resultado y diagrama de arquitectura.", "Pick a project to see its case study: context, approach, result and architecture diagram.")}
       </p>
       <div className="grid grid-cols-1 @lg:grid-cols-2 gap-3">
         {PROJECTS.map((p) => (
@@ -273,13 +302,11 @@ export function ProjectsContent({ onOpenProject }) {
                 {p.langs.map((l) => <LangBadge key={l} id={l} />)}
               </div>
             )}
-            <div className="text-[13px] font-medium text-white/90 mb-1" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
-              {p.title}
-            </div>
-            <div className="text-[10.5px] mb-1.5" style={{ color: CORE, fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{p.org}</div>
+            <div className="text-[13px] font-medium text-white/90 mb-1" style={DISPLAY}>{p.title}</div>
+            <div className="text-[10.5px] mb-1.5" style={{ color: CORE, ...MONO }}>{p.org}</div>
             <p className="text-[11.5px] text-white/65 leading-5 mb-2">{p.summary}</p>
             <div className="flex items-center gap-1 text-[10.5px]" style={{ color: CORE }}>
-              Ver infografía <ChevronRight size={12} />
+              {t("Ver caso de estudio", "View case study")} <ChevronRight size={12} />
             </div>
           </button>
           </Tilt>
@@ -289,12 +316,31 @@ export function ProjectsContent({ onOpenProject }) {
   );
 }
 
+function CaseBlock({ label, children, Icon }) {
+  return (
+    <section className="flex gap-3">
+      <span className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-white/[0.04] border border-white/10" style={{ color: CORE }}>
+        <Icon size={13} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <h4 className="text-[10.5px] uppercase tracking-wider text-white/60 mb-1" style={MONO}>{label}</h4>
+        {children}
+      </div>
+    </section>
+  );
+}
+
 export function ProjectDetailContent({ project }) {
+  const t = useT();
+  const { openWindow } = useSystem();
+  const { CASES } = useContent();
+  const cs = CASES[project.id];
   return (
     <div className="w-full">
       <div className="flex items-center gap-1.5 mb-3 flex-wrap">
         {project.langs.map((l) => <LangBadge key={l} id={l} size="md" />)}
-        <span className="text-[11px] text-white/60 ml-1" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{project.org}</span>
+        <span className="text-[11px] text-white/60 ml-1" style={MONO}>{project.org}</span>
+        <CopyLinkButton className="ml-auto" params={{ proyecto: project.id }} label={t("Copiar enlace", "Copy link")} />
       </div>
       <p className="text-[12.5px] text-white/65 leading-6 mb-4">{project.summary}</p>
 
@@ -305,33 +351,68 @@ export function ProjectDetailContent({ project }) {
         </div>
       </div>
 
+      {cs && (
+        <div className="space-y-4 mb-4">
+          <CaseBlock label={t("Contexto", "Context")} Icon={Target}>
+            <p className="text-[12.5px] text-white/75 leading-5">{cs.context}</p>
+          </CaseBlock>
+          <CaseBlock label={t("Enfoque técnico", "Technical approach")} Icon={Lightbulb}>
+            <ul className="space-y-1">
+              {cs.approach.map((a) => (
+                <li key={a} className="text-[12px] text-white/70 leading-5 flex gap-1.5"><span className="text-white/30">&bull;</span>{a}</li>
+              ))}
+            </ul>
+          </CaseBlock>
+          <CaseBlock label={t("Resultado", "Result")} Icon={ArrowRight}>
+            <p className="text-[12.5px] font-medium leading-5" style={{ color: LANG.node.c2 }}>{cs.result}</p>
+            {cs.evidence && <p className="text-[10.5px] text-white/50 mt-1" style={MONO}>{cs.evidence}</p>}
+          </CaseBlock>
+          {cs.snippet && (
+            <CodeBlock
+              code={cs.snippet.code}
+              lang={cs.snippet.lang}
+              note={cs.snippet.illustrative
+                ? t("Ejemplo ilustrativo del patrón aplicado; no es el código del cliente.", "Illustrative example of the pattern applied; not the client's code.")
+                : null}
+            />
+          )}
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-1.5">
         {project.stack.map((s) => (
-          <span key={s} className="rounded-full border border-white/10 px-2 py-0.5 text-[10.5px] text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
-            {s}
-          </span>
+          <span key={s} className="rounded-full border border-white/10 px-2 py-0.5 text-[10.5px] text-white/60" style={MONO}>{s}</span>
         ))}
       </div>
+      {project.id === "portfolio" && (
+        <button
+          onClick={() => openWindow("site")}
+          className="mt-4 w-full flex items-center gap-2 rounded-lg border px-3.5 py-2.5 text-left text-[12.5px] text-white/85 hover:brightness-125 transition-all focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
+          style={{ borderColor: `${CORE}44`, background: `${CORE}10` }}
+        >
+          <Cpu size={15} style={{ color: CORE }} /> {t("Ver cómo está hecho este sitio, con sus números", "See how this site is built, with its numbers")}
+          <ChevronRight size={14} className="ml-auto text-white/55" />
+        </button>
+      )}
       {project.id === "buk-migration" && <SimulatorBanner compact />}
     </div>
   );
 }
 
 export function ExperienceContent() {
+  const t = useT();
+  const { EXPERIENCE } = useContent();
+  const rows = useCareerRows(CORE);
   return (
     <div className="w-full">
+      <CareerTimeline rows={rows} title={t("Línea de tiempo", "Timeline")} />
       <div className="relative pl-5 border-l" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
         {EXPERIENCE.map((e, i) => (
           <div key={i} className="mb-5 last:mb-0 relative">
-            <span
-              className="absolute -left-[25px] top-1 w-2.5 h-2.5 rounded-full border-2"
-              style={{ borderColor: CORE, background: "#0d1117" }}
-            />
-            <div className="text-[13px] font-medium text-white/90" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
-              {e.role}
-            </div>
+            <span className="absolute -left-[25px] top-1 w-2.5 h-2.5 rounded-full border-2" style={{ borderColor: CORE, background: "#0d1117" }} />
+            <div className="text-[13px] font-medium text-white/90" style={DISPLAY}>{e.role}</div>
             <div className="text-[11.5px] mb-1" style={{ color: CORE }}>{e.company}</div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] text-white/60 mb-2" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] text-white/60 mb-2" style={MONO}>
               <span className="inline-flex items-center gap-1"><Calendar size={11} /> {e.period}</span>
               <span className="inline-flex items-center gap-1"><MapPin size={11} /> {e.location}</span>
             </div>
@@ -349,40 +430,81 @@ export function ExperienceContent() {
   );
 }
 
-export function EducationContent() {
+/* "Formación": degree, certifications and what I'm learning now. `plain`: the RRHH view adds a short
+   plain-language note under each certification. */
+function Education({ plain }) {
+  const t = useT();
+  const { openWindow } = useSystem();
+  const { EDUCATION, CERTS, LEARNING } = useContent();
+  const { HR_CERT_NOTES } = useHR();
+  const accent = plain ? HR_ACCENT : CORE;
   return (
-    <div className="w-full space-y-3">
-      {EDUCATION.map((ed, i) => (
-        <div key={i} className="rounded-lg border border-white/10 p-3" style={{ background: "rgba(255,255,255,0.02)" }}>
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <div className="text-[13px] font-medium text-white/90" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
-              {ed.title}
+    <div className="w-full space-y-6">
+      <section>
+        <SectionTitle color={accent}>{t("Estudios", "Degree")}</SectionTitle>
+        <div className="space-y-3">
+          {EDUCATION.map((ed, i) => (
+            <div key={i} className="rounded-lg border border-white/10 p-3 flex gap-3" style={{ background: "rgba(255,255,255,0.02)" }}>
+              <GraduationCap size={18} className="shrink-0 mt-0.5" style={{ color: accent }} />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <div className="text-[13px] font-medium text-white/90" style={DISPLAY}>{ed.title}</div>
+                  <span className="text-[10.5px] text-white/60 shrink-0" style={MONO}>{ed.period}</span>
+                </div>
+                <div className="text-[11.5px] mb-1.5" style={{ color: accent }}>{ed.place}</div>
+                <p className="text-[12px] text-white/55 leading-5">{ed.detail}</p>
+              </div>
             </div>
-            <span className="text-[10.5px] text-white/60 shrink-0" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>{ed.period}</span>
-          </div>
-          <div className="text-[11.5px] mb-1.5" style={{ color: CORE }}>{ed.place}</div>
-          <p className="text-[12px] text-white/55 leading-5">{ed.detail}</p>
+          ))}
         </div>
-      ))}
+      </section>
+
+      <section>
+        <SectionTitle color={accent}>{t("Certificaciones y capacitaciones", "Certifications and training")}</SectionTitle>
+        <div className="grid grid-cols-1 @md:grid-cols-2 gap-3">
+          {CERTS.map((c, i) => {
+            const color = plain ? HR_ACCENT : [LANG.python.c1, LANG.java.c1, LANG.node.c1, CORE][i % 4];
+            return (
+              <div key={c.name} className="rounded-lg border p-3 flex items-start gap-2.5" style={{ borderColor: `${color}33`, background: `${color}0d` }}>
+                <Award size={16} style={{ color }} className="shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <div className="text-[12px] font-medium text-white/90 leading-4">{c.name}</div>
+                  <div className="text-[10.5px] text-white/60 mt-1">{c.org} &middot; {c.year}</div>
+                  {plain && HR_CERT_NOTES[c.name] && <p className="text-[11.5px] text-white/60 leading-5 mt-2">{HR_CERT_NOTES[c.name]}</p>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <section>
+        <SectionTitle color={accent}>{t("Aprendiendo ahora", "Learning right now")}</SectionTitle>
+        <ul className="space-y-2">
+          {LEARNING.map((l) => (
+            <li key={l.id} className="flex gap-3 rounded-lg border border-white/[0.08] px-3 py-2.5">
+              <span className="relative flex w-2.5 h-2.5 mt-1.5 shrink-0" aria-hidden="true">
+                <span className="absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping" style={{ background: accent }} />
+                <span className="relative inline-flex rounded-full w-2.5 h-2.5" style={{ background: accent }} />
+              </span>
+              <div className="min-w-0">
+                <div className="text-[12.5px] font-medium text-white/90">{l.name}</div>
+                <p className="text-[11.5px] text-white/60 leading-5">{l.detail}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <button
+          onClick={() => openWindow("notes")}
+          className="mt-3 inline-flex items-center gap-1.5 text-[11.5px] hover:underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden rounded-sm"
+          style={{ color: accent }}
+        >
+          <BookOpen size={13} /> {t("Ver mis notas técnicas", "Read my tech notes")} <ChevronRight size={12} />
+        </button>
+      </section>
     </div>
   );
 }
 
-export function CertificationsContent() {
-  return (
-    <div className="w-full grid grid-cols-1 @md:grid-cols-2 gap-3">
-      {CERTS.map((c, i) => {
-        const color = [LANG.python.c1, LANG.java.c1, LANG.node.c1, CORE][i % 4];
-        return (
-          <div key={c.name} className="rounded-lg border p-3 flex items-start gap-2.5" style={{ borderColor: `${color}33`, background: `${color}0d` }}>
-            <Award size={16} style={{ color }} className="shrink-0 mt-0.5" />
-            <div className="min-w-0">
-              <div className="text-[12px] font-medium text-white/90 leading-4">{c.name}</div>
-              <div className="text-[10.5px] text-white/60 mt-1">{c.org} &middot; {c.year}</div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+export const EducationContent = () => <Education />;
+export const EducationHRContent = () => <Education plain />;

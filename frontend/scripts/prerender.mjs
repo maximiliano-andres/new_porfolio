@@ -7,6 +7,7 @@ import { readdirSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import vm from "node:vm";
+import { CONTACT_EMAIL, SOCIAL_LINKS } from "../src/styles/theme.js";
 
 const ssr = await import(pathToFileURL("dist-ssr/prerender.js").href);
 const script = ssr.shellScript();
@@ -16,7 +17,7 @@ const SIZES = [[320, 568], [360, 640], [375, 667], [390, 844], [412, 915], [430,
 for (const [w, h] of SIZES) {
   const vars = {};
   const sandbox = {
-    innerWidth: w, innerHeight: h, URLSearchParams, location: { search: "" },
+    innerWidth: w, innerHeight: h, URLSearchParams, location: { search: "" }, navigator: { language: "es-CL" },
     localStorage: { getItem: () => null }, addEventListener: () => {},
     document: { documentElement: { dataset: {}, style: { setProperty: (k, v) => { vars[k] = v; } } } },
   };
@@ -37,7 +38,40 @@ if (!index.includes('<div id="root"></div>')) throw new Error("prerender: #root 
 index = index
   .replace('<div id="root"></div>', () => `<div id="root">${html}</div>`)
   .replace("</head>", () => `  <script>${script}</script>\n</head>`);
+
+// ---- public URL (SITE_URL env, optional): absolute og:image, canonical and hreflang links ----
+const siteUrl = (process.env.SITE_URL || "").trim().replace(/\/+$/, "");
+if (siteUrl && !/^https?:\/\/[^\s"'<>]+$/.test(siteUrl)) throw new Error(`prerender: SITE_URL is not a valid http(s) URL: ${siteUrl}`);
+if (siteUrl) {
+  index = index.replaceAll("__SITE_URL__", () => siteUrl);
+} else {
+  // no public URL: the preview image stays relative; tags that require an absolute URL are left out
+  index = index
+    .replace(/(content=")__SITE_URL__(\/img\/og-cover\.png")/, (_, a, b) => `${a}${b}`)
+    .split("\n").filter((line) => !line.includes("__SITE_URL__")).join("\n");
+}
+
+// ---- structured data (schema.org Person) for search engines; only facts already shown on the site ----
+const person = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: "Maximiliano Andrés Caniullán Lefiñir",
+  jobTitle: "Backend Developer",
+  ...(siteUrl ? { url: `${siteUrl}/`, image: `${siteUrl}/img/max_andres_head_256.webp` } : {}),
+  email: `mailto:${CONTACT_EMAIL}`,
+  address: { "@type": "PostalAddress", addressLocality: "Peñaflor", addressRegion: "Región Metropolitana", addressCountry: "CL" },
+  alumniOf: { "@type": "CollegeOrUniversity", name: "Universidad Mayor" },
+  knowsLanguage: ["es", "en"],
+  knowsAbout: ["Java", "Spring Boot", "GraalVM Native Image", "Python", "FastAPI", "Node.js", "PostgreSQL", "MySQL", "MongoDB",
+    "REST APIs", "Microservices", "Performance optimization", "Data migration", "Docker", "AWS"],
+  sameAs: [SOCIAL_LINKS.linkedin, SOCIAL_LINKS.github],
+};
+// "<" escaped: the JSON can never close the <script> element
+const jsonLd = JSON.stringify(person).replace(/</g, "\\u003c");
+index = index.replace("</head>", () => `  <script type="application/ld+json">${jsonLd}</script>\n</head>`);
+if (index.includes("__SITE_URL__")) throw new Error("prerender: __SITE_URL__ placeholder left in dist/index.html");
 writeFileSync(file, index);
+console.log(`prerender: link preview + JSON-LD (${siteUrl ? `SITE_URL=${siteUrl}` : "no SITE_URL: relative og:image, no canonical/hreflang"})`);
 rmSync("dist-ssr", { recursive: true, force: true });
 console.log(`prerender: landing screen injected (${(html.length / 1024).toFixed(1)} KB HTML), layout verified at ${SIZES.length} viewports`);
 

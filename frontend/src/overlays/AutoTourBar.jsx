@@ -2,10 +2,13 @@
 import { useEffect, useRef } from "react";
 import { m } from "framer-motion";
 import { Pause, Play, SkipForward, X } from "lucide-react";
-import { AUTO_TOUR_MS } from "../data/system.js";
+import { AUTO_TOUR_MS, loc } from "../data/system.js";
+import { useLang, useT } from "../app/context.js";
 import { HR_ACCENT } from "../styles/theme.js";
 
 export function AutoTourBar({ tour, bottom, onNext, onTogglePlay, onStop }) {
+  const t = useT();
+  const { lang } = useLang();
   const stepMs = AUTO_TOUR_MS / tour.steps.length;
   // one timer per step (paused time is kept), and the progress bar is a CSS animation paused/resumed with
   // animation-play-state: no re-render every 100 ms for a minute
@@ -27,7 +30,7 @@ export function AutoTourBar({ tour, bottom, onNext, onTogglePlay, onStop }) {
     <m.div
       initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}
       role="region"
-      aria-label="Recorrido guiado"
+      aria-label={t("Recorrido guiado", "Guided walkthrough")}
       className="w-full max-w-[560px] rounded-xl border px-3.5 py-2.5 shadow-2xl pointer-events-auto"
       style={{ background: "rgba(10,14,20,0.96)", borderColor: `${HR_ACCENT}44` }}
     >
@@ -35,15 +38,15 @@ export function AutoTourBar({ tour, bottom, onNext, onTogglePlay, onStop }) {
         <span className="shrink-0 text-[10.5px] tabular-nums" style={{ color: HR_ACCENT, fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
           {tour.i + 1}/{tour.steps.length}
         </span>
-        <p className="flex-1 min-w-0 text-[12px] sm:text-[12.5px] text-white/85 leading-5" aria-live="polite">{step.text}</p>
+        <p className="flex-1 min-w-0 text-[12px] sm:text-[12.5px] text-white/85 leading-5" aria-live="polite">{loc(step, "text", lang)}</p>
         <div className="flex items-center gap-1 shrink-0">
-          <button onClick={onTogglePlay} aria-label={tour.playing ? "Pausar recorrido" : "Reanudar recorrido"} className="w-8 h-8 rounded-md flex items-center justify-center text-white/70 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">
+          <button onClick={onTogglePlay} aria-label={tour.playing ? t("Pausar recorrido", "Pause walkthrough") : t("Reanudar recorrido", "Resume walkthrough")} className="w-8 h-8 rounded-md flex items-center justify-center text-white/70 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">
             {tour.playing ? <Pause size={14} /> : <Play size={14} />}
           </button>
-          <button onClick={onNext} aria-label="Siguiente paso" className="w-8 h-8 rounded-md flex items-center justify-center text-white/70 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">
+          <button onClick={onNext} aria-label={t("Siguiente paso", "Next step")} className="w-8 h-8 rounded-md flex items-center justify-center text-white/70 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">
             <SkipForward size={14} />
           </button>
-          <button onClick={onStop} aria-label="Terminar recorrido" className="w-8 h-8 rounded-md flex items-center justify-center text-white/70 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">
+          <button onClick={onStop} aria-label={t("Terminar recorrido", "End walkthrough")} className="w-8 h-8 rounded-md flex items-center justify-center text-white/70 hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">
             <X size={14} />
           </button>
         </div>

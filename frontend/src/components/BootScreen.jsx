@@ -6,9 +6,14 @@ import { prefersReducedMotion } from "../lib/env.js";
 import { sound } from "../lib/sound.js";
 import { storage } from "../lib/storage.js";
 import { CORE } from "../styles/theme.js";
+import { useLang, useT } from "../app/context.js";
+import { loc } from "../data/system.js";
+import { LangToggle } from "./audience.jsx";
 
 /* onChoose(audience) is called only when the visitor picks a profile; clicking elsewhere skips */
 export function BootScreen({ onDone, onChoose, current }) {
+  const t = useT();
+  const { lang } = useLang();
   const [count, setCount] = useState(0);
   const [leaving, setLeaving] = useState(false);
   const firstChoiceRef = useRef(null);
@@ -82,7 +87,7 @@ export function BootScreen({ onDone, onChoose, current }) {
       aria-hidden={leaving}
       role="dialog"
       aria-modal="true"
-      aria-label="Inicio del portafolio"
+      aria-label={t("Inicio del portafolio", "Portfolio start")}
     >
       <div
         className="w-full max-w-xl rounded-lg border px-4 py-4 sm:px-6 sm:py-6 cursor-default"
@@ -98,7 +103,8 @@ export function BootScreen({ onDone, onChoose, current }) {
           <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]" />
           <span className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]" />
           <span className="w-2.5 h-2.5 rounded-full bg-[#27c93f]" />
-          <span className="ml-3 text-[11px] text-white/60">boot — polyglot_core</span>
+          <span className="ml-3 text-[11px] text-white/60 flex-1 min-w-0 truncate">boot — polyglot_core</span>
+          <span onClick={(e) => e.stopPropagation()}><LangToggle /></span>
         </div>
         <div className="text-[9.5px] min-[380px]:text-[11px] sm:text-[13px] leading-5 sm:leading-6 min-h-[180px] sm:min-h-[210px] short:min-h-0 overflow-x-auto" role="status" aria-live="polite">
           {BOOT_LINES.slice(0, count).map((line, i) => (
@@ -125,7 +131,7 @@ export function BootScreen({ onDone, onChoose, current }) {
                 $ select --profile <span className="animate-pulse">_</span>
               </p>
               <p className="text-[12.5px] text-white/70 mb-3" style={{ fontFamily: "'Inter', 'Inter Fallback', sans-serif" }}>
-                ¿Cómo quieres explorar este portafolio?
+                {t("¿Cómo quieres explorar este portafolio?", "How would you like to explore this portfolio?")}
               </p>
               <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2.5">
                 {AUDIENCES.map((a, i) => (
@@ -137,10 +143,12 @@ export function BootScreen({ onDone, onChoose, current }) {
                     style={{ borderColor: `${a.color}${current === a.id ? "88" : "40"}`, background: `${a.color}0f` }}
                   >
                     <span className="flex items-center gap-2 text-[13px] font-semibold" style={{ color: a.color }}>
-                      <a.Icon size={15} /> {a.long}
+                      <a.Icon size={15} /> {loc(a, "long", lang)}
                     </span>
                     <span className="block text-[11.5px] text-white/60 mt-1 leading-4" style={{ fontFamily: "'Inter', 'Inter Fallback', sans-serif" }}>
-                      {a.id === "ti" ? "Tecnologías, arquitectura y métricas." : "Lenguaje de negocio, sin tecnicismos."}
+                      {a.id === "ti"
+                        ? t("Tecnologías, arquitectura y métricas.", "Technologies, architecture and metrics.")
+                        : t("Lenguaje de negocio, sin tecnicismos.", "Business language, no jargon.")}
                     </span>
                   </button>
                 ))}
@@ -149,7 +157,7 @@ export function BootScreen({ onDone, onChoose, current }) {
           )}
         </AnimatePresence>
         <p className="mt-3 text-right text-[10px] text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
-          {done ? "puedes cambiarlo después desde la barra superior" : <>clic o Esc para saltar &rarr;</>}
+          {done ? t("puedes cambiarlo después desde la barra superior", "you can change it later from the top bar") : <>{t("clic o Esc para saltar", "click or Esc to skip")} &rarr;</>}
         </p>
       </div>
     </m.div>

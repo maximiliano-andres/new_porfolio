@@ -1,18 +1,54 @@
-/* Plain-language (RRHH) versions of the portfolio content. Only re-explains existing facts. */
-import { Briefcase, Gauge, Laptop, MapPin, ShieldCheck, Sparkles, TrendingDown } from "lucide-react";
+/* Plain-language (RRHH) versions of the portfolio content. Only re-explains existing facts.
+   The English twin lives in hr.en.js (same exports, same order): keep both in sync. */
+import { BadgeCheck, Briefcase, CalendarCheck, FileSearch, FlaskConical, Gauge, Languages, Laptop, MapPin, NotebookPen, ShieldCheck, TrendingDown, Users } from "lucide-react";
 import { CORE, HR_ACCENT, LANG } from "../styles/theme.js";
 
 export const HR_FACTS = [
   { Icon: Briefcase, label: "Experiencia", value: "+2 años" },
   { Icon: MapPin, label: "Ubicación", value: "Peñaflor, RM · Chile" },
   { Icon: Laptop, label: "Modalidad", value: "Remoto o presencial" },
-  { Icon: Sparkles, label: "Estado", value: "Disponible" },
+  { Icon: Languages, label: "Inglés", value: "Intermedio (B1–B2)" },
+  { Icon: CalendarCheck, label: "Disponibilidad", value: "Inmediata" },
 ];
 
 export const HR_KPIS = [
   { value: "−83%", label: "Tiempo de migración de documentos", detail: "De más de 1 hora a 5–10 minutos", client: "Push HR · BUK", color: LANG.java.c1 },
   { value: "< 1 s", label: "Tiempo de respuesta", detail: "Antes tardaba 3–4 segundos", client: "BiceVida", color: LANG.node.c2 },
-  { value: "−40%", label: "Uso de procesador (CPU)", detail: "−30–40% de CPU y −15–30% de memoria", client: "Push HR", color: LANG.python.c1 },
+  { value: "−30–40%", label: "Uso de procesador (CPU)", detail: "Y −15–30% de consumo de memoria", client: "Push HR", color: LANG.python.c1 },
+];
+
+/* "Qué busco": the kind of role and company, as stated by the candidate */
+export const HR_SEEKING = {
+  roles: [
+    "Backend con Java y Spring Boot",
+    "Backend con Python (FastAPI)",
+    "Empresas HR-tech, de nómina o ERP",
+    "Optimización de rendimiento y procesamiento de datos",
+  ],
+  text: "Busco integrarme a un equipo de tecnología donde el rendimiento, la calidad del código y la arquitectura sean prioridad, y donde optimizar un sistema tenga un impacto directo en el negocio.",
+};
+
+/* business domain: what the candidate already knows about HR and payroll, each with its evidence */
+export const HR_DOMAIN = {
+  intro: "Casi toda mi experiencia está en tecnología para Recursos Humanos. Además de programar, conozco el negocio: entiendo qué es una novedad de nómina, una liquidación o un centro de costo.",
+  items: [
+    { term: "Plataforma BUK", evidence: "Migración masiva de documentos (de más de 1 hora a 5–10 minutos) e integración con su API." },
+    { term: "Novedades de nómina", evidence: "Plataforma BPO: carga, revisión, procesamiento y cierre con plantillas BUK, para muchas empresas cliente." },
+    { term: "Liquidaciones, haberes y descuentos", evidence: "Consolidador automático de planillas de remuneraciones, con auditoría por archivo." },
+    { term: "Histórico de remuneraciones", evidence: "3,55 millones de registros de 2.006 trabajadores, consultables por trabajador, fecha de pago y centro de costo." },
+    { term: "Datos de personas (RUT y documentos)", evidence: "Validación por nombre, RUT y documento con 98 % de coincidencia." },
+    { term: "Protección de datos personales", evidence: "Capacitación ISO 27001; plataforma con doble factor de autenticación y datos cifrados." },
+  ],
+};
+
+/* "Cómo trabajo": habits, each backed by something concrete in this portfolio */
+export const HR_WORKSTYLE = [
+  { Icon: Gauge, title: "Mido antes y después", evidence: "Cada logro tiene una cifra: de +1 h a 5–10 min, −30–40 % de CPU, de 3–4 s a milisegundos." },
+  { Icon: Users, title: "Construyo para usuarios no técnicos", evidence: "Multi-DB Workbook: RRHH y Finanzas sacan sus reportes sin escribir SQL ni depender de TI." },
+  { Icon: FileSearch, title: "Trazabilidad y auditoría", evidence: "Reportes 100 % exactos de lo migrado y lo pendiente; auditoría por archivo en el consolidador." },
+  { Icon: FlaskConical, title: "Calidad con pruebas automatizadas", evidence: "~1.100 pruebas en la Plataforma BPO, 258 en Multi-DB Workbook y 137 en el backend de este portafolio." },
+  { Icon: NotebookPen, title: "Documento lo que aprendo", evidence: "Guía propia de concurrencia y acceso a datos: 43 problemas con ejemplos en Java, Python y Node.js." },
+  { Icon: BadgeCheck, title: "Seguridad desde el diseño", evidence: "Capacitación ISO 27001; doble factor, cifrado AES-256-GCM y cabeceras de seguridad en mis proyectos." },
 ];
 
 export const HR_VALUE = [
@@ -160,8 +196,8 @@ export const HR_PROJECTS = {
     title: "Un portafolio rápido de cargar",
     challenge: "Un sitio interactivo, con muchas ventanas y animaciones, corre el riesgo de ser pesado y lento.",
     action: "Lo construí para que cargue solo lo necesario, con la portada lista de antemano y archivos comprimidos.",
-    result: "Los archivos del sitio pesan 74% menos al enviarse (de ≈540 KB a ≈140 KB).",
-    before: "≈540 KB", after: "≈140 KB",
+    result: "Los archivos del sitio pesan 75% menos al enviarse (de ≈730 KB a ≈180 KB).",
+    before: "≈730 KB", after: "≈180 KB",
   },
 };
 

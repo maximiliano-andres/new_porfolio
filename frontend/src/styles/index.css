@@ -86,6 +86,9 @@ body {
   50% { opacity: 1; transform: scale(1.04); }
 }
 @keyframes tourfill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+/* hobbies scenes: water surface and a gentle float */
+@keyframes waveshift { to { transform: translateX(-40px); } }
+@keyframes bob { 50% { transform: translateY(-2px); } }
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
 }
@@ -94,6 +97,9 @@ body {
 /* the inline head script sets data-audience; only the matching variant is shown */
 html[data-audience="rrhh"] [data-shell="ti"],
 html:not([data-audience="rrhh"]) [data-shell="rrhh"] { display: none; }
+/* …and data-lang picks the language variant */
+html[data-lang="en"] [data-shell-lang="es"],
+html:not([data-lang="en"]) [data-shell-lang="en"] { display: none; }
 /* first visit: the boot sequence comes first, so the shell shows only the background */
 html[data-boot] [data-shell-hero] { visibility: hidden; }
 /* live readings (clock, simulated metrics) would be stale in static HTML */

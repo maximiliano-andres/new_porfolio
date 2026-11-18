@@ -14,10 +14,10 @@ export const LANG = {
     name: "Python",
     c1: "#4B8BBE",
     c2: "#FFD43B",
-    label: "CPython 3.13",
+    label: "CPython 3.14",
   },
   java: { name: "Java", c1: "#F8981D", c2: "#5382A1", label: "OpenJDK 21 LTS" },
-  node: { name: "Node.js", c1: "#3C8C40", c2: "#7CC576", label: "Node 22 LTS" },
+  node: { name: "Node.js", c1: "#3C8C40", c2: "#7CC576", label: "Node 24 LTS" },
 };
 
 export const CORE = "#22D3EE";

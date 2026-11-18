@@ -1,13 +1,15 @@
-/* TI / RRHH profile switch and its cross-fade. Kept apart from ui.jsx on purpose: the shell (top bar, hero,
+/* TI / RRHH profile switch, ES / EN language switch and the profile cross-fade. Kept apart from ui.jsx on purpose: the shell (top bar, hero,
    window chrome) only needs these two, so the charts and diagrams in ui.jsx stay out of the initial chunk. */
 import { useId, useRef } from "react";
 import { m } from "framer-motion";
-import { useAudience } from "../app/context.js";
-import { AUDIENCES } from "../data/shell.js";
+import { useAudience, useLang } from "../app/context.js";
+import { AUDIENCES, LANGUAGES } from "../data/shell.js";
+import { loc } from "../data/system.js";
 
 /* radiogroup with a roving tabindex: one Tab stop, arrow keys switch the profile (WAI-ARIA radio pattern) */
 export function AudienceToggle({ variant = "compact" }) {
   const { audience, setAudience } = useAudience();
+  const { lang } = useLang();
   const uid = useId();
   const groupRef = useRef(null);
   const long = variant === "long";
@@ -24,7 +26,7 @@ export function AudienceToggle({ variant = "compact" }) {
     <div
       ref={groupRef}
       role="radiogroup"
-      aria-label="Lenguaje del contenido"
+      aria-label={lang === "en" ? "Content profile" : "Lenguaje del contenido"}
       className="inline-flex items-center shrink-0 rounded-full border border-white/10 bg-black/40 p-0.5"
       onPointerDown={(e) => e.stopPropagation()}
       onKeyDown={onKeyDown}
@@ -38,7 +40,7 @@ export function AudienceToggle({ variant = "compact" }) {
             role="radio"
             aria-checked={active}
             tabIndex={active ? 0 : -1}
-            title={a.hint}
+            title={loc(a, "hint", lang)}
             onClick={() => setAudience(a.id)}
             className={`relative inline-flex items-center rounded-full font-medium transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden ${long ? "gap-1.5 px-3.5 py-1.5 text-[12px]" : "gap-1 px-2.5 py-[7px] text-[10px] leading-none"
               }`}
@@ -54,8 +56,56 @@ export function AudienceToggle({ variant = "compact" }) {
             )}
             <span className="relative inline-flex items-center gap-1.5">
               {long && <a.Icon size={13} />}
-              {long ? a.long : a.label}
+              {long ? loc(a, "long", lang) : loc(a, "label", lang)}
             </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ES / EN switch: same radio pattern, two options */
+export function LangToggle({ className = "" }) {
+  const { lang, setLang } = useLang();
+  const groupRef = useRef(null);
+  const onKeyDown = (e) => {
+    if (!["ArrowRight", "ArrowLeft", "ArrowUp", "ArrowDown"].includes(e.key)) return;
+    e.preventDefault();
+    const next = lang === "es" ? "en" : "es";
+    setLang(next);
+    groupRef.current?.querySelector(`[data-lang-id="${next}"]`)?.focus();
+  };
+  return (
+    <div
+      ref={groupRef}
+      role="radiogroup"
+      aria-label={lang === "en" ? "Language" : "Idioma"}
+      className={`inline-flex items-center shrink-0 rounded-full border border-white/10 bg-black/40 p-0.5 ${className}`}
+      onPointerDown={(e) => e.stopPropagation()}
+      onKeyDown={onKeyDown}
+    >
+      {LANGUAGES.map((l) => {
+        const active = lang === l.id;
+        return (
+          <button
+            key={l.id}
+            data-lang-id={l.id}
+            role="radio"
+            aria-checked={active}
+            aria-label={l.name}
+            lang={l.id}
+            tabIndex={active ? 0 : -1}
+            title={l.name}
+            onClick={() => setLang(l.id)}
+            className="rounded-full px-2 py-[7px] text-[10px] leading-none font-medium transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
+            style={{
+              color: active ? "#05070b" : "rgba(255,255,255,0.68)",
+              background: active ? "rgba(255,255,255,0.85)" : "transparent",
+              fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace",
+            }}
+          >
+            {l.label}
           </button>
         );
       })}

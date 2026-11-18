@@ -2,16 +2,18 @@
 import { memo } from "react";
 import { circuit } from "../lib/circuitStore.js";
 import { prefetchWindow } from "../windows/lazy.js";
+import { useT } from "../app/context.js";
 
 // hovering/focusing an icon lights its circuit trace and preloads the window's code
 const hoverOn = (id) => { circuit.hover(id); prefetchWindow(id); };
 const hoverOff = () => circuit.hover(null);
 /* shortcuts: false when the visitor turned the single-key shortcuts off (then they aren't advertised) */
 export const Dock = memo(function Dock({ items, windows, onToggle, scale = 1, shortcuts = true }) {
+  const t = useT();
   return (
     <nav
       data-tour="dock"
-      aria-label="Navegación principal"
+      aria-label={t("Navegación principal", "Main navigation")}
       className="fixed bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-0 min-[380px]:gap-0.5 sm:gap-1.5 p-1 min-[360px]:p-1.5 sm:p-2 rounded-2xl border pointer-events-auto max-w-[calc(100vw-12px)]"
       style={{
         zoom: scale,

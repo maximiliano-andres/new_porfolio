@@ -3,16 +3,21 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { m } from "framer-motion";
 import { isTopTrap, useFocusTrap } from "../lib/useFocusTrap.js";
 import { CORE } from "../styles/theme.js";
+import { useLang, useT } from "../app/context.js";
+import { loc } from "../data/system.js";
 
 const COACH_STEPS = [
-  { target: '[data-tour="dock"]', title: "Tu barra de navegación", text: "Cada ícono abre una sección como una ventana. Tócalo de nuevo para minimizarla." },
-  { target: '[data-tour="audience"]', title: "Dos formas de leer", text: "TI muestra el detalle técnico; RRHH lo explica en lenguaje de negocio. Cámbialo cuando quieras." },
-  { target: '[data-tour="core"]', title: "El núcleo CORE", text: "Es el centro de control del sistema: tócalo para ver todos los módulos a la vez." },
-  { target: '[data-tour="palette"]', title: "Busca lo que quieras", text: "Escribe «contacto», «logros» o «simulador» y llega directo. Con teclado: Ctrl + K." },
-  { target: '[data-tour="progress"]', title: "Explora y gana insignias", text: "Tu avance se guarda aquí. ¿Llegarás al 100%?" },
+  { target: '[data-tour="dock"]', title: "Tu barra de navegación", titleEn: "Your navigation bar", text: "Cada ícono abre una sección como una ventana. Tócalo de nuevo para minimizarla.", textEn: "Each icon opens a section as a window. Tap it again to minimize it." },
+  { target: '[data-tour="audience"]', title: "Dos formas de leer", titleEn: "Two ways to read", text: "TI muestra el detalle técnico; RRHH lo explica en lenguaje de negocio. Cámbialo cuando quieras.", textEn: "Tech shows the technical detail; HR explains it in business terms. Switch anytime." },
+  { target: '[data-tour="lang"]', title: "Español o inglés", titleEn: "Spanish or English", text: "Todo el portafolio está disponible en ambos idiomas.", textEn: "The whole portfolio is available in both languages." },
+  { target: '[data-tour="core"]', title: "El núcleo CORE", titleEn: "The CORE hub", text: "Es el centro de control del sistema: tócalo para ver todos los módulos a la vez.", textEn: "The system's control center: tap it to see every module at once." },
+  { target: '[data-tour="palette"]', title: "Busca lo que quieras", titleEn: "Search for anything", text: "Escribe «contacto», «hobbies» o «simulador» y llega directo. Con teclado: Ctrl + K.", textEn: "Type “contact”, “hobbies” or “simulator” and go straight there. Keyboard: Ctrl + K." },
+  { target: '[data-tour="progress"]', title: "Explora y gana insignias", titleEn: "Explore and earn badges", text: "Tu avance se guarda aquí. ¿Llegarás al 100%?", textEn: "Your progress is saved here. Can you reach 100%?" },
 ];
 
 export function CoachTour({ open, onClose, onFinish }) {
+  const t = useT();
+  const { lang } = useLang();
   const [i, setI] = useState(0);
   const [rect, setRect] = useState(null);
   const [vp, setVp] = useState({ w: 0, h: 0 });
@@ -61,7 +66,7 @@ export function CoachTour({ open, onClose, onFinish }) {
   const last = i === steps.length - 1;
 
   return (
-    <div className="fixed inset-0 z-[260]" role="dialog" aria-modal="true" aria-label="Tour guiado">
+    <div className="fixed inset-0 z-[260]" role="dialog" aria-modal="true" aria-label={t("Tour guiado", "Guided tour")}>
       <m.div
         className="fixed rounded-[14px] pointer-events-none"
         animate={{ left: rect.left - pad, top: rect.top - pad, width: rect.width + pad * 2, height: rect.height + pad * 2 }}
@@ -83,13 +88,13 @@ export function CoachTour({ open, onClose, onFinish }) {
         }}
       >
         <div className="text-[10px] uppercase tracking-wider mb-1" style={{ color: CORE, fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
-          Paso {i + 1} de {steps.length}
+          {t("Paso", "Step")} {i + 1} {t("de", "of")} {steps.length}
         </div>
-        <div className="text-[14px] font-semibold text-white mb-1" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>{step.title}</div>
-        <p className="text-[12.5px] text-white/70 leading-5">{step.text}</p>
+        <div className="text-[14px] font-semibold text-white mb-1" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>{loc(step, "title", lang)}</div>
+        <p className="text-[12.5px] text-white/70 leading-5">{loc(step, "text", lang)}</p>
         <div className="flex items-center justify-between gap-2 mt-4">
           <button onClick={onClose} className="text-[11.5px] text-white/65 hover:text-white px-1 py-1.5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden rounded-sm">
-            Saltar tour
+            {t("Saltar tour", "Skip tour")}
           </button>
           <div className="flex gap-2">
             <button
@@ -97,7 +102,7 @@ export function CoachTour({ open, onClose, onFinish }) {
               disabled={i === 0}
               className="rounded-md border border-white/15 px-3 py-1.5 text-[12px] text-white/75 disabled:opacity-40 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
             >
-              Atrás
+              {t("Atrás", "Back")}
             </button>
             <button
               data-autofocus
@@ -105,7 +110,7 @@ export function CoachTour({ open, onClose, onFinish }) {
               className="rounded-md px-3 py-1.5 text-[12px] font-medium focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-hidden"
               style={{ background: CORE, color: "#05070b" }}
             >
-              {last ? "¡Listo!" : "Siguiente"}
+              {last ? t("¡Listo!", "Done!") : t("Siguiente", "Next")}
             </button>
           </div>
         </div>

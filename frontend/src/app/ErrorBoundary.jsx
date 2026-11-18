@@ -16,6 +16,8 @@ export default class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.hasError) {
+      // outside every provider: the <html lang> set by the app (or the head script) tells the language
+      const en = typeof document !== "undefined" && document.documentElement.lang === "en";
       return (
         <div
           style={{
@@ -32,7 +34,7 @@ export default class ErrorBoundary extends React.Component {
             padding: "1.5rem",
           }}
         >
-          <p style={{ fontSize: "14px" }}>Algo salió mal cargando el portafolio.</p>
+          <p style={{ fontSize: "14px" }}>{en ? "Something went wrong loading the portfolio." : "Algo salió mal cargando el portafolio."}</p>
           <button
             onClick={() => window.location.reload()}
             style={{
@@ -44,7 +46,7 @@ export default class ErrorBoundary extends React.Component {
               cursor: "pointer",
             }}
           >
-            Recargar página
+            {en ? "Reload page" : "Recargar página"}
           </button>
         </div>
       );

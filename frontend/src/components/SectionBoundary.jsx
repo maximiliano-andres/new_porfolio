@@ -4,11 +4,13 @@ import { Component } from "react";
 import { AlertTriangle, RotateCcw } from "lucide-react";
 import { resetFailedLazies } from "../lib/lazyWithRetry.js";
 import { reloadOnce } from "../lib/reload.js";
+import { LangContext, useT } from "../app/context.js";
 
 const isChunkLoadError = (error) =>
   /dynamically imported module|Importing a module script failed|Loading chunk|Failed to fetch|Unable to preload/i.test(String(error?.message));
 
 export class SectionBoundary extends Component {
+  static contextType = LangContext;
   state = { error: null, resetKey: this.props.resetKey };
 
   static getDerivedStateFromError(error) {
@@ -39,20 +41,23 @@ export class SectionBoundary extends Component {
     if (!this.state.error) return this.props.children;
     if (this.props.silent) return null; // overlays: failing quietly is better than a broken layer
     const offline = isChunkLoadError(this.state.error);
+    const en = this.context?.lang === "en";
     return (
       <div role="alert" className="w-full flex flex-col items-center text-center gap-3 py-8 px-4">
         <AlertTriangle size={26} className="text-amber-400" />
         <div>
-          <p className="text-[13px] font-medium text-white/90">Esta sección no se pudo mostrar.</p>
+          <p className="text-[13px] font-medium text-white/90">{en ? "This section couldn't be displayed." : "Esta sección no se pudo mostrar."}</p>
           <p className="text-[12px] text-white/60 mt-1">
-            {offline ? "Revisa tu conexión a internet e inténtalo otra vez." : "Ocurrió un error inesperado. El resto del portafolio sigue funcionando."}
+            {offline
+              ? (en ? "Check your internet connection and try again." : "Revisa tu conexión a internet e inténtalo otra vez.")
+              : (en ? "Something unexpected happened. The rest of the portfolio still works." : "Ocurrió un error inesperado. El resto del portafolio sigue funcionando.")}
           </p>
         </div>
         <button
           onClick={this.retry}
           className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 px-3 py-1.5 text-[12px] text-white/80 hover:bg-white/5 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
         >
-          <RotateCcw size={13} /> Reintentar
+          <RotateCcw size={13} /> {en ? "Try again" : "Reintentar"}
         </button>
       </div>
     );
@@ -61,8 +66,9 @@ export class SectionBoundary extends Component {
 
 /* placeholder shown while a window's code chunk downloads */
 export function WindowSkeleton() {
+  const t = useT();
   return (
-    <div className="w-full space-y-3 animate-pulse py-1" aria-busy="true" aria-label="Cargando">
+    <div className="w-full space-y-3 animate-pulse py-1" aria-busy="true" aria-label={t("Cargando", "Loading")}>
       <div className="h-3 w-2/3 rounded-sm bg-white/10" />
       <div className="h-3 w-full rounded-sm bg-white/[0.07]" />
       <div className="h-3 w-5/6 rounded-sm bg-white/[0.07]" />

@@ -10,6 +10,9 @@ const loaders = {
   simulator: () => importWithRetry(() => import("./SimulatorContent.jsx")),
   badges: () => importWithRetry(() => import("./BadgesContent.jsx")),
   cv: () => importWithRetry(() => import("./CvContent.jsx")),
+  hobbies: () => importWithRetry(() => import("./HobbiesContent.jsx")),
+  notes: () => importWithRetry(() => import("./NotesContent.jsx")),
+  site: () => importWithRetry(() => import("./SiteContent.jsx")),
 };
 
 // a failed download is retried with backoff; "Reintentar" (SectionBoundary) can try again without a page reload
@@ -21,7 +24,7 @@ export const ProjectsContent = pick("tech", "ProjectsContent");
 export const ProjectDetailContent = pick("tech", "ProjectDetailContent");
 export const ExperienceContent = pick("tech", "ExperienceContent");
 export const EducationContent = pick("tech", "EducationContent");
-export const CertificationsContent = pick("tech", "CertificationsContent");
+export const EducationHRContent = pick("tech", "EducationHRContent");
 
 export const HRSummaryContent = pick("hr", "HRSummaryContent");
 export const AboutHRContent = pick("hr", "AboutHRContent");
@@ -29,18 +32,21 @@ export const SkillsHRContent = pick("hr", "SkillsHRContent");
 export const ProjectsHRContent = pick("hr", "ProjectsHRContent");
 export const ProjectDetailHRContent = pick("hr", "ProjectDetailHRContent");
 export const ExperienceHRContent = pick("hr", "ExperienceHRContent");
-export const CertificationsHRContent = pick("hr", "CertificationsHRContent");
 
 export const ContactContent = pick("contact", "ContactContent");
 export const TerminalContent = pick("terminal", "TerminalContent");
 export const SimulatorContent = pick("simulator", "SimulatorContent");
 export const BadgesContent = pick("badges", "BadgesContent");
 export const CvContent = pick("cv", "CvContent");
+export const HobbiesContent = pick("hobbies", "HobbiesContent");
+export const NotesContent = pick("notes", "NotesContent");
+export const SiteContent = pick("site", "SiteContent");
 
 const WINDOW_CHUNKS = {
   about: ["tech", "hr"], hr: ["hr"], skills: ["tech", "hr"], projects: ["tech", "hr"],
-  experience: ["tech", "hr"], education: ["tech"], certifications: ["tech", "hr"],
+  experience: ["tech", "hr"], education: ["tech"], hobbies: ["hobbies"],
   contact: ["contact"], terminal: ["terminal"], simulator: ["simulator"], badges: ["badges"], cv: ["cv"],
+  notes: ["notes"], site: ["site"],
 };
 const requested = new Set();
 

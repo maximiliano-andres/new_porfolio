@@ -5,8 +5,10 @@ import { CornerDownLeft, Search } from "lucide-react";
 import { norm } from "../lib/env.js";
 import { CORE } from "../styles/theme.js";
 import { useFocusTrap } from "../lib/useFocusTrap.js";
+import { useT } from "../app/context.js";
 
 export function CommandPalette({ open, onClose, commands }) {
+  const t = useT();
   const [q, setQ] = useState("");
   const [sel, setSel] = useState(0);
   const inputRef = useRef(null);
@@ -87,7 +89,7 @@ export function CommandPalette({ open, onClose, commands }) {
             tabIndex={-1} // a click on an empty area keeps the focus inside the dialog
             role="dialog"
             aria-modal="true"
-            aria-label="Paleta de comandos"
+            aria-label={t("Paleta de comandos", "Command palette")}
             initial={{ y: -10, scale: 0.98 }} animate={{ y: 0, scale: 1 }} exit={{ y: -10, scale: 0.98 }}
             className="outline-hidden w-full max-w-[560px] h-fit max-h-[min(520px,calc(100dvh-24px))] flex flex-col rounded-xl border overflow-hidden shadow-2xl"
             style={{ background: "rgba(10,14,20,0.97)", borderColor: `${CORE}33` }}
@@ -99,8 +101,8 @@ export function CommandPalette({ open, onClose, commands }) {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 onKeyDown={onKeyDown}
-                placeholder="¿Qué quieres ver? Ej: contacto, logros, modo RRHH…"
-                aria-label="Buscar comando"
+                placeholder={t("¿Qué quieres ver? Ej: contacto, hobbies, modo RRHH…", "What do you want to see? e.g. contact, hobbies, HR view…")}
+                aria-label={t("Buscar comando", "Search commands")}
                 role="combobox"
                 aria-expanded="true"
                 aria-controls="palette-list"
@@ -111,9 +113,9 @@ export function CommandPalette({ open, onClose, commands }) {
                 esc
               </button>
             </div>
-            <div ref={listRef} id="palette-list" role="listbox" aria-label="Comandos" tabIndex={-1} className="relative overflow-y-auto overscroll-contain py-1.5 min-h-0" style={{ scrollbarWidth: "thin" }}>
+            <div ref={listRef} id="palette-list" role="listbox" aria-label={t("Comandos", "Commands")} tabIndex={-1} className="relative overflow-y-auto overscroll-contain py-1.5 min-h-0" style={{ scrollbarWidth: "thin" }}>
               {results.length === 0 && (
-                <p className="px-4 py-6 text-center text-[12.5px] text-white/60">Sin resultados para «{q}»</p>
+                <p className="px-4 py-6 text-center text-[12.5px] text-white/60">{t("Sin resultados para", "No results for")} «{q}»</p>
               )}
               {groups.map((g) => (
                 <div key={g.name} role="group" aria-labelledby={`cmd-group-${g.name}`}>
@@ -146,7 +148,7 @@ export function CommandPalette({ open, onClose, commands }) {
               ))}
             </div>
             <div className="hidden sm:flex items-center gap-4 px-4 py-2 border-t border-white/10 text-[10px] text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
-              <span>↑↓ navegar</span><span>↵ abrir</span><span>esc cerrar</span>
+              <span>↑↓ {t("navegar", "move")}</span><span>↵ {t("abrir", "open")}</span><span>esc {t("cerrar", "close")}</span>
             </div>
           </m.div>
         </m.div>
