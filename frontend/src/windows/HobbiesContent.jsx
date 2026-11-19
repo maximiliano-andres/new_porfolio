@@ -285,7 +285,15 @@ function PhotoStack({ hobby }) {
   const t = useT();
   const { lang } = useLang();
   const [open, setOpen] = useState(null);
-  const photos = hobby.photos;
+  const photos = useMemo(() => {
+    return (hobby.photos || []).map((p) => {
+      if (typeof p === "string") {
+        const src = p.startsWith("/") ? p : `/img/hobbies/${p}`;
+        return { src, alt: hobby.name, altEn: hobby.nameEn, w: 1200, h: 900 };
+      }
+      return p;
+    });
+  }, [hobby]);
   if (!photos.length) {
     // only while developing: where to put the pictures (visitors never see an empty frame)
     if (!import.meta.env.DEV) return null;
@@ -386,7 +394,7 @@ export function HobbiesContent() {
             <h3 className="text-[16px] font-semibold text-white" style={DISPLAY}>{loc(hobby, "name", lang)}</h3>
             <span className="text-[10.5px] uppercase tracking-wider" style={{ color: hobby.color, ...MONO }}>{loc(hobby, "tagline", lang)}</span>
           </div>
-          <p className="text-[12.5px] text-white/70 leading-6 mb-3">{loc(hobby, "text", lang)}</p>
+          <p className="text-[12.5px] text-white/70 leading-6 mb-3 whitespace-pre-line">{loc(hobby, "text", lang)}</p>
           <div className="flex flex-wrap gap-1.5 mb-4">
             {hobby.traits.map((tr) => (
               <span key={tr.es} className="rounded-full px-2.5 py-1 text-[11px]" style={{ color: hobby.color, background: `${hobby.color}17`, border: `1px solid ${hobby.color}40` }}>
