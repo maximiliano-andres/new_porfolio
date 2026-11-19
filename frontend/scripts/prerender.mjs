@@ -14,15 +14,31 @@ const script = ssr.shellScript();
 
 const SIZES = [[320, 568], [360, 640], [375, 667], [390, 844], [412, 915], [430, 932], [667, 375], [932, 430], [768, 1024],
   [820, 1180], [1024, 768], [1280, 720], [1366, 768], [1440, 900], [1536, 864], [1920, 1080], [2560, 1440], [3840, 2160]];
-for (const [w, h] of SIZES) {
+/* runs the head script in a sandbox; returns the CSS variables it sets and <html>'s dataset */
+function runHeadScript(w, h, { language = "es-CL", search = "" } = {}) {
   const vars = {};
+  const html = { dataset: {}, style: { setProperty: (k, v) => { vars[k] = v; } } };
   const sandbox = {
-    innerWidth: w, innerHeight: h, URLSearchParams, location: { search: "" }, navigator: { language: "es-CL" },
+    innerWidth: w, innerHeight: h, URLSearchParams, location: { search }, navigator: { language },
     localStorage: { getItem: () => null }, addEventListener: () => {},
-    document: { documentElement: { dataset: {}, style: { setProperty: (k, v) => { vars[k] = v; } } } },
+    document: { documentElement: html },
   };
   sandbox.window = sandbox;
   vm.runInNewContext(script, sandbox);
+  return { vars, dataset: html.dataset };
+}
+// language and boot choices must match the app's own rules (app/PolyglotPortfolio.jsx: initialLang, deep links)
+for (const [opts, lang, boot] of [
+  [{ language: "es-CL" }, "es", "1"], [{ language: "es" }, "es", "1"], [{ language: "en-US" }, "en", "1"], [{ language: "" }, "es", "1"],
+  [{ language: "en-US", search: "?lang=es" }, "es", "1"], [{ language: "es-CL", search: "?lang=en&ventana=hobbies" }, "en", undefined],
+]) {
+  const { dataset } = runHeadScript(1440, 900, opts);
+  if (dataset.lang !== lang || dataset.boot !== boot) {
+    throw new Error(`prerender: head script picked lang=${dataset.lang} boot=${dataset.boot} for ${JSON.stringify(opts)} (expected ${lang}/${boot})`);
+  }
+}
+for (const [w, h] of SIZES) {
+  const { vars } = runHeadScript(w, h);
   const expected = ssr.shellVars(w, h);
   for (const [k, v] of Object.entries(expected)) {
     if (vars[k] !== v) throw new Error(`prerender: shell script disagrees with layout at ${w}x${h}: ${k}=${vars[k]} (expected ${v})`);
@@ -45,10 +61,15 @@ if (siteUrl && !/^https?:\/\/[^\s"'<>]+$/.test(siteUrl)) throw new Error(`preren
 if (siteUrl) {
   index = index.replaceAll("__SITE_URL__", () => siteUrl);
 } else {
-  // no public URL: the preview image stays relative; tags that require an absolute URL are left out
-  index = index
-    .replace(/(content=")__SITE_URL__(\/img\/og-cover\.png")/, (_, a, b) => `${a}${b}`)
-    .split("\n").filter((line) => !line.includes("__SITE_URL__")).join("\n");
+  // no public URL: the preview image stays relative; tags that require an absolute URL are left out. Only whole
+  // one-line <meta>/<link> tags may be dropped: removing part of anything else (a comment…) would leave stray text
+  // in <head>, and the browser would then move the whole head into <body> and push the page down
+  index = index.replace(/(content=")__SITE_URL__(\/img\/og-cover\.png")/, (_, a, b) => `${a}${b}`);
+  index = index.split("\n").filter((line) => {
+    if (!line.includes("__SITE_URL__")) return true;
+    if (!/^\s*<(meta|link)\b[^>]*>\s*$/.test(line)) throw new Error(`prerender: can't drop a non-tag line holding __SITE_URL__: ${line.trim()}`);
+    return false;
+  }).join("\n");
 }
 
 // ---- structured data (schema.org Person) for search engines; only facts already shown on the site ----

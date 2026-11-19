@@ -140,7 +140,7 @@ export function HRSummaryContent({ onOpen }) {
           <CopyLinkButton className="justify-center rounded-lg! py-2! text-[11.5px]!" params={{ vista: "rrhh", lang: lang === "en" ? "en" : null }} label={t("Copiar enlace a esta ficha", "Copy link to this summary")} />
         </div>
         <details className="mt-2.5">
-          <summary className="cursor-pointer text-[11px] text-white/55 hover:text-white/80 select-none" style={MONO}>{t("Ver el resumen que se copia", "Preview the copied summary")}</summary>
+          <summary className="relative cursor-pointer text-[11px] text-white/55 hover:text-white/80 select-none after:absolute after:content-[''] after:inset-x-0 after:-inset-y-2" style={MONO}>{t("Ver el resumen que se copia", "Preview the copied summary")}</summary>
           <pre className="mt-2 whitespace-pre-wrap rounded-lg border border-white/10 bg-black/30 p-3 text-[11px] leading-5 text-white/70 select-text" style={MONO}>{summary}</pre>
         </details>
       </section>

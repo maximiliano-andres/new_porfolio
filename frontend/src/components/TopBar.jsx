@@ -32,7 +32,13 @@ export function TopBar({ scale = 1, openCount = 0, progress = 0, onPalette, onBa
       <span className="text-[10.5px] tabular-nums" style={{ color }}>{val}{unit}</span>
     </div>
   );
-  const iconBtn = "inline-flex items-center justify-center gap-1.5 h-7 min-w-[28px] rounded-full border border-white/10 bg-black/40 px-2 text-white/70 hover:text-white hover:border-white/25 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden";
+  /* Fitts: 28px buttons whose hit area (invisible ::after) reaches the top edge of the screen (9px above them), goes
+     3px down (to y = 40px, where windows start on phones) and fills half the gap to each neighbour
+     (gap-1.5 = 6px → 3px, sm:gap-2.5 = 10px → 5px) */
+  const iconBtn = "relative inline-flex items-center justify-center gap-1.5 h-7 min-w-[28px] rounded-full border border-white/10 bg-black/40 px-2 text-white/70 hover:text-white hover:border-white/25 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden after:absolute after:content-[''] after:-top-3 after:-bottom-[3px] after:-inset-x-[3px] sm:after:-inset-x-[5px]";
+  // GitHub / LinkedIn (desktop): same reach to the top edge. Their -m-1.5 already makes the two boxes touch,
+  // so their areas don't grow sideways
+  const socialHit = "relative after:absolute after:content-[''] after:inset-x-0 after:-top-3 after:-bottom-[3px]";
   const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
   return (
     <div
@@ -40,12 +46,7 @@ export function TopBar({ scale = 1, openCount = 0, progress = 0, onPalette, onBa
       style={{ zoom: scale, background: "linear-gradient(to bottom, rgba(5,7,11,0.75), transparent)" }}
     >
       <div className="flex items-center gap-3 pointer-events-auto min-w-0">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: CORE, boxShadow: `0 0 8px ${CORE}` }} />
-          <span className="text-[11px] tracking-wide text-white/70 truncate" style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}>
-            polyglot_core <span className="text-white/55 hidden min-[380px]:inline">v1.0</span>
-          </span>
-        </div>
+
       </div>
       <div data-live className="hidden lg:flex items-center gap-4 pointer-events-auto" title={t("Carga simulada: cada ventana abierta es un proceso", "Simulated load: every open window is a process")}>
         {item(Cpu, "CPU", stats.cpu, "%", LANG.python.c2)}
@@ -69,8 +70,8 @@ export function TopBar({ scale = 1, openCount = 0, progress = 0, onPalette, onBa
         <button data-live onClick={onToggleSound} className={iconBtn} aria-pressed={soundOn} aria-label={soundOn ? t("Desactivar sonidos", "Turn sounds off") : t("Activar sonidos", "Turn sounds on")} title={soundOn ? t("Sonidos activados", "Sounds on") : t("Sonidos desactivados", "Sounds off")}>
           {soundOn ? <Volume2 size={13} style={{ color: CORE }} /> : <VolumeX size={13} />}
         </button>
-        <div data-tour="lang"><LangToggle /></div>
-        <div data-tour="audience"><AudienceToggle /></div>
+        <div data-tour="lang"><LangToggle edge /></div>
+        <div data-tour="audience"><AudienceToggle edge /></div>
         <div className="hidden sm:flex items-center gap-3 pl-1 pr-3 border-r border-white/10">
           <a
             href={SOCIAL_LINKS.github}
@@ -78,7 +79,7 @@ export function TopBar({ scale = 1, openCount = 0, progress = 0, onPalette, onBa
             rel="noopener noreferrer"
             title={t("Ver GitHub", "View GitHub")}
             aria-label={t("Ver GitHub", "View GitHub")}
-            className="p-1.5 -m-1.5 text-white/65 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden rounded-sm"
+            className={`p-1.5 -m-1.5 text-white/65 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden rounded-sm ${socialHit}`}
           >
             <Github size={15} />
           </a>
@@ -88,7 +89,7 @@ export function TopBar({ scale = 1, openCount = 0, progress = 0, onPalette, onBa
             rel="noopener noreferrer"
             title={t("Ver LinkedIn", "View LinkedIn")}
             aria-label={t("Ver LinkedIn", "View LinkedIn")}
-            className="p-1.5 -m-1.5 text-white/65 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden rounded-sm"
+            className={`p-1.5 -m-1.5 text-white/65 hover:text-white transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden rounded-sm ${socialHit}`}
           >
             <Linkedin size={15} />
           </a>

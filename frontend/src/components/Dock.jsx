@@ -7,6 +7,16 @@ import { useT } from "../app/context.js";
 // hovering/focusing an icon lights its circuit trace and preloads the window's code
 const hoverOn = (id) => { circuit.hover(id); prefetchWindow(id); };
 const hoverOff = () => circuit.hover(null);
+/* Fitts: each icon's hit area (an invisible ::after) runs down to the screen edge, so a fast flick down can't miss,
+   and sideways it fills half the gap to its neighbours. Distance from an icon's bottom to the screen edge =
+   nav padding + 1px border + nav offset: 4+1+8 = 13px (<360px), 6+1+8 = 15px (<640px), 8+1+16 = 25px (sm+).
+   Hovering lifts the icon 4px (hover:-translate-y-1), so its area grows 4px more: the pointer never falls off it
+   at the very edge (which would drop the hover, lower the icon and make it flicker). */
+const DOCK_HIT =
+  "after:absolute after:content-[''] after:top-0 after:inset-x-0 min-[380px]:after:-inset-x-px sm:after:-inset-x-[3px] " +
+  "after:-bottom-[14px] min-[360px]:after:-bottom-[16px] sm:after:-bottom-[26px] " +
+  "hover:after:-bottom-[18px] min-[360px]:hover:after:-bottom-[20px] sm:hover:after:-bottom-[30px]";
+
 /* shortcuts: false when the visitor turned the single-key shortcuts off (then they aren't advertised) */
 export const Dock = memo(function Dock({ items, windows, onToggle, scale = 1, shortcuts = true }) {
   const t = useT();
@@ -38,7 +48,7 @@ export const Dock = memo(function Dock({ items, windows, onToggle, scale = 1, sh
             aria-label={it.label}
             aria-keyshortcuts={shortcuts ? String(i + 1) : undefined}
             aria-pressed={active}
-            className="group relative flex flex-col items-center justify-center w-8 h-8 min-[360px]:w-9 min-[360px]:h-9 sm:w-11 sm:h-11 shrink-0 rounded-xl transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden hover:-translate-y-1"
+            className={`group relative flex flex-col items-center justify-center w-8 h-8 min-[360px]:w-9 min-[360px]:h-9 sm:w-11 sm:h-11 shrink-0 rounded-xl transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden hover:-translate-y-1 ${DOCK_HIT}`}
             style={{
               background: active ? `${it.accent}22` : "transparent",
             }}

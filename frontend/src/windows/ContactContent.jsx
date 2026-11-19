@@ -52,7 +52,7 @@ export function ContactContent() {
           href={SOCIAL_LINKS.email}
           onClick={onMail}
           aria-describedby={MAIL_HINT_ID}
-          className={`inline-block max-w-full break-all select-all text-[15px] sm:text-[16px] font-medium text-white hover:underline underline-offset-4 decoration-white/40 rounded-sm ${ring}`}
+          className={`relative inline-block max-w-full break-all select-all text-[15px] sm:text-[16px] font-medium text-white hover:underline underline-offset-4 decoration-white/40 rounded-sm ${ring} after:absolute after:content-[''] after:inset-x-0 after:-inset-y-1`}
           style={{ fontFamily: "'Space Grotesk', 'Space Grotesk Fallback', sans-serif" }}
         >
           {CONTACT_EMAIL}

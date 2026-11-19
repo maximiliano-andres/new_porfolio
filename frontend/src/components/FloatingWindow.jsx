@@ -44,9 +44,11 @@ export function FloatingWindow({
     y.set(0);
   }, [pos.left, pos.top, x, y]);
 
-  // 12px traffic lights get an invisible 28px hit area for touch
+  // 12px traffic lights get an invisible hit area 28px tall. Sideways it grows only up to HALF the gap to the next
+  // light (gap-2.5 = 10px on phones → 5px, sm:gap-1.5 = 6px → 3px): wider areas overlapped, and the later light won
+  // the overlap, so a click on the right edge of "close" minimized the window (Fitts: neighbours must not share area)
   const dotCls =
-    "relative w-3 h-3 rounded-full hover:brightness-110 focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-hidden after:absolute after:-inset-2 after:content-['']";
+    "relative w-3 h-3 rounded-full hover:brightness-110 focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-hidden after:absolute after:-inset-y-2 after:-inset-x-[5px] sm:after:-inset-x-[3px] after:content-['']";
 
   return (
     <m.div

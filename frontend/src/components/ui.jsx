@@ -283,7 +283,7 @@ export function CodeBlock({ code, lang: codeLang, note, accent = CORE }) {
     <figure className="m-0 rounded-lg border border-white/10 bg-black/40 overflow-hidden">
       <figcaption className="flex items-center justify-between gap-2 px-3 py-1.5 border-b border-white/[0.06] text-[10px]" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
         <span style={{ color: accent }}>{codeLang}</span>
-        <button type="button" onClick={copy} className="inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-white/60 hover:text-white focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden">
+        <button type="button" onClick={copy} className="relative inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-white/60 hover:text-white focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden after:absolute after:content-[''] after:-inset-y-[6px] after:-inset-x-1">
           {copied ? <><Check size={11} /> {t("Copiado", "Copied")}</> : <><Copy size={11} /> {t("Copiar", "Copy")}</>}
         </button>
       </figcaption>

@@ -433,7 +433,7 @@ export function TerminalContent({ onTriggerNotification, onOpenHR }) {
             key={c}
             type="button"
             onClick={(e) => { e.stopPropagation(); runCommand(c); }}
-            className="rounded-sm border px-1.5 py-1 text-[10.5px] text-white/70 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
+            className="relative rounded-sm border px-1.5 py-1 text-[10.5px] text-white/70 hover:text-white hover:border-white/30 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden after:absolute after:content-[''] after:-inset-[3px]"
             style={{ borderColor: `${LANG.node.c1}44` }}
           >
             {c}

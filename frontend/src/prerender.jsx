@@ -70,7 +70,7 @@ export function shellScript() {
   const fns = [uiScaleFor, isCompactViewport, dockSpaceFor, deskArea].map((f) => f.toString()).join("\n");
   return `(function(){var d=document.documentElement;
 var q=null,l=null,dl=false;try{var u=new URLSearchParams(location.search);q=u.get("vista");l=u.get("lang");dl=!!(u.get("ventana")||u.get("window")||u.get("proyecto")||u.get("project"));}catch(e){}
-var nav=(navigator.language||"");var navLang=!nav||/^es\b/i.test(nav)?"es":"en";
+var nav=(navigator.language||"");var navLang=!nav||/^es\\b/i.test(nav)?"es":"en";
 try{var s=window.localStorage;d.dataset.audience=q==="rrhh"||q==="ti"?q:(s.getItem("audience")==="rrhh"?"rrhh":"ti");
 var sl=s.getItem("lang");d.dataset.lang=l==="es"||l==="en"?l:(sl==="es"||sl==="en"?sl:navLang);
 if(!s.getItem("boot_seen")&&!dl)d.dataset.boot="1";}catch(e){d.dataset.audience=q==="rrhh"?"rrhh":"ti";d.dataset.lang=l==="en"||l==="es"?l:navLang;if(!dl)d.dataset.boot="1";}

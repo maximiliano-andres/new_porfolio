@@ -103,7 +103,7 @@ export function BootScreen({ onDone, onChoose, current }) {
           <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]" />
           <span className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]" />
           <span className="w-2.5 h-2.5 rounded-full bg-[#27c93f]" />
-          <span className="ml-3 text-[11px] text-white/60 flex-1 min-w-0 truncate">boot — polyglot_core</span>
+
           <span onClick={(e) => e.stopPropagation()}><LangToggle /></span>
         </div>
         <div className="text-[9.5px] min-[380px]:text-[11px] sm:text-[13px] leading-5 sm:leading-6 min-h-[180px] sm:min-h-[210px] short:min-h-0 overflow-x-auto" role="status" aria-live="polite">

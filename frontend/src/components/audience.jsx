@@ -6,8 +6,13 @@ import { useAudience, useLang } from "../app/context.js";
 import { AUDIENCES, LANGUAGES } from "../data/shell.js";
 import { loc } from "../data/system.js";
 
+/* Fitts, top bar only (`edge`): each 24px segment's hit area (an invisible ::after) reaches up to the screen edge
+   (11px above it) and 5px down, stopping where windows start (y = 40px on phones). Segments touch each other, so
+   their areas never grow sideways. Not used in window title bars or the hero, where there is no edge to lean on. */
+const EDGE_HIT = "after:absolute after:content-[''] after:inset-x-0 after:-top-3 after:-bottom-[5px]";
+
 /* radiogroup with a roving tabindex: one Tab stop, arrow keys switch the profile (WAI-ARIA radio pattern) */
-export function AudienceToggle({ variant = "compact" }) {
+export function AudienceToggle({ variant = "compact", edge = false }) {
   const { audience, setAudience } = useAudience();
   const { lang } = useLang();
   const uid = useId();
@@ -42,7 +47,7 @@ export function AudienceToggle({ variant = "compact" }) {
             tabIndex={active ? 0 : -1}
             title={loc(a, "hint", lang)}
             onClick={() => setAudience(a.id)}
-            className={`relative inline-flex items-center rounded-full font-medium transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden ${long ? "gap-1.5 px-3.5 py-1.5 text-[12px]" : "gap-1 px-2.5 py-[7px] text-[10px] leading-none"
+            className={`relative inline-flex items-center rounded-full font-medium transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden ${edge ? EDGE_HIT : ""} ${long ? "gap-1.5 px-3.5 py-1.5 text-[12px]" : "gap-1 px-2.5 py-[7px] text-[10px] leading-none"
               }`}
             style={{ color: active ? "#05070b" : "rgba(255,255,255,0.68)", fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}
           >
@@ -66,7 +71,7 @@ export function AudienceToggle({ variant = "compact" }) {
 }
 
 /* ES / EN switch: same radio pattern, two options */
-export function LangToggle({ className = "" }) {
+export function LangToggle({ className = "", edge = false }) {
   const { lang, setLang } = useLang();
   const groupRef = useRef(null);
   const onKeyDown = (e) => {
@@ -98,7 +103,7 @@ export function LangToggle({ className = "" }) {
             tabIndex={active ? 0 : -1}
             title={l.name}
             onClick={() => setLang(l.id)}
-            className="rounded-full px-2 py-[7px] text-[10px] leading-none font-medium transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
+            className={`relative rounded-full px-2 py-[7px] text-[10px] leading-none font-medium transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden ${edge ? EDGE_HIT : ""}`}
             style={{
               color: active ? "#05070b" : "rgba(255,255,255,0.68)",
               background: active ? "rgba(255,255,255,0.85)" : "transparent",

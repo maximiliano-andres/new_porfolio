@@ -251,7 +251,7 @@ export function SkillsContent() {
 
       {/* table view of the same data */}
       <details className="mt-4 group">
-        <summary className="cursor-pointer text-[11.5px] text-white/60 hover:text-white/85 select-none" style={MONO}>
+        <summary className="relative cursor-pointer text-[11.5px] text-white/60 hover:text-white/85 select-none after:absolute after:content-[''] after:inset-x-0 after:-inset-y-2" style={MONO}>
           {t(`Ver histórico de proyectos (${total})`, `View project history (${total})`)}
         </summary>
         <ul className="mt-3 space-y-2.5">
@@ -496,7 +496,7 @@ function Education({ plain }) {
         </ul>
         <button
           onClick={() => openWindow("notes")}
-          className="mt-3 inline-flex items-center gap-1.5 text-[11.5px] hover:underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden rounded-sm"
+          className="relative mt-3 inline-flex items-center gap-1.5 text-[11.5px] hover:underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden rounded-sm after:absolute after:content-[''] after:-inset-x-1 after:-inset-y-2"
           style={{ color: accent }}
         >
           <BookOpen size={13} /> {t("Ver mis notas técnicas", "Read my tech notes")} <ChevronRight size={12} />
