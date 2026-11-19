@@ -7,8 +7,9 @@ import { AudienceToggle } from "./audience.jsx";
 import { useT } from "../app/context.js";
 import { CORE, HR_ACCENT, LANG, SOCIAL_LINKS } from "../styles/theme.js";
 
+/* low: (≤ 640px tall) 38px instead of 42px, so the three rows of buttons clear the dock on 320×568 */
 const heroBtn =
-  "flex items-center justify-center gap-2 rounded-lg px-4 sm:px-5 py-2.5 2xl:py-3 text-[13.5px] 2xl:text-[15px] font-medium active:scale-[0.98] transition-all focus:outline-hidden whitespace-nowrap";
+  "flex items-center justify-center gap-2 rounded-lg px-4 sm:px-5 py-2.5 low:py-2 2xl:py-3 text-[13.5px] 2xl:text-[15px] font-medium active:scale-[0.98] transition-all focus:outline-hidden whitespace-nowrap";
 
 /* insets: { top, bottom } — px numbers in the app, CSS variables in the prerendered shell.
    animateIn: false when taking over a prerendered shell, so the hero doesn't fade in a second time. */
@@ -49,7 +50,10 @@ export function Hero({ hr, insets, animateIn = true, onPrimary, onAbout, onCv, o
           className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10.5px] 2xl:text-[12px] mb-4 2xl:mb-6 low:mb-3 short:mb-2"
           style={{ borderColor: `${CORE}44`, color: CORE, fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}
         >
-          <Sparkles size={11} /> {t("Disponible para nuevos proyectos · inicio inmediato", "Open to new roles · available now")}
+          <Sparkles size={11} />
+          {/* one text item (the badge is a flex row: a second item would add the gap); below 380px the second half
+              is dropped so the badge stays on one line: two lines pushed the last hero buttons under the dock */}
+          <span>{t("Disponible para nuevos proyectos", "Open to new roles")}<span className="hidden min-[380px]:inline">{t(" · inicio inmediato", " · available now")}</span></span>
         </span>
         <h1
           className="text-[28px] min-[380px]:text-[32px] sm:text-[44px] lg:text-[52px] 2xl:text-[64px] short:text-[26px] font-semibold text-white mb-3 2xl:mb-5 low:mb-2 short:mb-2 leading-[1.1] max-w-4xl text-balance"
@@ -57,7 +61,7 @@ export function Hero({ hr, insets, animateIn = true, onPrimary, onAbout, onCv, o
         >
           Maximiliano Andrés Caniullán Lefiñir
         </h1>
-        <p className="text-[14px] sm:text-[16px] 2xl:text-[19px] leading-relaxed text-white/65 max-w-md sm:max-w-xl 2xl:max-w-2xl mb-6 2xl:mb-8 low:mb-4 short:mb-4 short:text-[13.5px] text-pretty">
+        <p className="text-[14px] sm:text-[16px] 2xl:text-[19px] leading-relaxed low:leading-[1.55] text-white/65 max-w-md sm:max-w-xl 2xl:max-w-2xl mb-6 2xl:mb-8 low:mb-4 short:mb-3 short:text-[13.5px] text-pretty">
           {hr ? t(
             <>Construyo la parte invisible de las aplicaciones —la que procesa cada solicitud de los usuarios— y me especializo en que <span className="text-white/85">funcione más rápido y cueste menos operar</span>. Resultados medidos en Push HR, BiceVida y proyectos para PUMA, GyG e IACC.</>,
             <>I build the invisible part of applications —the part that handles every user request— and I specialize in making it <span className="text-white/85">run faster and cost less to operate</span>. Measured results at Push HR, BiceVida and projects for PUMA, GyG and IACC.</>
@@ -66,14 +70,16 @@ export function Hero({ hr, insets, animateIn = true, onPrimary, onAbout, onCv, o
             <>Backend Developer focused on building fast, efficient systems with <span style={{ color: LANG.java.c1 }}>Java / Spring Boot</span>, <span style={{ color: LANG.python.c2 }}>Python</span> and <span style={{ color: LANG.node.c2 }}>Node.js</span>. I turn slow, heavy processes into fast, stable systems that use fewer resources.</>
           )}
         </p>
-        <div className="flex flex-col items-center gap-2 mb-6 low:mb-4 short:mb-4 pointer-events-auto">
+        {/* short: (landscape phones) the same switch is always in the top bar; hiding this copy is what lets the buttons
+            below clear the dock on a 375px-tall screen */}
+        <div className="flex flex-col items-center gap-2 mb-6 low:mb-3 short:hidden pointer-events-auto">
           <span className="text-[10.5px] uppercase tracking-wider text-white/60" style={{ fontFamily: "'JetBrains Mono', 'JetBrains Mono Fallback', monospace" }}>
             {t("Ver el portafolio como", "View the portfolio as")}
           </span>
           <AudienceToggle variant="long" />
         </div>
         {/* 2×2 grid of equal buttons on phones, a single row from sm up */}
-        <div className="grid grid-cols-2 gap-2.5 w-full max-w-[340px] sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 sm:w-auto sm:max-w-none pointer-events-auto">
+        <div className="grid grid-cols-2 gap-2.5 low:gap-2 w-full max-w-[340px] sm:flex sm:flex-wrap sm:items-center sm:justify-center sm:gap-3 sm:w-auto sm:max-w-none pointer-events-auto">
           {hr ? (
             <button
               data-hero-action="primary"

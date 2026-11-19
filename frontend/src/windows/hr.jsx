@@ -245,27 +245,43 @@ export function HRSummaryContent({ onOpen }) {
         </dl>
       </section>
 
-      <div className="flex flex-wrap gap-2.5 pt-4 border-t border-white/10">
+      {/* Fitts: the main call to action stays pinned to the bottom of the window while the summary scrolls, instead
+          of waiting ~4,000 characters below. Negative margins cancel the window's padding (px-4/py-4, sm: 5) so the
+          bar spans the scroll area; the gradient lets content fade under it. Browsers pin sticky boxes to the scroll
+          container's padding edge, so `bottom` cancels that padding too (else text would show in a strip below the
+          bar); in an engine that doesn't, only the bar's own bottom padding would go out of view. Narrow windows keep
+          it to one row: LinkedIn and CV become 42px icon buttons; from 580px of width all three show their text. */}
+      <div
+        className="sticky -bottom-4 sm:-bottom-5 z-10 -mx-4 sm:-mx-5 -mb-4 sm:-mb-5 px-4 sm:px-5 pt-3 pb-4 sm:pb-5 border-t border-white/10 flex gap-2.5 @min-[580px]:flex-wrap"
+        style={{ background: "linear-gradient(to bottom, rgba(13,17,23,0.9), rgba(13,17,23,0.98) 12px)" }}
+      >
         <button
           onClick={() => onOpen("contact")}
-          className="flex-1 min-w-[180px] inline-flex items-center justify-center gap-2 rounded-lg py-2.5 text-[12.5px] font-medium hover:brightness-110 active:scale-[0.98] transition-all focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-hidden"
+          className="flex-1 min-w-0 @min-[580px]:min-w-[180px] inline-flex items-center justify-center gap-2 rounded-lg py-2.5 text-[12.5px] font-medium hover:brightness-110 active:scale-[0.98] transition-all focus-visible:ring-2 focus-visible:ring-white/60 focus:outline-hidden"
           style={{ background: `linear-gradient(90deg, ${HR_ACCENT}, ${LANG.java.c1})`, color: "#05070b" }}
         >
-          <Calendar size={14} /> {t("Coordinar una entrevista", "Schedule an interview")}
+          <Calendar size={14} className="shrink-0" />
+          {/* under 360px of width the full label wrapped to two lines: a shorter one keeps the bar at one row */}
+          <span className="whitespace-nowrap @max-[359px]:hidden">{t("Coordinar una entrevista", "Schedule an interview")}</span>
+          <span className="whitespace-nowrap hidden @max-[359px]:inline">{t("Coordinar entrevista", "Schedule interview")}</span>
         </button>
         <a
           href={SOCIAL_LINKS.linkedin}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1 min-w-[180px] inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 py-2.5 text-[12.5px] font-medium text-white/80 hover:bg-white/5 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
+          aria-label={t("Ver perfil en LinkedIn", "View LinkedIn profile")}
+          title={t("Ver perfil en LinkedIn", "View LinkedIn profile")}
+          className="w-[42px] shrink-0 @min-[580px]:w-auto @min-[580px]:flex-1 @min-[580px]:min-w-[180px] inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 py-2.5 text-[12.5px] font-medium text-white/80 hover:bg-white/5 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
         >
-          <Linkedin size={14} /> {t("Ver perfil en LinkedIn", "View LinkedIn profile")}
+          <Linkedin size={14} /> <span className="hidden @min-[580px]:inline">{t("Ver perfil en LinkedIn", "View LinkedIn profile")}</span>
         </a>
         <button
           onClick={() => onOpen("cv")}
-          className="flex-1 min-w-[180px] inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 py-2.5 text-[12.5px] font-medium text-white/80 hover:bg-white/5 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
+          aria-label={t("Ver CV", "View CV")}
+          title={t("Ver CV", "View CV")}
+          className="w-[42px] shrink-0 @min-[580px]:w-auto @min-[580px]:flex-1 @min-[580px]:min-w-[180px] inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 py-2.5 text-[12.5px] font-medium text-white/80 hover:bg-white/5 transition-colors focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
         >
-          <FileText size={14} /> {t("Ver CV", "View CV")}
+          <FileText size={14} /> <span className="hidden @min-[580px]:inline">{t("Ver CV", "View CV")}</span>
         </button>
       </div>
     </div>
