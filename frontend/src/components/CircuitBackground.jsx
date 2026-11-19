@@ -3,8 +3,12 @@
    - static art (grid, base traces, CORE label) lives in its own SVG layer and is painted once;
    - the animated layer has no per-frame `filter` (glow = a wider translucent dashed stroke);
    - the cursor glow is a fixed-size circle moved with `transform` (compositor only, no repaint);
-   - everything pauses when hidden behind windows or when the visitor prefers reduced motion. */
-import { memo, useEffect, useRef } from "react";
+   - everything pauses when it adds nothing: a window is open (the desk is behind it), the visitor has been idle
+     for 10 s (it resumes on the next pointer/key/scroll/touch), the device can't keep up (below 45 fps for two
+     2-second samples in a row → static for the rest of the visit), or the visitor prefers reduced motion.
+   Why: the dashes and the moving dots repaint this full-screen SVG on every frame. Measured over 3 s on the
+   landing screen: 381 repaints and ~2.3 s of GPU work while animating, 36 repaints and ~0.07 s when paused. */
+import { memo, useEffect, useRef, useState } from "react";
 import { CIRCUIT_PATHS } from "../data/shell.js";
 import { useCircuit } from "../lib/circuitStore.js";
 import { hasFinePointer, usePrefersReducedMotion } from "../lib/env.js";
@@ -12,6 +16,12 @@ import { CORE } from "../styles/theme.js";
 
 const SVG_PROPS = { viewBox: "0 0 1440 900", preserveAspectRatio: "xMidYMid slice", fill: "none" };
 const GLOW_SIZE = 480;
+const IDLE_MS = 10000; // no input for this long → the background stops until the next interaction
+const FPS_FLOOR = 45; // below this for SLOW_SAMPLES samples of SAMPLE_MS → static background for this visit
+const SAMPLE_MS = 2000;
+const SLOW_SAMPLES = 2;
+const MEASURE_DELAY_MS = 3000; // skip start-up work (hydration, fonts, chunk downloads) and every resume
+const WAKE_EVENTS = ["pointermove", "pointerdown", "keydown", "wheel", "touchstart", "scroll"];
 
 /* energized: trace indexes of open windows (prop, changes only when windows do).
    paused: the desk is covered (maximized window, or any window on a phone).
@@ -21,7 +31,58 @@ export const CircuitBackground = memo(function CircuitBackground({ energized, pa
   const glowRef = useRef(null);
   const animatedRef = useRef(null);
   const reduced = usePrefersReducedMotion(); // live: turning "reduce motion" on mid-session pauses the SMIL dots too
-  const still = paused || reduced;
+  const [idle, setIdle] = useState(false);
+  const [lowPower, setLowPower] = useState(false);
+  const still = paused || reduced || idle || lowPower;
+  // why it is (not) moving: handy in DevTools and read by the browser tests
+  const motion = reduced ? "reduced" : lowPower ? "low-power" : paused ? "paused" : idle ? "idle" : "running";
+
+  // idle: any input restarts the countdown; state only changes on the idle ↔ active edges (no re-render per event)
+  useEffect(() => {
+    if (reduced) return;
+    let timer = setTimeout(() => setIdle(true), IDLE_MS);
+    let last = 0;
+    const wake = () => {
+      const now = performance.now();
+      if (now - last < 250) return; // pointermove fires dozens of times a second
+      last = now;
+      setIdle(false);
+      clearTimeout(timer);
+      timer = setTimeout(() => setIdle(true), IDLE_MS);
+    };
+    const opts = { passive: true, capture: true };
+    WAKE_EVENTS.forEach((type) => window.addEventListener(type, wake, opts));
+    return () => {
+      clearTimeout(timer);
+      WAKE_EVENTS.forEach((type) => window.removeEventListener(type, wake, opts));
+    };
+  }, [reduced]);
+
+  // low-power: counts frames only while the background animates; a gap over 1 s (hidden tab, sleep, debugger)
+  // restarts the sample instead of counting as a slow device
+  useEffect(() => {
+    if (still) return;
+    let frame = 0;
+    let start = 0;
+    let prev = 0;
+    let count = 0;
+    let slow = 0;
+    const tick = (t) => {
+      if (!start || t - prev > 1000) { start = t; count = 0; }
+      prev = t;
+      count += 1;
+      if (t - start >= SAMPLE_MS) {
+        const fps = ((count - 1) * 1000) / (t - start);
+        slow = fps < FPS_FLOOR ? slow + 1 : 0;
+        if (slow >= SLOW_SAMPLES) { setLowPower(true); return; }
+        start = t;
+        count = 1;
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    const delay = setTimeout(() => { frame = requestAnimationFrame(tick); }, MEASURE_DELAY_MS);
+    return () => { clearTimeout(delay); cancelAnimationFrame(frame); };
+  }, [still]);
 
   // cursor-following glow — mouse only, never with reduced motion; moved on the compositor, no React re-renders
   useEffect(() => {
@@ -54,7 +115,7 @@ export const CircuitBackground = memo(function CircuitBackground({ energized, pa
   const playState = still ? "paused" : "running";
 
   return (
-    <div className="fixed inset-0 z-0 overflow-hidden bg-[#05070b]" aria-hidden="true">
+    <div className="fixed inset-0 z-0 overflow-hidden bg-[#05070b]" aria-hidden="true" data-motion={motion}>
       <div
         className="absolute inset-0"
         style={{ background: "radial-gradient(ellipse 70% 55% at 50% 42%, rgba(34,211,238,0.09), transparent 60%)" }}

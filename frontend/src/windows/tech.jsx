@@ -32,8 +32,9 @@ export function AboutContent() {
               ) : (
                 <span className="text-white/20 font-bold text-lg select-none" style={DISPLAY}>MC</span>
               )}
-              {/* Scanline overlay */}
-              <div className="absolute inset-0 bg-linear-to-b from-transparent via-cyan-500/10 to-transparent pointer-events-none opacity-40 group-hover:opacity-75 transition-opacity duration-300" style={{ animation: "dashflow 8s linear infinite" }} />
+              {/* Scanline overlay. No animation on purpose: it used to run `dashflow` (a stroke-dashoffset animation),
+                  which does nothing to a <div> yet repainted the window on every frame (~120 paints/s) */}
+              <div className="absolute inset-0 bg-linear-to-b from-transparent via-cyan-500/10 to-transparent pointer-events-none opacity-40 group-hover:opacity-75 transition-opacity duration-300" />
             </div>
           </div>
           <span className="text-[10px] text-white/60 mt-1.5 font-mono">max_andres_head.webp</span>

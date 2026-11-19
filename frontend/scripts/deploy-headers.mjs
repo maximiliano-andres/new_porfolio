@@ -1,17 +1,18 @@
-/* Post-build step: writes deploy/security-headers.caddy from config/security-headers.json (the same policy the
-   backend applies), adding the SHA-256 of each inline script in dist/index.html to script-src.
+/* Post-build step: writes deploy/security-headers.caddy AND frontend/vercel.json from config/security-headers.json
+   (the same policy the backend applies), adding the SHA-256 of each inline script in dist/index.html to script-src.
    "Inline" = every <script> without a src attribute, whatever its other attributes (type=module, JSON-LD…): the
    same rule as backend/app/adapters/inbound/http/security.py, so a new inline script can never be blocked by the
    CSP in one server and allowed in the other.
    Paths are resolved from this file, so the step works from any working directory (local, CI, Docker). */
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const fromHere = (rel) => fileURLToPath(new URL(rel, import.meta.url));
 const POLICY_FILE = fromHere("../../config/security-headers.json");
 const INDEX_FILE = fromHere("../dist/index.html");
 const OUT_DIR = fromHere("../../deploy/");
+const VERCEL_FILE = fromHere("../vercel.json");
 
 const policy = JSON.parse(readFileSync(POLICY_FILE, "utf8"));
 const html = readFileSync(INDEX_FILE, "utf8");
@@ -35,3 +36,35 @@ const lines = [
 mkdirSync(OUT_DIR, { recursive: true });
 writeFileSync(`${OUT_DIR}security-headers.caddy`, lines.join("\n"));
 console.log(`deploy-headers: deploy/security-headers.caddy (${hashes.length} inline script hash${hashes.length === 1 ? "" : "es"})`);
+
+/* ---- Vercel (static hosting of frontend/: no Caddy, no FastAPI) ----
+   Same security headers and the same cache rules as deploy/Caddyfile. HSTS is left out on purpose: Vercel already
+   sends a stronger one (2 years, preload) and a header from here would replace it with the gradual max-age=300.
+   Vercel reads vercel.json from the repository BEFORE building, so the committed file is the one that applies:
+   on Vercel/CI a stale file fails the build (a wrong CSP hash would block the head script and break the landing
+   screen); locally it is just rewritten — commit it together with the change that produced it. */
+const cache = (source, value) => ({ source, headers: [{ key: "Cache-Control", value }] });
+const vercel = {
+  $schema: "https://openapi.vercel.sh/vercel.json",
+  headers: [
+    {
+      source: "/(.*)",
+      headers: [
+        { key: "Content-Security-Policy", value: cspValue },
+        ...Object.entries(policy.headers).map(([key, value]) => ({ key, value })),
+      ],
+    },
+    cache("/assets/(.*)", "public, max-age=31536000, immutable"), // content-hashed by the build
+    cache("/fonts/(.*)", "public, max-age=2592000"),
+    cache("/img/(.*)", "public, max-age=3600"),
+    cache("/cv/(.*)", "no-cache"),
+    cache("/sw.js", "no-cache"),
+  ],
+};
+const vercelJson = `${JSON.stringify(vercel, null, 2)}\n`;
+const committed = existsSync(VERCEL_FILE) ? readFileSync(VERCEL_FILE, "utf8") : null;
+if (committed !== vercelJson && (process.env.VERCEL || process.env.CI)) {
+  throw new Error("deploy-headers: frontend/vercel.json is out of date. Run `npm run build` locally and commit frontend/vercel.json.");
+}
+writeFileSync(VERCEL_FILE, vercelJson);
+console.log(`deploy-headers: frontend/vercel.json (${committed === vercelJson ? "unchanged" : "updated — commit it"})`);

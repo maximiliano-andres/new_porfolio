@@ -83,11 +83,12 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci --no-audit --no-fund
       - run: npm run lint
-      # full pipeline: vite build, SSR prerender (layout verified at 18 viewports), br/gz, Caddy CSP
+      # full pipeline: vite build, SSR prerender (layout verified at 18 viewports), br/gz, Caddy + Vercel headers
+      # (the build itself fails on CI when frontend/vercel.json is stale)
       - run: npm run build
-      - name: CSP hash in deploy/ matches the committed one
+      - name: CSP hash in deploy/ and frontend/vercel.json matches the committed one
         if: runner.os == 'Linux'
-        run: git diff --exit-code ../deploy/security-headers.caddy
+        run: git diff --exit-code ../deploy/security-headers.caddy vercel.json
 
   docker:
     name: docker · build + smoke test

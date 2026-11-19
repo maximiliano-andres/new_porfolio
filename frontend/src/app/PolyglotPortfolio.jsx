@@ -602,11 +602,10 @@ export default function PolyglotPortfolio() {
     ...(projectWin.open && !projectWin.minimized ? [WINDOW_CIRCUIT["project-detail"]] : []),
   ].join(",");
   const energized = useMemo(() => (energizedKey ? energizedKey.split(",").map(Number) : []), [energizedKey]);
-  // nothing to animate when the desk is hidden: a maximized window, or any window on a phone (windows fill the screen)
-  const deskCovered =
-    Object.values(windows).some((w) => w.open && !w.minimized && w.maximized) ||
-    (projectWin.open && !projectWin.minimized && projectWin.maximized) ||
-    (isMobile && openCount > 0);
+  // the background stops while any window is open: attention is on the window and the desk sits behind it (on
+  // phones windows fill the screen). It was the biggest rendering cost of the site: every animated frame repaints
+  // a full-screen SVG under the windows. Opening a window still fires its one-shot pulse along its trace.
+  const deskCovered = openCount > 0;
 
   // deep links (?ventana=…, ?proyecto=…): opened once, right after mount; unknown project ids are ignored
   const deepLinkDone = useRef(false);

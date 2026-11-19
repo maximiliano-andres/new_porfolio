@@ -219,9 +219,12 @@ sequenceDiagram
 
 > La API conserva `POST /api/contact`, pero el sitio ya no la llama.
 
-### 4. Una sola política de seguridad para dos servidores
+### 4. Una sola política de seguridad para tres servidores
 
-La CSP y las cabeceras se definen una vez y se aplican igual en FastAPI y en Caddy. El hash del único script en línea se recalcula en cada build, y el CI falla si la versión del repositorio quedó desactualizada.
+La CSP y las cabeceras se definen una vez y se aplican igual en FastAPI, en Caddy y en **Vercel**. El hash de los scripts en línea se recalcula en cada build, y el CI falla si la versión del repositorio quedó desactualizada.
+
+> [!IMPORTANT]
+> **Vercel** lee `frontend/vercel.json` del repositorio *antes* de compilar, así que el archivo que vale es el que está en el repositorio. `npm run build` lo regenera (cabeceras de seguridad y las mismas reglas de caché que Caddy: `/assets/*` inmutable por un año, fuentes 30 días, imágenes 1 hora, CV y `sw.js` sin caché). Si cambia, haz commit. Si en Vercel o en el CI quedó desactualizado, el build se detiene en vez de publicar un sitio con la CSP equivocada. HSTS no va en ese archivo: Vercel ya envía uno más fuerte.
 
 ```mermaid
 flowchart LR
