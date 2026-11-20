@@ -79,7 +79,7 @@ CMD ["granian", "--interface", "asgi", \
      "app.main:asgi"]
 
 # ---------- 4. web: Caddy with the static build ----------
-FROM caddy:2.11-alpine@sha256:ae5e525ca6773b0a4ce579c774cb39b3147e1576084139229517bdbcfe3ed812 AS web
+FROM caddy:2.11-alpine@sha256:003a97808e781aa9f7e75cc2f43d34d461099031faf5e20faefb9f61126836f0 AS web
 # non-root (fixed uid/gid 10002): /data (TLS certificates) and /config (autosaved config) are the only writable paths.
 # Ports 80/443 still bind: Docker sets net.ipv4.ip_unprivileged_port_start=0 in the container (docker-compose.yml also
 # sets it explicitly) and compose keeps NET_BIND_SERVICE for runtimes that don't.
