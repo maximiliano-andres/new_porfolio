@@ -30,7 +30,7 @@ RUN npm run build
 # ---------- 2. python dependencies in an isolated venv ----------
 # uv (Rust) installs the exact, hash-verified versions from backend/requirements.lock: a tampered or re-published
 # wheel fails the build, and every build gets the same starlette/pydantic the tests ran against
-FROM ghcr.io/astral-sh/uv:0.13.7@sha256:96f40d3904aad8d0bd010539001d36c8e2188b981e1334471a90c4a1d93bb490 AS uv
+FROM ghcr.io/astral-sh/uv:0.13.9@sha256:d3b601f0c7b118bc1753febf7c41cc80981df678445e0254284eecf84db79a7d AS uv
 FROM python:3.14-slim@sha256:af8a5aa14780025dbfbcfbc81bd8a91ebd87711dd5b0f48ed71090949dd7cb1d AS api-deps
 COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
