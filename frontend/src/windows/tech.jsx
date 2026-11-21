@@ -24,7 +24,7 @@ export function AboutContent() {
             <div className="w-28 h-28 rounded-lg overflow-hidden bg-black/40 flex items-center justify-center relative">
               {!imgError ? (
                 <img
-                  src="/img/max_andres_head_256.webp" width={256} height={234} decoding="async"
+                  src="/img/foto2_webp.webp" width={256} height={234} decoding="async"
                   alt="Maximiliano Caniullán"
                   onError={() => setImgError(true)}
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -293,23 +293,23 @@ export function ProjectsContent({ onOpenProject }) {
       <div className="grid grid-cols-1 @lg:grid-cols-2 gap-3">
         {PROJECTS.map((p) => (
           <Tilt key={p.id} className="h-full">
-          <button
-            onClick={() => onOpenProject(p.id)}
-            className="w-full h-full text-left rounded-lg border border-white/10 p-3 hover:border-white/25 hover:-translate-y-0.5 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
-            style={{ background: "rgba(255,255,255,0.02)" }}
-          >
-            {p.langs.length > 0 && (
-              <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-                {p.langs.map((l) => <LangBadge key={l} id={l} />)}
+            <button
+              onClick={() => onOpenProject(p.id)}
+              className="w-full h-full text-left rounded-lg border border-white/10 p-3 hover:border-white/25 hover:-translate-y-0.5 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden"
+              style={{ background: "rgba(255,255,255,0.02)" }}
+            >
+              {p.langs.length > 0 && (
+                <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                  {p.langs.map((l) => <LangBadge key={l} id={l} />)}
+                </div>
+              )}
+              <div className="text-[13px] font-medium text-white/90 mb-1" style={DISPLAY}>{p.title}</div>
+              <div className="text-[10.5px] mb-1.5" style={{ color: CORE, ...MONO }}>{p.org}</div>
+              <p className="text-[11.5px] text-white/65 leading-5 mb-2">{p.summary}</p>
+              <div className="flex items-center gap-1 text-[10.5px]" style={{ color: CORE }}>
+                {t("Ver caso de estudio", "View case study")} <ChevronRight size={12} />
               </div>
-            )}
-            <div className="text-[13px] font-medium text-white/90 mb-1" style={DISPLAY}>{p.title}</div>
-            <div className="text-[10.5px] mb-1.5" style={{ color: CORE, ...MONO }}>{p.org}</div>
-            <p className="text-[11.5px] text-white/65 leading-5 mb-2">{p.summary}</p>
-            <div className="flex items-center gap-1 text-[10.5px]" style={{ color: CORE }}>
-              {t("Ver caso de estudio", "View case study")} <ChevronRight size={12} />
-            </div>
-          </button>
+            </button>
           </Tilt>
         ))}
       </div>

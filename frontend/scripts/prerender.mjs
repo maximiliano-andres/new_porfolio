@@ -13,14 +13,14 @@ const ssr = await import(pathToFileURL("dist-ssr/prerender.js").href);
 const script = ssr.shellScript();
 
 const SIZES = [[320, 568], [360, 640], [375, 667], [390, 844], [412, 915], [430, 932], [667, 375], [932, 430], [768, 1024],
-  [820, 1180], [1024, 768], [1280, 720], [1366, 768], [1440, 900], [1536, 864], [1920, 1080], [2560, 1440], [3840, 2160]];
+[820, 1180], [1024, 768], [1280, 720], [1366, 768], [1440, 900], [1536, 864], [1920, 1080], [2560, 1440], [3840, 2160]];
 /* runs the head script in a sandbox; returns the CSS variables it sets and <html>'s dataset */
 function runHeadScript(w, h, { language = "es-CL", search = "" } = {}) {
   const vars = {};
   const html = { dataset: {}, style: { setProperty: (k, v) => { vars[k] = v; } } };
   const sandbox = {
     innerWidth: w, innerHeight: h, URLSearchParams, location: { search }, navigator: { language },
-    localStorage: { getItem: () => null }, addEventListener: () => {},
+    localStorage: { getItem: () => null }, addEventListener: () => { },
     document: { documentElement: html },
   };
   sandbox.window = sandbox;
@@ -78,7 +78,7 @@ const person = {
   "@type": "Person",
   name: "Maximiliano Andrés Caniullán Lefiñir",
   jobTitle: "Backend Developer",
-  ...(siteUrl ? { url: `${siteUrl}/`, image: `${siteUrl}/img/max_andres_head_256.webp` } : {}),
+  ...(siteUrl ? { url: `${siteUrl}/`, image: `${siteUrl}/img/foto2_webp.webp` } : {}),
   email: `mailto:${CONTACT_EMAIL}`,
   address: { "@type": "PostalAddress", addressLocality: "Peñaflor", addressRegion: "Región Metropolitana", addressCountry: "CL" },
   alumniOf: { "@type": "CollegeOrUniversity", name: "Universidad Mayor" },

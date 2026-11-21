@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="frontend/public/img/max_andres_head_256.webp" alt="Avatar de Maximiliano Caniullan" width="110" />
+<img src="frontend/public/img/foto2_webp.webp" alt="Avatar de Maximiliano Caniullan" width="110" />
 
 # Polyglot Core · Portafolio de Maximiliano Caniullan
 

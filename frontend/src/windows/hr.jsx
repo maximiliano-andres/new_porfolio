@@ -69,16 +69,16 @@ function KpiGrid() {
     <div className="grid grid-cols-1 @md:grid-cols-3 gap-3">
       {HR_KPIS.map((k) => (
         <Tilt key={k.client} className="h-full">
-        <div className="h-full rounded-lg border p-3.5 flex @md:flex-col items-center @md:items-start gap-3 @md:gap-1" style={{ borderColor: `${k.color}33`, background: `${k.color}0b` }}>
-          <div className="text-[24px] leading-none font-semibold shrink-0 min-w-[78px] @md:min-w-0" style={{ color: k.color, ...DISPLAY }}>
-            <CountUp value={k.value} />
+          <div className="h-full rounded-lg border p-3.5 flex @md:flex-col items-center @md:items-start gap-3 @md:gap-1" style={{ borderColor: `${k.color}33`, background: `${k.color}0b` }}>
+            <div className="text-[24px] leading-none font-semibold shrink-0 min-w-[78px] @md:min-w-0" style={{ color: k.color, ...DISPLAY }}>
+              <CountUp value={k.value} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[12px] font-medium text-white/90 leading-4 @md:mt-1.5">{k.label}</div>
+              <div className="text-[11px] text-white/55 mt-1 leading-4">{k.detail}</div>
+              <div className="text-[10px] text-white/60 mt-1.5" style={MONO}>{k.client}</div>
+            </div>
           </div>
-          <div className="min-w-0">
-            <div className="text-[12px] font-medium text-white/90 leading-4 @md:mt-1.5">{k.label}</div>
-            <div className="text-[11px] text-white/55 mt-1 leading-4">{k.detail}</div>
-            <div className="text-[10px] text-white/60 mt-1.5" style={MONO}>{k.client}</div>
-          </div>
-        </div>
         </Tilt>
       ))}
     </div>
@@ -108,7 +108,7 @@ export function HRSummaryContent({ onOpen }) {
       {/* candidate card */}
       <div className="rounded-xl border p-4" style={{ borderColor: `${HR_ACCENT}2e`, background: `linear-gradient(135deg, ${HR_ACCENT}0d, transparent 60%)` }}>
         <div className="flex items-center gap-3.5 mb-4">
-          <img src="/img/max_andres_head_256.webp" width={256} height={234} decoding="async" alt="" className="w-14 h-14 rounded-lg object-cover border border-white/10 shrink-0 bg-black/40" />
+          <img src="/img/foto2_webp.webp" width={256} height={234} decoding="async" alt="" className="w-14 h-14 rounded-lg object-cover border border-white/10 shrink-0 bg-black/40" />
           <div className="min-w-0">
             <div className="text-[15px] font-semibold text-white leading-5 text-balance" style={DISPLAY}>{FULL_NAME}</div>
             <div className="text-[12px] text-white/55 mt-0.5">Backend Developer · {t("Especialista en optimización", "Optimization specialist")}</div>
@@ -294,7 +294,7 @@ export function AboutHRContent() {
   return (
     <div className="w-full space-y-5">
       <div className="flex items-center gap-3.5">
-        <img src="/img/max_andres_head_256.webp" width={256} height={234} decoding="async" alt="Maximiliano Caniullán" className="w-16 h-16 rounded-xl object-cover border border-white/10 shrink-0 bg-black/40" />
+        <img src="/img/foto2_webp.webp" width={256} height={234} decoding="async" alt="Maximiliano Caniullán" className="w-16 h-16 rounded-xl object-cover border border-white/10 shrink-0 bg-black/40" />
         <div className="min-w-0">
           <h3 className="text-white text-[15px] font-semibold text-balance" style={DISPLAY}>{FULL_NAME}</h3>
           <p className="text-white/50 text-[12px]">{t("Desarrollador de sistemas · Especialista en eficiencia", "Systems developer · Efficiency specialist")}</p>
@@ -413,19 +413,19 @@ export function ProjectsHRContent({ onOpenProject }) {
           const hr = HR_PROJECTS[p.id];
           return (
             <Tilt key={p.id} className="h-full">
-            <button
-              onClick={() => onOpenProject(p.id)}
-              className="w-full h-full text-left rounded-lg border border-white/10 p-3.5 hover:border-white/25 hover:-translate-y-0.5 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden flex flex-col"
-              style={{ background: "rgba(255,255,255,0.02)" }}
-            >
-              <BeforeAfter hr={hr} />
-              <div className="text-[13px] font-medium text-white/90 mt-2 mb-1" style={DISPLAY}>{hr.title}</div>
-              <div className="text-[10.5px] text-white/60 mb-1">{p.org}</div>
-              <p className="text-[11.5px] text-white/60 leading-5 mb-2">{hr.result}</p>
-              <div className="mt-auto flex items-center gap-1 text-[10.5px]" style={{ color: HR_ACCENT }}>
-                {t("Ver el caso", "View the case")} <ChevronRight size={12} />
-              </div>
-            </button>
+              <button
+                onClick={() => onOpenProject(p.id)}
+                className="w-full h-full text-left rounded-lg border border-white/10 p-3.5 hover:border-white/25 hover:-translate-y-0.5 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/50 focus:outline-hidden flex flex-col"
+                style={{ background: "rgba(255,255,255,0.02)" }}
+              >
+                <BeforeAfter hr={hr} />
+                <div className="text-[13px] font-medium text-white/90 mt-2 mb-1" style={DISPLAY}>{hr.title}</div>
+                <div className="text-[10.5px] text-white/60 mb-1">{p.org}</div>
+                <p className="text-[11.5px] text-white/60 leading-5 mb-2">{hr.result}</p>
+                <div className="mt-auto flex items-center gap-1 text-[10.5px]" style={{ color: HR_ACCENT }}>
+                  {t("Ver el caso", "View the case")} <ChevronRight size={12} />
+                </div>
+              </button>
             </Tilt>
           );
         })}

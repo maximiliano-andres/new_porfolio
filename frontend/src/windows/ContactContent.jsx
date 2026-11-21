@@ -24,7 +24,7 @@ export function ContactContent() {
         <div className="w-9 h-9 rounded-full overflow-hidden bg-black/40 shrink-0 border border-cyan-500/20 flex items-center justify-center">
           {!imgError ? (
             <img
-              src="/img/max_andres_head_256.webp" width={256} height={234} decoding="async"
+              src="/img/foto2_webp.webp" width={256} height={234} decoding="async"
               alt="Maximiliano"
               onError={() => setImgError(true)}
               className="w-full h-full object-cover"
